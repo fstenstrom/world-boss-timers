@@ -348,6 +348,19 @@ local function reset()
     end
 end
 
+local function ShowGUI()
+    if gui ~= nil then
+        gui:Hide();
+        gui = nil;
+    end
+    initGUI();
+end
+
+local function HideGUI()
+    gui:Hide();
+    gui = nil;
+end
+
 local function slashHandler(input)
 
     -- print(input);
@@ -356,15 +369,9 @@ local function slashHandler(input)
     -- print(arg1, arg2);
     
     if arg1 == "hide" then
-        -- gui:Hide(); -- TODO: find out what side effects are created by :Hide() (just killing gui for now)
-        gui:Hide();
-        gui = nil;
+        HideGUI();
     elseif arg1 == "show" then
-        if gui ~= nil then
-            gui:Hide();
-            gui = nil;
-        end
-        initGUI();
+        ShowGUI();
     elseif arg1 == "ann" or arg1 == "a" or arg1 == "announce" or arg1 == "yell" or arg1 == "tell" then
         if arg2 == nil then
             input = "false";
