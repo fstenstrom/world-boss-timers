@@ -403,11 +403,7 @@ function WBT:OnEnable()
 
     initGUI();
 
-    self:RegisterChatCommand(":a", announceSpawnTime);
-    self:RegisterChatCommand(":", printKilledBosses);
-    self:RegisterChatCommand("::", function()  end);
     self:RegisterChatCommand("wbt", slashHandler);
-    self:RegisterChatCommand("worldbosstimer", slashHandler);
     self:RegisterChatCommand("worldbosstimers", slashHandler);
 
 end
