@@ -374,7 +374,7 @@ local function slashHandler(input)
         ShowGUI();
     elseif arg1 == "ann" or arg1 == "a" or arg1 == "announce" or arg1 == "yell" or arg1 == "tell" then
         if arg2 == nil then
-            input = "false";
+            input = "true";
         end
         announceSpawnTime(input);
     elseif arg1 == "r" or arg1 == "reset" then
