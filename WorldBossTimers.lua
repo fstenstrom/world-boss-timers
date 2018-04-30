@@ -340,7 +340,7 @@ local function initGUI()
     recordGUIPositioning();
 end
 
-local function reset()
+local function ResetKillInfo()
     WBT:Print("Reseting all kill info.");
     for k, v in pairs(WBT.db.global.boss) do
         WBT.db.global.boss[k].timer.kill = true;
@@ -377,8 +377,8 @@ local function slashHandler(input)
             input = "true";
         end
         announceSpawnTime(input);
-    elseif arg1 == "r" or arg1 == "reset" then
-        reset();
+    elseif arg1 == "r" or arg1 == "reset" or arg1 == "restart" then
+        ResetKillInfo();
     elseif arg1 == "s" or arg1 == "saved" or arg1 == "save" then
         printKilledBosses();
     else
