@@ -60,19 +60,19 @@ local bosses = {
     },
 }
 
-local function getColoredBossName(name)
+local function GetColoredBossName(name)
     return bosses[name].color .. bosses[name].name .. BASE_COLOR;
 end
 
-local function setContainsKey(set, key)
+local function SetContainsKey(set, key)
     return set[key] ~= nil;
 end
 
 local function isBoss(name)
-    return setContainsKey(bosses, name);
+    return SetContainsKey(bosses, name);
 end
 
-local function setDeathTime(time, name)
+local function SetDeathTime(time, name)
     if WBT.db.global.boss[name] == nil then
         local boss = {};
         WBT.db.global.boss[name] = boss;
@@ -80,11 +80,11 @@ local function setDeathTime(time, name)
     WBT.db.global.boss[name].t_death = time;
 end
 
-local function killUpdateFrame(frame)
+local function KillUpdateFrame(frame)
     frame:SetScript("OnUpdate", nil);
 end
 
-local function formatTimeSeconds(seconds)
+local function FormatTimeSeconds(seconds)
     local mins = math.floor(seconds / 60);
     local secs = math.floor(seconds % 60);
     if mins > 0 then
@@ -94,19 +94,19 @@ local function formatTimeSeconds(seconds)
     end
 end
 
-local function getSpawnTimeSec(name)
+local function GetSpawnTimeSec(name)
     boss = WBT.db.global.boss[name]
     if boss ~= nil then
         return boss.t_death + MAX_RESPAWN_TIME - GetServerTime();
     end
 end
 
-local function getSpawnTime(name)
-    local spawnTimeSec = getSpawnTimeSec(name);
+local function GetSpawnTime(name)
+    local spawnTimeSec = GetSpawnTimeSec(name);
     if spawnTimeSec == nil or spawnTimeSec < 0 then
         return -1;
     end
-    return formatTimeSeconds(spawnTimeSec);
+    return FormatTimeSeconds(spawnTimeSec);
 end
 
 local function IsBossZone()
@@ -122,17 +122,17 @@ local function IsBossZone()
     return is_boss_zone;
 end
 
-local function isDead(name)
+local function IsDead(name)
     if WBT.db.global.boss[name] == nil then
         return false;
     end
-    return getSpawnTimeSec(name) >= 0;
+    return GetSpawnTimeSec(name) >= 0;
 end
 
 local function AnyDead()
     any_dead = false;
     for name, boss in pairs(bosses) do
-        if isDead(name) then
+        if IsDead(name) then
             any_dead = true;
         end
     end
@@ -143,7 +143,7 @@ local function ShouldShowGUI()
     return AnyDead() or IsBossZone();
 end
 
-local function getBossNames()
+local function GetBossNames()
     local boss_names = {};
     local i = 1; -- Don't start on index = 0... >-<
     for name, _ in pairs(bosses) do
@@ -154,7 +154,7 @@ local function getBossNames()
     return boss_names;
 end
 
-local function initGUI()
+local function InitGUI()
 
     local AceGUI = LibStub("AceGUI-3.0"); -- Need to create AceGUI 'OnInit or OnEnabled'
     gui = AceGUI:Create("Window");
@@ -167,22 +167,23 @@ local function initGUI()
     gui:EnableResize(false);
     gui.frame:SetFrameStrata("LOW");
 
-    function gui:update()
+    function gui:Update()
         self:ReleaseChildren();
 
         for name, boss in pairs(WBT.db.global.boss) do
-            if isDead(name) then
+            if IsDead(name) then
                 local label = AceGUI:Create("InteractiveLabel");
                 label:SetWidth(170);
-                label:SetText(getColoredBossName(name) .. ": " .. getSpawnTime(name));
+                label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTime(name));
                 label:SetCallback("OnClick", function() WBT:Print(name) end);
                 -- Add the button to the container
                 self:AddChild(label);
+                --WBT:Print(label:IsShown());
             end
         end
     end
 
-    function gui:initPosition()
+    function gui:InitPosition()
         gui_position = WBT.db.char.gui_position;
         local gp;
         if gui_position ~= nil then
@@ -200,8 +201,8 @@ local function initGUI()
         self:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
     end
 
-    local function recordGUIPositioning()
-        local function saveGuiPoint()
+    local function RecordGUIPositioning()
+        local function SaveGuiPoint()
             point, relativeTo, relativePoint, xOfs, yOfs = gui:GetPoint();
             WBT.db.char.gui_position = {
                 point = point,
@@ -212,16 +213,16 @@ local function initGUI()
             };
             -- print(WBT.db.char.gui_position.point, WBT.db.char.gui_position.relativeToName, WBT.db.char.gui_position.relativePoint, WBT.db.char.gui_position.xOfs, WBT.db.char.gui_position.yOfs);
         end
-        hooksecurefunc(gui.frame, "StopMovingOrSizing", saveGuiPoint);
+        hooksecurefunc(gui.frame, "StopMovingOrSizing", SaveGuiPoint);
     end
 
-    gui:update();
+    gui:Update();
 
-    gui:initPosition();
+    gui:InitPosition();
 
     gui:Show();
 
-    recordGUIPositioning();
+    RecordGUIPositioning();
 end
 
 local function RegisterEvents()
@@ -239,7 +240,7 @@ local function ShowGUI()
         gui:Hide();
         gui = nil;
     end
-    initGUI();
+    InitGUI();
 end
 
 local function HideGUI()
@@ -264,15 +265,15 @@ local function UpdateGUIVisibility()
     end
 end
 
-local function startWorldBossDeathTimer(...)
+local function StartWorldBossDeathTimer(...)
 
-    local function hasRespawned(name)
+    local function HasRespawned(name)
         local t_death = WBT.db.global.boss[name].t_death;
         local t_now = GetServerTime();
         return (t_now - t_death > MAX_RESPAWN_TIME);
     end
 
-    local function startTimer(boss, time, freq, text)
+    local function StartTimer(boss, time, freq, text)
         -- Always kill the previous frame and start a new one.
         if boss.timer ~= nil then
             boss.timer.kill = true;
@@ -292,12 +293,12 @@ local function startWorldBossDeathTimer(...)
                     self.remaining_time = until_time - GetServerTime();
                     if self.remaining_time < 0 or self.kill then
                         FlashClientIcon();
-                        killUpdateFrame(self);
+                        KillUpdateFrame(self);
                         UpdateGUIVisibility();
                     end
 
                     if gui ~= nil then
-                        gui:update();
+                        gui:Update();
                     end
                     self.TimeSinceLastUpdate = 0;
                 end
@@ -306,9 +307,9 @@ local function startWorldBossDeathTimer(...)
     end
 
     for _, name in ipairs({...}) do -- To iterate varargs, note that they have to be in a table. They will be expanded otherwise.
-        if WBT.db.global.boss[name] and not hasRespawned(name) then
-            local timer_duration = getSpawnTimeSec(name);
-            startTimer(WBT.db.global.boss[name], timer_duration, 1, bosses[name].color .. name .. BASE_COLOR .. ": ");
+        if WBT.db.global.boss[name] and not HasRespawned(name) then
+            local timer_duration = GetSpawnTimeSec(name);
+            StartTimer(WBT.db.global.boss[name], timer_duration, 1, bosses[name].color .. name .. BASE_COLOR .. ": ");
         end
     end
 end
@@ -322,8 +323,8 @@ local function InitDeathTrackerFrame()
     boss_death_frame:SetScript("OnEvent", function(event, ...)
              local timestamp, type, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2 = select(2, ...);
              if type == "UNIT_DIED" and isBoss(destName) then
-                 setDeathTime(GetServerTime(), destName); -- Don't use timestamp from varags. It's not synchronized with server time.
-                 startWorldBossDeathTimer(destName);
+                 SetDeathTime(GetServerTime(), destName); -- Don't use timestamp from varags. It's not synchronized with server time.
+                 StartWorldBossDeathTimer(destName);
              end
         end);
 end
@@ -338,14 +339,14 @@ local function InitCombatScannerFrame()
     local time_out = 60*2; -- Legacy world bosses SHOULD die in this time.
     boss_combat_frame.t_next = 0;
 
-    function boss_combat_frame:doScanWorldBossCombat(event, ...)
+    function boss_combat_frame:DoScanWorldBossCombat(event, ...)
         -- NOTE: I don't know why InitDeathTrackerFrame gets one extra input arg in varags. Seems to be 'event'.
         local timestamp, type, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2 = select(1, ...);
 
         local t = GetServerTime();
 
         if isBoss(destName) and t > self.t_next then
-            WBT:Print(getColoredBossName(destName) .. " is now engaged in combat!");
+            WBT:Print(GetColoredBossName(destName) .. " is now engaged in combat!");
             local soundfile = bosses[destName].soundfile;
             PlaySoundFile(soundfile, "Master");
             FlashClientIcon();
@@ -353,13 +354,13 @@ local function InitCombatScannerFrame()
         end
     end
 
-    boss_combat_frame:SetScript("OnEvent", boss_combat_frame.doScanWorldBossCombat);
+    boss_combat_frame:SetScript("OnEvent", boss_combat_frame.DoScanWorldBossCombat);
 end
 
 function WBT:OnInitialize()
 end
 
-local function printKilledBosses()
+local function PrintKilledBosses()
     WBT:Print("Tracked world bosses killed:");
 
     local none_killed_text = "None";
@@ -372,7 +373,7 @@ local function printKilledBosses()
             local name = GetSavedWorldBossInfo(i);
             if isBoss(name) then
                 none_killed = false;
-                WBT:Print(getColoredBossName(name))
+                WBT:Print(GetColoredBossName(name))
             end
         end
         if none_killed then
@@ -381,7 +382,7 @@ local function printKilledBosses()
     end
 end
 
-local function announceSpawnTime(currentZoneOnly)
+local function AnnounceSpawnTime(currentZoneOnly)
 
     currentZoneOnly = string.lower(currentZoneOnly);
 
@@ -394,8 +395,8 @@ local function announceSpawnTime(currentZoneOnly)
     local entries = 0; -- No way to get size of table :(
     for name, boss in pairs(bosses) do
         if (not currentZoneOnly) or current_zone == boss.zone then
-            if isDead(name) then
-                spawn_timers[name] = getSpawnTime(name);
+            if IsDead(name) then
+                spawn_timers[name] = GetSpawnTime(name);
                 entries = entries + 1;
             end
         end
@@ -422,7 +423,7 @@ local function ResetKillInfo()
     end
 end
 
-local function slashHandler(input)
+local function SlashHandler(input)
 
     -- print(input);
     -- input = input:trim();
@@ -437,11 +438,11 @@ local function slashHandler(input)
         if arg2 == nil then
             input = "true";
         end
-        announceSpawnTime(input);
+        AnnounceSpawnTime(input);
     elseif arg1 == "r" or arg1 == "reset" or arg1 == "restart" then
         ResetKillInfo();
     elseif arg1 == "s" or arg1 == "saved" or arg1 == "save" then
-        printKilledBosses();
+        PrintKilledBosses();
     else
         WBT:Print("How to use: /wbt <arg1> <arg2>");
         WBT:Print("arg1: \'r\' --> resets all kill info.");
@@ -470,11 +471,11 @@ function WBT:OnEnable()
 
     InitDeathTrackerFrame(); -- Todo: make sure this can't be called twice in same session
     InitCombatScannerFrame();
-    initGUI();
+    InitGUI();
 
     if AnyDead() or IsBossZone() then
         RegisterEvents();
-        startWorldBossDeathTimer(unpack(getBossNames()));
+        StartWorldBossDeathTimer(unpack(GetBossNames()));
         ShowGUI();
     else
         HideGUI();
@@ -482,8 +483,8 @@ function WBT:OnEnable()
 
     StartVisibilityHandler();
 
-    self:RegisterChatCommand("wbt", slashHandler);
-    self:RegisterChatCommand("worldbosstimers", slashHandler);
+    self:RegisterChatCommand("wbt", SlashHandler);
+    self:RegisterChatCommand("worldbosstimers", SlashHandler);
 
 end
 
