@@ -25,7 +25,7 @@ local BASE_COLOR = "|cffffffff";
 local INDENT = "--";
 local MAX_RESPAWN_TIME = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:58.
 --local MAX_RESPAWN_TIME = 50 - 1; -- Minus 1, since they tend to spawn after 14:58.
-local SOUND_DIR = "Interface\\AddOns\\!WorldBossTimer\\resources\\sound\\"
+local SOUND_DIR = "Interface\\AddOns\\!WorldBossTimers\\resources\\sound\\"
 
 local bosses = {
     ["Oondasta"] = {
@@ -162,7 +162,7 @@ local function InitGUI()
     gui:SetWidth(200);
     gui:SetHeight(100);
     gui:SetCallback("OnClose",function(widget) AceGUI:Release(widget) end);
-    gui:SetTitle("World Boss Timer");
+    gui:SetTitle("World Boss Timers");
     gui:SetLayout("List");
     gui:EnableResize(false);
     gui.frame:SetFrameStrata("LOW");
