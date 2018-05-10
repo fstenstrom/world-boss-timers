@@ -68,6 +68,16 @@ local function SetContainsKey(set, key)
     return set[key] ~= nil;
 end
 
+local function SetContainsValue(set, value)
+    for k, v in pairs(set) do
+        if v == value then
+            return true;
+        end
+    end
+
+    return false;
+end
+
 local function isBoss(name)
     return SetContainsKey(bosses, name);
 end
@@ -265,7 +275,49 @@ local function UpdateGUIVisibility()
     end
 end
 
+local function AnnounceSpawnTime(currentZoneOnly, send_meta_info)
+
+    currentZoneOnly = string.lower(currentZoneOnly);
+
+    if currentZoneOnly == "0" or currentZoneOnly == "false" or currentZoneOnly == "all" then
+        currentZoneOnly = false;
+    end
+
+    local current_zone = GetZoneText();
+    local spawn_timers = {};
+    local entries = 0; -- No way to get size of table :(
+    for name, boss in pairs(bosses) do
+        if (not currentZoneOnly) or current_zone == boss.zone then
+            if IsDead(name) then
+                spawn_timers[name] = GetSpawnTime(name);
+                entries = entries + 1;
+            end
+        end
+    end
+
+    if entries > 0 then
+        local channel = "SAY";
+        if send_meta_info then
+            SendChatMessage("Bosses spawn in ...", channel, nil, nil);
+        end
+        local SKULL = "{skull}";
+        for name, spawn_time in pairs(spawn_timers) do
+            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time;
+            SendChatMessage(msg, channel, nil, nil);
+        end
+    else
+        WBT:Print("No spawn timers registered");
+    end
+end
+
 local function StartWorldBossDeathTimer(...)
+
+    local function MaybeAnnounceSpawnTimer(remaining_time)
+        local announce_times = {1, 2, 3, 1*60, 5*60, 10*60};
+        if SetContainsValue(announce_times, remaining_time) then
+            AnnounceSpawnTime("true", false);
+        end
+    end
 
     local function HasRespawned(name)
         local t_death = WBT.db.global.boss[name].t_death;
@@ -291,6 +343,9 @@ local function StartWorldBossDeathTimer(...)
 
                 if (self.TimeSinceLastUpdate > UpdateInterval) then
                     self.remaining_time = until_time - GetServerTime();
+
+                    MaybeAnnounceSpawnTimer(self.remaining_time);
+
                     if self.remaining_time < 0 or self.kill then
                         FlashClientIcon();
                         KillUpdateFrame(self);
@@ -382,39 +437,6 @@ local function PrintKilledBosses()
     end
 end
 
-local function AnnounceSpawnTime(currentZoneOnly)
-
-    currentZoneOnly = string.lower(currentZoneOnly);
-
-    if currentZoneOnly == "0" or currentZoneOnly == "false" or currentZoneOnly == "all" then
-        currentZoneOnly = false;
-    end
-
-    local current_zone = GetZoneText();
-    local spawn_timers = {};
-    local entries = 0; -- No way to get size of table :(
-    for name, boss in pairs(bosses) do
-        if (not currentZoneOnly) or current_zone == boss.zone then
-            if IsDead(name) then
-                spawn_timers[name] = GetSpawnTime(name);
-                entries = entries + 1;
-            end
-        end
-    end
-
-    if entries > 0 then
-        local channel = "SAY";
-        SendChatMessage("Bosses spawn in ...", channel, nil, nil);
-        local SKULL = "{skull}";
-        for name, spawn_time in pairs(spawn_timers) do
-            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time;
-            SendChatMessage(msg, channel, nil, nil);
-        end
-    else
-        WBT:Print("No spawn timers registered");
-    end
-end
-
 local function ResetKillInfo()
     WBT:Print("Reseting all kill info.");
     for k, v in pairs(WBT.db.global.boss) do
@@ -438,7 +460,7 @@ local function SlashHandler(input)
         if arg2 == nil then
             input = "true";
         end
-        AnnounceSpawnTime(input);
+        AnnounceSpawnTime(input, true);
     elseif arg1 == "r" or arg1 == "reset" or arg1 == "restart" then
         ResetKillInfo();
     elseif arg1 == "s" or arg1 == "saved" or arg1 == "save" then
