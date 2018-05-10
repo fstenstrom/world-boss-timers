@@ -78,7 +78,7 @@ local function SetContainsValue(set, value)
     return false;
 end
 
-local function isBoss(name)
+local function IsBoss(name)
     return SetContainsKey(bosses, name);
 end
 
@@ -275,19 +275,19 @@ local function UpdateGUIVisibility()
     end
 end
 
-local function AnnounceSpawnTime(currentZoneOnly, send_meta_info)
+local function AnnounceSpawnTime(current_zone_only, send_meta_info)
 
-    currentZoneOnly = string.lower(currentZoneOnly);
+    current_zone_only = string.lower(current_zone_only);
 
-    if currentZoneOnly == "0" or currentZoneOnly == "false" or currentZoneOnly == "all" then
-        currentZoneOnly = false;
+    if current_zone_only == "0" or current_zone_only == "false" or current_zone_only == "all" then
+        current_zone_only = false;
     end
 
     local current_zone = GetZoneText();
     local spawn_timers = {};
     local entries = 0; -- No way to get size of table :(
     for name, boss in pairs(bosses) do
-        if (not currentZoneOnly) or current_zone == boss.zone then
+        if (not current_zone_only) or current_zone == boss.zone then
             if IsDead(name) then
                 spawn_timers[name] = GetSpawnTime(name);
                 entries = entries + 1;
@@ -377,7 +377,7 @@ local function InitDeathTrackerFrame()
     boss_death_frame = CreateFrame("Frame");
     boss_death_frame:SetScript("OnEvent", function(event, ...)
              local timestamp, type, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2 = select(2, ...);
-             if type == "UNIT_DIED" and isBoss(destName) then
+             if type == "UNIT_DIED" and IsBoss(destName) then
                  SetDeathTime(GetServerTime(), destName); -- Don't use timestamp from varags. It's not synchronized with server time.
                  StartWorldBossDeathTimer(destName);
              end
@@ -400,7 +400,7 @@ local function InitCombatScannerFrame()
 
         local t = GetServerTime();
 
-        if isBoss(destName) and t > self.t_next then
+        if IsBoss(destName) and t > self.t_next then
             WBT:Print(GetColoredBossName(destName) .. " is now engaged in combat!");
             local soundfile = bosses[destName].soundfile;
             PlaySoundFile(soundfile, "Master");
@@ -426,7 +426,7 @@ local function PrintKilledBosses()
         local none_killed = true;
         for i=1, num_saved_world_bosses do
             local name = GetSavedWorldBossInfo(i);
-            if isBoss(name) then
+            if IsBoss(name) then
                 none_killed = false;
                 WBT:Print(GetColoredBossName(name))
             end
