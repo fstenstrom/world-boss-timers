@@ -314,7 +314,7 @@ end
 local function StartWorldBossDeathTimer(...)
 
     local function MaybeAnnounceSpawnTimer(remaining_time, boss_name)
-        local announce_times = {1, 2, 3, 1*60, 5*60, 10*60};
+        local announce_times = {1, 2, 3, 4, 5, 10, 30, 1*60, 5*60, 10*60};
         if SetContainsValue(announce_times, remaining_time) and bosses[boss_name].zone == GetZoneText() then
             AnnounceSpawnTime("true", false);
         end
