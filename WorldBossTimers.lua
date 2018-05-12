@@ -88,6 +88,7 @@ local function SetDeathTime(time, name)
         WBT.db.global.boss[name] = boss;
     end
     WBT.db.global.boss[name].t_death = time;
+    WBT.db.global.boss[name].name = name;
 end
 
 local function KillUpdateFrame(frame)
@@ -312,9 +313,9 @@ end
 
 local function StartWorldBossDeathTimer(...)
 
-    local function MaybeAnnounceSpawnTimer(remaining_time)
+    local function MaybeAnnounceSpawnTimer(remaining_time, boss_name)
         local announce_times = {1, 2, 3, 1*60, 5*60, 10*60};
-        if SetContainsValue(announce_times, remaining_time) then
+        if SetContainsValue(announce_times, remaining_time) and bosses[boss_name].zone == GetZoneText() then
             AnnounceSpawnTime("true", false);
         end
     end
@@ -344,7 +345,7 @@ local function StartWorldBossDeathTimer(...)
                 if (self.TimeSinceLastUpdate > UpdateInterval) then
                     self.remaining_time = until_time - GetServerTime();
 
-                    MaybeAnnounceSpawnTimer(self.remaining_time);
+                    MaybeAnnounceSpawnTimer(self.remaining_time, boss.name);
 
                     if self.remaining_time < 0 or self.kill then
                         FlashClientIcon();
