@@ -82,6 +82,10 @@ local function IsBoss(name)
     return SetContainsKey(bosses, name);
 end
 
+local function IsInZoneOfBoss(name)
+    return GetZoneText() == bosses[name].zone;
+end
+
 local function SetDeathTime(time, name)
     if WBT.db.global.boss[name] == nil then
         local boss = {};
@@ -315,7 +319,7 @@ local function StartWorldBossDeathTimer(...)
 
     local function MaybeAnnounceSpawnTimer(remaining_time, boss_name)
         local announce_times = {1, 2, 3, 4, 5, 10, 30, 1*60, 5*60, 10*60};
-        if SetContainsValue(announce_times, remaining_time) and bosses[boss_name].zone == GetZoneText() then
+        if SetContainsValue(announce_times, remaining_time) and IsInZoneOfBoss(boss_name) then
             AnnounceSpawnTime("true", false);
         end
     end
@@ -348,7 +352,9 @@ local function StartWorldBossDeathTimer(...)
                     MaybeAnnounceSpawnTimer(self.remaining_time, boss.name);
 
                     if self.remaining_time < 0 or self.kill then
-                        FlashClientIcon();
+                        if IsInZoneOfBoss(boss.name) then
+                            FlashClientIcon();
+                        end
                         KillUpdateFrame(self);
                         UpdateGUIVisibility();
                     end
