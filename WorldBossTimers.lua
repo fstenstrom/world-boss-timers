@@ -23,9 +23,12 @@ local defaults = {
 
 local BASE_COLOR = "|cffffffff";
 local INDENT = "--";
+local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
+local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
 local MAX_RESPAWN_TIME = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:58.
 --local MAX_RESPAWN_TIME = 50 - 1; -- Minus 1, since they tend to spawn after 14:58.
 local SOUND_DIR = "Interface\\AddOns\\!WorldBossTimers\\resources\\sound\\"
+
 
 local bosses = {
     ["Oondasta"] = {
@@ -86,6 +89,17 @@ local function IsInZoneOfBoss(name)
     return GetZoneText() == bosses[name].zone;
 end
 
+local function BossesInCurrentZone()
+    local BossesInZone = {}
+    for name, boss in pairs(bosses) do
+        if IsInZoneOfBoss(name) then
+            BossesInZone[name] = name;
+        end
+    end
+
+    return BossesInZone;
+end
+
 local function SetDeathTime(time, name)
     if WBT.db.global.boss[name] == nil then
         local boss = {};
@@ -93,6 +107,10 @@ local function SetDeathTime(time, name)
     end
     WBT.db.global.boss[name].t_death = time;
     WBT.db.global.boss[name].name = name;
+end
+
+local function GetServerDeathTime(name)
+    return WBT.db.global.boss[name].t_death;
 end
 
 local function KillUpdateFrame(frame)
@@ -280,7 +298,7 @@ local function UpdateGUIVisibility()
     end
 end
 
-local function AnnounceSpawnTime(current_zone_only, send_meta_info)
+local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
 
     current_zone_only = string.lower(current_zone_only);
 
@@ -294,7 +312,11 @@ local function AnnounceSpawnTime(current_zone_only, send_meta_info)
     for name, boss in pairs(bosses) do
         if (not current_zone_only) or current_zone == boss.zone then
             if IsDead(name) then
-                spawn_timers[name] = GetSpawnTime(name);
+                local ServerDeathTime = "";
+                if send_data_for_parsing then
+                    ServerDeathTime = " (" .. SERVER_DEATH_TIME_PREFIX .. GetServerDeathTime(name) .. ")";
+                end
+                spawn_timers[name] = {GetSpawnTime(name), ServerDeathTime};
                 entries = entries + 1;
             end
         end
@@ -302,12 +324,11 @@ local function AnnounceSpawnTime(current_zone_only, send_meta_info)
 
     if entries > 0 then
         local channel = "SAY";
-        if send_meta_info then
-            SendChatMessage("Bosses spawn in ...", channel, nil, nil);
-        end
         local SKULL = "{skull}";
-        for name, spawn_time in pairs(spawn_timers) do
-            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time;
+        for name, timers in pairs(spawn_timers) do
+            local spawn_time = timers[1];
+            local ServerDeathTime = timers[2];
+            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time .. ServerDeathTime;
             SendChatMessage(msg, channel, nil, nil);
         end
     else
@@ -472,6 +493,8 @@ local function SlashHandler(input)
         ResetKillInfo();
     elseif arg1 == "s" or arg1 == "saved" or arg1 == "save" then
         PrintKilledBosses();
+    elseif arg1 == "request" then
+        SendChatMessage(CHAT_MSG_TIMER_REQUEST, "SAY");
     else
         WBT:Print("How to use: /wbt <arg1> <arg2>");
         WBT:Print("arg1: \'r\' --> resets all kill info.");
@@ -491,6 +514,48 @@ local function StartVisibilityHandler()
             UpdateGUIVisibility();
         end
     );
+end
+
+local function ShareTimers()
+    AnnounceSpawnTime("true", true);
+end
+
+function WBT:InitChatParsing()
+
+    local function InitRequestParsing()
+        local RequestParser = CreateFrame("Frame");
+        local Requesters = {};
+        RequestParser:RegisterEvent("CHAT_MSG_SAY");
+        RequestParser:SetScript("OnEvent",
+            function(self, event, msg, sender)
+                if event == "CHAT_MSG_SAY" and msg == CHAT_MSG_TIMER_REQUEST and not SetContainsKey(Requesters, sender) then
+                    ShareTimers();
+                end
+                Requesters[sender] = sender;
+            end
+        );
+    end
+
+    local function InitSharedTimersParsing()
+        local TimerParser = CreateFrame("Frame");
+        TimerParser:RegisterEvent("CHAT_MSG_SAY");
+        TimerParser:SetScript("OnEvent",
+            function(self, event, msg, sender)
+                if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
+                    local BossName, ServerDeathTime = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
+                    if IsBoss(BossName) and not IsDead(BossName) then
+                        WBT:Print("Received spawn timer from: " .. sender);
+                        SetDeathTime(ServerDeathTime, BossName);
+                        StartWorldBossDeathTimer(BossName);
+                    end
+                end
+            end
+        );
+    end
+
+    InitRequestParsing();
+    InitSharedTimersParsing();
+
 end
 
 function WBT:OnEnable()
@@ -514,6 +579,8 @@ function WBT:OnEnable()
 
     self:RegisterChatCommand("wbt", SlashHandler);
     self:RegisterChatCommand("worldbosstimers", SlashHandler);
+
+    self:InitChatParsing();
 
 end
 
