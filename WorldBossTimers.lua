@@ -494,7 +494,7 @@ local function SlashHandler(input)
     elseif arg1 == "s" or arg1 == "saved" or arg1 == "save" then
         PrintKilledBosses();
     elseif arg1 == "request" then
-        SendChatMessage(CHAT_MSG_TIMER_REQUEST, "SAY");
+        RequestKillData();
     else
         WBT:Print("How to use: /wbt <arg1> <arg2>");
         WBT:Print("arg1: \'r\' --> resets all kill info.");
@@ -520,18 +520,27 @@ local function ShareTimers()
     AnnounceSpawnTime("true", true);
 end
 
+function WBT:GetGui()
+    return gui;
+end
+
 function WBT:InitChatParsing()
 
     local function InitRequestParsing()
+        local function PlayerSentRequest(sender)
+            -- Since \b and alike doesnt exist: use "frontier pattern": %f[%A]
+            return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
+        end
+
         local RequestParser = CreateFrame("Frame");
-        local Requesters = {};
+        local AnsweredRequesters = {};
         RequestParser:RegisterEvent("CHAT_MSG_SAY");
         RequestParser:SetScript("OnEvent",
             function(self, event, msg, sender)
-                if event == "CHAT_MSG_SAY" and msg == CHAT_MSG_TIMER_REQUEST and not SetContainsKey(Requesters, sender) then
+                if event == "CHAT_MSG_SAY" and msg == CHAT_MSG_TIMER_REQUEST and not SetContainsKey(AnsweredRequesters, sender) and not PlayerSentRequest(sender) then
                     ShareTimers();
+                    AnsweredRequesters[sender] = sender;
                 end
-                Requesters[sender] = sender;
             end
         );
     end
