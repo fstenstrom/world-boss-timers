@@ -187,18 +187,41 @@ local function GetBossNames()
     return boss_names;
 end
 
+local LastRequestTime = 0;
+local function RequestKillData()
+    if GetServerTime() - LastRequestTime > 5 then
+        SendChatMessage(CHAT_MSG_TIMER_REQUEST, "SAY");
+        LastRequestTime = GetServerTime();
+    end
+end
+
+
 local function InitGUI()
 
     local AceGUI = LibStub("AceGUI-3.0"); -- Need to create AceGUI 'OnInit or OnEnabled'
+    local frame = AceGUI:Create("SimpleGroup");
     gui = AceGUI:Create("Window");
 
-    gui:SetWidth(200);
-    gui:SetHeight(100);
-    gui:SetCallback("OnClose",function(widget) AceGUI:Release(widget) end);
+    local width = 200;
+    local height = 100;
+    gui:SetWidth(width);
+    gui:SetHeight(height);
+    gui:SetCallback("OnClose", function(widget) AceGUI:Release(widget) end);
     gui:SetTitle("World Boss Timers");
     gui:SetLayout("List");
     gui:EnableResize(false);
     gui.frame:SetFrameStrata("LOW");
+
+    local btn = AceGUI:Create("Button");
+    btn:SetWidth(width);
+    btn:SetText("Request kill data");
+    btn:SetCallback("OnClick", RequestKillData);
+
+    hooksecurefunc(gui, "Hide", function() btn.frame:Hide() end);
+
+    frame:AddChild(gui);
+    frame:AddChild(btn);
+
 
     function gui:Update()
         self:ReleaseChildren();
