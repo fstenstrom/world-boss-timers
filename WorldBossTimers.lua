@@ -576,7 +576,7 @@ function WBT:InitChatParsing()
                 if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
                     local BossName, ServerDeathTime = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
                     if IsBoss(BossName) and not IsDead(BossName) then
-                        WBT:Print("Received spawn timer from: " .. sender);
+                        WBT:Print("Received " .. GetColoredBossName(BossName) .. " timer from: " .. sender);
                         SetDeathTime(ServerDeathTime, BossName);
                         StartWorldBossDeathTimer(BossName);
                     end
