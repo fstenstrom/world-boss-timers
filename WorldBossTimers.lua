@@ -27,8 +27,8 @@ local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
 local MAX_RESPAWN_TIME = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:58.
 --local MAX_RESPAWN_TIME = 50 - 1; -- Minus 1, since they tend to spawn after 14:58.
-local SOUND_DIR = "Interface\\AddOns\\!WorldBossTimers\\resources\\sound\\";
 local DEFAULT_SOUND_PATH = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
+local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
 
 
 local bosses = {
