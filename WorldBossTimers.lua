@@ -14,6 +14,8 @@ local defaults = {
     global = {
         boss = {},
         gui = nil,
+        sound_enabled = true,
+        sound_type = "fancy",
     },
     char = {
         boss = {},
@@ -27,8 +29,8 @@ local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
 local MAX_RESPAWN_TIME = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:58.
 --local MAX_RESPAWN_TIME = 50 - 1; -- Minus 1, since they tend to spawn after 14:58.
-local DEFAULT_SOUND_PATH = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
 local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
+local DEFAULT_SOUND_FILE = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
 
 
 local bosses = {
@@ -48,19 +50,19 @@ local bosses = {
         name = "Galleon",
         color = "|cffc1f973",
         zone = "Valley of the Four Winds",
-        soundfile = DEFAULT_SOUND_PATH,
+        soundfile = DEFAULT_SOUND_FILE,
     },
     ["Nalak"] = {
         name = "Nalak",
         color = "|cff0081cc",
         zone = "Isle of Thunder",
-        soundfile = DEFAULT_SOUND_PATH,
+        soundfile = DEFAULT_SOUND_FILE,
     },
     ["Sha of Anger"] = {
         name = "Sha of Anger",
         color = "|cff8a1a9f",
         zone = "Valley of the Four Winds",
-        soundfile = DEFAULT_SOUND_PATH,
+        soundfile = DEFAULT_SOUND_FILE,
     },
     ["Vale Moth"] = {
         name = "Vale Moth",
@@ -453,6 +455,22 @@ local function InitDeathTrackerFrame()
         end);
 end
 
+local function PlayAlertSound(boss_name)
+    local sound_type = WBT.db.global.sound_type;
+    local sound_enabled = WBT.db.global.sound_enabled;
+
+    local soundfile = bosses[boss_name].soundfile;
+    if sound_type == "classic" then
+        soundfile = DEFAULT_SOUND_FILE;
+    end
+
+    if sound_enabled then
+        PlaySoundFile(soundfile, "Master");
+    else
+        WBT:Print("Sound is off: enable with /WBT sound enable");
+    end
+end
+
 local function InitCombatScannerFrame()
     if boss_combat_frame ~= nil then
         return
@@ -471,8 +489,7 @@ local function InitCombatScannerFrame()
 
         if IsBoss(destName) and t > self.t_next then
             WBT:Print(GetColoredBossName(destName) .. " is now engaged in combat!");
-            local soundfile = bosses[destName].soundfile;
-            PlaySoundFile(soundfile, "Master");
+            PlayAlertSound(destName);
             FlashClientIcon();
             self.t_next = t + time_out;
         end
@@ -521,6 +538,21 @@ local function SlashHandler(input)
     arg1, arg2 = strsplit(" ", input);
     -- print(arg1, arg2);
 
+    local function PrintHelp()
+        local indent = "   ";
+        WBT:Print("How to use: /wbt <arg1> <arg2>");
+        WBT:Print("arg1: \'r\' --> resets all kill info.");
+        WBT:Print("arg1: \'s\' --> prints your saved bosses.");
+        WBT:Print("arg1: \'a\' --> announces timers for boss in zone (and all if arg2 == \'all\').");
+        WBT:Print("arg1: \'show\' --> shows the timers frame.");
+        WBT:Print("arg1: \'hide\' --> hides the timers frame.");
+        WBT:Print("arg1: \'sound\' --> ...");
+        WBT:Print("arg2: " .. indent .. "\'disable\'");
+        WBT:Print("arg2: " .. indent .. "\'enable\'");
+        WBT:Print("arg2: " .. indent .. "\'classic\' --> War drum alert.");
+        WBT:Print("arg2: " .. indent .. "\'fancy\' --> Sometimes custom fancy alerts.");
+    end
+
     if arg1 == "hide" then
         HideGUI();
     elseif arg1 == "show" then
@@ -536,13 +568,24 @@ local function SlashHandler(input)
         PrintKilledBosses();
     elseif arg1 == "request" then
         RequestKillData();
+    elseif arg1 == "sound" then
+        sound_type_args = {"classic", "fancy"};
+        enable_args = {"enable", "unmute"};
+        disable_args = {"disable", "mute"};
+        if SetContainsValue(sound_type_args, arg2) then
+            WBT.db.global.sound_type = arg2;
+            WBT:Print("SoundType: " .. arg2);
+        elseif SetContainsValue(enable_args, arg2) then
+            WBT.db.global.sound_enabled = true;
+            WBT:Print("Sound: " .. "enabled");
+        elseif SetContainsValue(disable_args, arg2) then
+            WBT.db.global.sound_enabled = false;
+            WBT:Print("Sound: " .. "disabled");
+        else
+            PrintHelp();
+        end
     else
-        WBT:Print("How to use: /wbt <arg1> <arg2>");
-        WBT:Print("arg1: \'r\' --> resets all kill info.");
-        WBT:Print("arg1: \'s\' --> prints your saved bosses.");
-        WBT:Print("arg1: \'a\' --> announces timers for boss in zone (and all if arg2 == \'all\').");
-        WBT:Print("arg1: \'show\' --> shows the timers frame.");
-        WBT:Print("arg1: \'hide\' --> hides the timers frame.");
+        PrintHelp();
     end
 
 end
