@@ -90,14 +90,14 @@ local function IsInZoneOfBoss(name)
 end
 
 local function BossesInCurrentZone()
-    local BossesInZone = {}
+    local bosses_in_zone = {}
     for name, boss in pairs(bosses) do
         if IsInZoneOfBoss(name) then
-            BossesInZone[name] = name;
+            bosses_in_zone[name] = name;
         end
     end
 
-    return BossesInZone;
+    return bosses_in_zone;
 end
 
 local function SetDeathTime(time, name)
@@ -187,14 +187,13 @@ local function GetBossNames()
     return boss_names;
 end
 
-local LastRequestTime = 0;
+local last_request_time = 0;
 local function RequestKillData()
-    if GetServerTime() - LastRequestTime > 5 then
+    if GetServerTime() - last_request_time > 5 then
         SendChatMessage(CHAT_MSG_TIMER_REQUEST, "SAY");
-        LastRequestTime = GetServerTime();
+        last_request_time = GetServerTime();
     end
 end
-
 
 local function InitGUI()
 
@@ -335,11 +334,11 @@ local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
     for name, boss in pairs(bosses) do
         if (not current_zone_only) or current_zone == boss.zone then
             if IsDead(name) then
-                local ServerDeathTime = "";
+                local server_death_time = "";
                 if send_data_for_parsing then
-                    ServerDeathTime = " (" .. SERVER_DEATH_TIME_PREFIX .. GetServerDeathTime(name) .. ")";
+                    server_death_time = " (" .. SERVER_DEATH_TIME_PREFIX .. GetServerDeathTime(name) .. ")";
                 end
-                spawn_timers[name] = {GetSpawnTime(name), ServerDeathTime};
+                spawn_timers[name] = {GetSpawnTime(name), server_death_time};
                 entries = entries + 1;
             end
         end
@@ -350,8 +349,8 @@ local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
         local SKULL = "{skull}";
         for name, timers in pairs(spawn_timers) do
             local spawn_time = timers[1];
-            local ServerDeathTime = timers[2];
-            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time .. ServerDeathTime;
+            local server_death_time = timers[2];
+            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time .. server_death_time;
             SendChatMessage(msg, channel, nil, nil);
         end
     else
@@ -555,30 +554,30 @@ function WBT:InitChatParsing()
             return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
         end
 
-        local RequestParser = CreateFrame("Frame");
-        local AnsweredRequesters = {};
-        RequestParser:RegisterEvent("CHAT_MSG_SAY");
-        RequestParser:SetScript("OnEvent",
+        local request_parser = CreateFrame("Frame");
+        local answered_requesters = {};
+        request_parser:RegisterEvent("CHAT_MSG_SAY");
+        request_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
-                if event == "CHAT_MSG_SAY" and msg == CHAT_MSG_TIMER_REQUEST and not SetContainsKey(AnsweredRequesters, sender) and not PlayerSentRequest(sender) then
+                if event == "CHAT_MSG_SAY" and msg == CHAT_MSG_TIMER_REQUEST and not SetContainsKey(answered_requesters, sender) and not PlayerSentRequest(sender) then
                     ShareTimers();
-                    AnsweredRequesters[sender] = sender;
+                    answered_requesters[sender] = sender;
                 end
             end
         );
     end
 
     local function InitSharedTimersParsing()
-        local TimerParser = CreateFrame("Frame");
-        TimerParser:RegisterEvent("CHAT_MSG_SAY");
-        TimerParser:SetScript("OnEvent",
+        local timer_parser = CreateFrame("Frame");
+        timer_parser:RegisterEvent("CHAT_MSG_SAY");
+        timer_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
-                    local BossName, ServerDeathTime = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
-                    if IsBoss(BossName) and not IsDead(BossName) then
-                        WBT:Print("Received " .. GetColoredBossName(BossName) .. " timer from: " .. sender);
-                        SetDeathTime(ServerDeathTime, BossName);
-                        StartWorldBossDeathTimer(BossName);
+                    local boss_name, server_death_time = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
+                    if IsBoss(boss_name) and not IsDead(boss_name) then
+                        WBT:Print("Received " .. GetColoredBossName(boss_name) .. " timer from: " .. sender);
+                        SetDeathTime(server_death_time, boss_name);
+                        StartWorldBossDeathTimer(boss_name);
                     end
                 end
             end
