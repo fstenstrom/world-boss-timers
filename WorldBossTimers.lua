@@ -27,7 +27,8 @@ local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
 local MAX_RESPAWN_TIME = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:58.
 --local MAX_RESPAWN_TIME = 50 - 1; -- Minus 1, since they tend to spawn after 14:58.
-local SOUND_DIR = "Interface\\AddOns\\!WorldBossTimers\\resources\\sound\\"
+local SOUND_DIR = "Interface\\AddOns\\!WorldBossTimers\\resources\\sound\\";
+local DEFAULT_SOUND_PATH = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
 
 
 local bosses = {
@@ -42,6 +43,24 @@ local bosses = {
         color = "|cfffa6e06",
         zone = "Spires of Arak",
         soundfile = SOUND_DIR .. "rukhmar1.mp3",
+    },
+    ["Galleon"] = {
+        name = "Galleon",
+        color = "|cffc1f973",
+        zone = "Valley of the Four Winds",
+        soundfile = DEFAULT_SOUND_PATH,
+    },
+    ["Nalak"] = {
+        name = "Nalak",
+        color = "|cff0081cc",
+        zone = "Isle of Thunder",
+        soundfile = DEFAULT_SOUND_PATH,
+    },
+    ["Sha of Anger"] = {
+        name = "Sha of Anger",
+        color = "|cff8a1a9f",
+        zone = "Valley of the Four Winds",
+        soundfile = DEFAULT_SOUND_PATH,
     },
     ["Vale Moth"] = {
         name = "Vale Moth",
