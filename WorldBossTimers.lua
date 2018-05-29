@@ -219,7 +219,7 @@ end
 local function InitGUI()
 
     local AceGUI = LibStub("AceGUI-3.0"); -- Need to create AceGUI 'OnInit or OnEnabled'
-    local frame = AceGUI:Create("SimpleGroup");
+    local gui_container = AceGUI:Create("SimpleGroup");
     gui = AceGUI:Create("Window");
 
     local width = 200;
@@ -239,9 +239,10 @@ local function InitGUI()
 
     hooksecurefunc(gui, "Hide", function() btn.frame:Hide() end);
 
-    frame:AddChild(gui);
-    frame:AddChild(btn);
+    gui_container:AddChild(gui);
+    gui_container:AddChild(btn);
 
+    gui_container.frame:SetFrameStrata("LOW");
 
     function gui:Update()
         self:ReleaseChildren();
