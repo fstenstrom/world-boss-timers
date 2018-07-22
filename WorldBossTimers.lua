@@ -22,6 +22,8 @@ local defaults = {
     },
 };
 
+local REALM_TYPE_PVE = "PvE";
+local REALM_TYPE_PVP = "PvP";
 
 local BASE_COLOR = "|cffffffff";
 local INDENT = "--";
@@ -92,6 +94,10 @@ local function SetContainsKey(set, key)
     return set[key] ~= nil;
 end
 
+local function TableIsEmpty(tbl)
+    return next(tbl) == nil
+end
+
 local function SetContainsValue(set, value)
     for k, v in pairs(set) do
         if v == value then
@@ -121,6 +127,57 @@ local function BossesInCurrentZone()
     return bosses_in_zone;
 end
 
+local function GetRealmType()
+    local pvpStyle = GetZonePVPInfo();
+    if pvpStyle == nil then
+        return REALM_TYPE_PVE;
+    end
+
+    return REALM_TYPE_PVP;
+end
+
+local function GetKillInfoFromZone()
+    local current_zone = GetZoneText();
+    for name, kill_info in pairs(REGISTERED_BOSSES) do
+        if kill_info.zone == current_zone then
+            return WBT.db.global.boss[kill_info.name];
+        end
+    end
+
+    return nil;
+end
+
+-- The data for the kill can be incorrect. This might happen
+-- when a player records a kill and then appear on another
+-- server shard.
+-- If this happens, we don't want the data to propagate
+-- to other players.
+local function IsKillInfoSafe(error_msgs)
+
+    local kill_info = GetKillInfoFromZone();
+
+    -- It's possible to have one char with war mode, and one
+    -- without on the same server.
+    local realm_type = GetRealmType();
+    local realmName = GetRealmName();
+
+    if not kill_info.safe then
+        table.insert(error_msgs, "Player was in a group during previous kill.");
+    end
+    if not kill_info.realm_type == realm_type then
+        table.insert(error_msgs, "Kill was made on a " .. kill_info.realm_type .. " realm, but are now on a " .. realm_type .. " realm.");
+    end
+    if not kill_info.realmName == realmName then
+        table.insert(error_msgs, "Kill was made on " .. kill_info.realmName .. ", but are now on " .. realmName .. ".");
+    end
+
+    if TableIsEmpty(error_msgs) then
+        return true;
+    end
+
+    return false;
+end
+
 local function SetDeathTime(time, name)
     if WBT.db.global.boss[name] == nil then
         local boss = {};
@@ -128,6 +185,9 @@ local function SetDeathTime(time, name)
     end
     WBT.db.global.boss[name].t_death = time;
     WBT.db.global.boss[name].name = name;
+    WBT.db.global.boss[name].realmName = GetRealmName();
+    WBT.db.global.boss[name].realm_type = GetRealmType();
+    WBT.db.global.boss[name].safe = not IsInGroup();
 end
 
 local function GetServerDeathTime(name)
@@ -384,7 +444,9 @@ local function StartWorldBossDeathTimer(...)
 
     local function MaybeAnnounceSpawnTimer(remaining_time, boss_name)
         local announce_times = {1, 2, 3, 4, 5, 10, 30, 1*60, 5*60, 10*60};
-        if SetContainsValue(announce_times, remaining_time) and IsInZoneOfBoss(boss_name) then
+        if SetContainsValue(announce_times, remaining_time)
+                and IsInZoneOfBoss(boss_name)
+                and IsKillInfoSafe({}) then
             AnnounceSpawnTime("true", false);
         end
     end
@@ -563,6 +625,13 @@ local function SlashHandler(input)
         if arg2 == nil then
             input = "true";
         end
+        local error_msgs = {};
+        if not IsKillInfoSafe(error_msgs) then
+            SendChatMessage("{cross}Warning{cross}: Timer might be incorrect!", "SAY", nil, nil);
+            for i, v in ipairs(error_msgs) do
+                SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
+            end
+        end
         AnnounceSpawnTime(input, true);
     elseif arg1 == "r" or arg1 == "reset" or arg1 == "restart" then
         ResetKillInfo();
@@ -623,7 +692,12 @@ function WBT:InitChatParsing()
         request_parser:RegisterEvent("CHAT_MSG_SAY");
         request_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
-                if event == "CHAT_MSG_SAY" and msg == CHAT_MSG_TIMER_REQUEST and not SetContainsKey(answered_requesters, sender) and not PlayerSentRequest(sender) then
+                if event == "CHAT_MSG_SAY"
+                        and msg == CHAT_MSG_TIMER_REQUEST
+                        and not SetContainsKey(answered_requesters, sender)
+                        and not PlayerSentRequest(sender)
+                        and IsKillInfoSafe({}) then
+
                     ShareTimers();
                     answered_requesters[sender] = sender;
                 end
