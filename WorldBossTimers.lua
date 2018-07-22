@@ -149,7 +149,7 @@ local function FormatTimeSeconds(seconds)
 end
 
 local function GetSpawnTimeSec(name)
-    boss = WBT.db.global.boss[name]
+    local boss = WBT.db.global.boss[name]
     if boss ~= nil then
         return boss.t_death + MAX_RESPAWN_TIME - GetServerTime();
     end
@@ -164,9 +164,9 @@ local function GetSpawnTime(name)
 end
 
 local function IsBossZone()
-    current_zone = GetZoneText();
+    local current_zone = GetZoneText();
 
-    is_boss_zone = false;
+    local is_boss_zone = false;
     for name, boss in pairs(REGISTERED_BOSSES) do
         if boss.zone == current_zone then
             is_boss_zone = true;
@@ -184,7 +184,7 @@ local function IsDead(name)
 end
 
 local function AnyDead()
-    any_dead = false;
+    local any_dead = false;
     for name, boss in pairs(REGISTERED_BOSSES) do
         if IsDead(name) then
             any_dead = true;
