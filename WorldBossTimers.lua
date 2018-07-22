@@ -66,24 +66,30 @@ local REGISTERED_BOSSES = {
         zone = "Valley of the Four Winds",
         soundfile = DEFAULT_SOUND_FILE,
     },
+    --[[
+    -- Dummy.
     ["Vale Moth"] = {
         name = "Vale Moth",
         color = "|cff1f3d4a",
         zone = "Azuremyst Isle",
         soundfile = SOUND_DIR .. "vale_moth1.mp3",
     },
+    -- Dummy.
     ["Grellkin"] = {
         name = "Grellkin",
         color = "|cffffff00",
         zone = "Shadowglen",
         soundfile = SOUND_DIR .. "grellkin2.mp3",
     },
+    -- Dummy.
+    -- This entry won't work for everything since two mobs reside in same zone.
     ["Young Nightsaber"] = {
         name = "Young Nightsaber",
         color = "|cffff3d4a",
-        zone =  "Shadowglen",
+        zone =  "_Shadowglen",
         soundfile = SOUND_DIR .. "vale_moth1.mp3",
     },
+    ]]--
 }
 
 local function GetColoredBossName(name)
