@@ -448,8 +448,10 @@ local function InitDeathTrackerFrame()
 
     boss_death_frame = CreateFrame("Frame");
     boss_death_frame:SetScript("OnEvent", function(event, ...)
-             local timestamp, type, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2 = select(2, ...);
-             if type == "UNIT_DIED" and IsBoss(destName) then
+		--local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, extraArg1, extraArg2, extraArg3, extraArg4, extraArg5, extraArg6, extraArg7, extraArg8, extraArg9, extraArg10 = CombatLogGetCurrentEventInfo()
+		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo()
+
+             if eventType == "UNIT_DIED" and IsBoss(destName) then
                  SetDeathTime(GetServerTime(), destName); -- Don't use timestamp from varags. It's not synchronized with server time.
                  StartWorldBossDeathTimer(destName);
              end
@@ -483,8 +485,7 @@ local function InitCombatScannerFrame()
     boss_combat_frame.t_next = 0;
 
     function boss_combat_frame:DoScanWorldBossCombat(event, ...)
-        -- NOTE: I don't know why InitDeathTrackerFrame gets one extra input arg in varags. Seems to be 'event'.
-        local timestamp, type, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2 = select(1, ...);
+		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo()
 
         local t = GetServerTime();
 
