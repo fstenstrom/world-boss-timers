@@ -33,7 +33,7 @@ local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
 local DEFAULT_SOUND_FILE = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
 
 
-local bosses = {
+local REGISTERED_BOSSES = {
     ["Oondasta"] = {
         name = "Oondasta",
         color = "|cff21ffa3",
@@ -85,7 +85,7 @@ local bosses = {
 }
 
 local function GetColoredBossName(name)
-    return bosses[name].color .. bosses[name].name .. BASE_COLOR;
+    return REGISTERED_BOSSES[name].color .. REGISTERED_BOSSES[name].name .. BASE_COLOR;
 end
 
 local function SetContainsKey(set, key)
@@ -103,16 +103,16 @@ local function SetContainsValue(set, value)
 end
 
 local function IsBoss(name)
-    return SetContainsKey(bosses, name);
+    return SetContainsKey(REGISTERED_BOSSES, name);
 end
 
 local function IsInZoneOfBoss(name)
-    return GetZoneText() == bosses[name].zone;
+    return GetZoneText() == REGISTERED_BOSSES[name].zone;
 end
 
 local function BossesInCurrentZone()
     local bosses_in_zone = {}
-    for name, boss in pairs(bosses) do
+    for name, boss in pairs(REGISTERED_BOSSES) do
         if IsInZoneOfBoss(name) then
             bosses_in_zone[name] = name;
         end
@@ -167,7 +167,7 @@ local function IsBossZone()
     current_zone = GetZoneText();
 
     is_boss_zone = false;
-    for name, boss in pairs(bosses) do
+    for name, boss in pairs(REGISTERED_BOSSES) do
         if boss.zone == current_zone then
             is_boss_zone = true;
         end
@@ -185,7 +185,7 @@ end
 
 local function AnyDead()
     any_dead = false;
-    for name, boss in pairs(bosses) do
+    for name, boss in pairs(REGISTERED_BOSSES) do
         if IsDead(name) then
             any_dead = true;
         end
@@ -200,7 +200,7 @@ end
 local function GetBossNames()
     local boss_names = {};
     local i = 1; -- Don't start on index = 0... >-<
-    for name, _ in pairs(bosses) do
+    for name, _ in pairs(REGISTERED_BOSSES) do
         boss_names[i] = name;
         i = i + 1;
     end
@@ -353,7 +353,7 @@ local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
     local current_zone = GetZoneText();
     local spawn_timers = {};
     local entries = 0; -- No way to get size of table :(
-    for name, boss in pairs(bosses) do
+    for name, boss in pairs(REGISTERED_BOSSES) do
         if (not current_zone_only) or current_zone == boss.zone then
             if IsDead(name) then
                 local server_death_time = "";
@@ -436,7 +436,7 @@ local function StartWorldBossDeathTimer(...)
     for _, name in ipairs({...}) do -- To iterate varargs, note that they have to be in a table. They will be expanded otherwise.
         if WBT.db.global.boss[name] and not HasRespawned(name) then
             local timer_duration = GetSpawnTimeSec(name);
-            StartTimer(WBT.db.global.boss[name], timer_duration, 1, bosses[name].color .. name .. BASE_COLOR .. ": ");
+            StartTimer(WBT.db.global.boss[name], timer_duration, 1, REGISTERED_BOSSES[name].color .. name .. BASE_COLOR .. ": ");
         end
     end
 end
@@ -462,7 +462,7 @@ local function PlayAlertSound(boss_name)
     local sound_type = WBT.db.global.sound_type;
     local sound_enabled = WBT.db.global.sound_enabled;
 
-    local soundfile = bosses[boss_name].soundfile;
+    local soundfile = REGISTERED_BOSSES[boss_name].soundfile;
     if sound_type == "classic" then
         soundfile = DEFAULT_SOUND_FILE;
     end
