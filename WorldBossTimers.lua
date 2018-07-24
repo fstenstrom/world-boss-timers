@@ -20,6 +20,7 @@ local defaults = {
         sound_enabled = true,
         sound_type = SOUND_CLASSIC,
         do_announce = true,
+        send_data = true,
     },
     char = {
         boss = {},
@@ -462,7 +463,7 @@ local function StartWorldBossDeathTimer(...)
                 and SetContainsValue(announce_times, remaining_time)
                 and IsInZoneOfBoss(boss_name)
                 and IsKillInfoSafe({}) then
-            AnnounceSpawnTime(true, false);
+            AnnounceSpawnTime(true, WBT.db.global.send_data);
         end
     end
 
@@ -626,12 +627,25 @@ local function SlashHandler(input)
         WBT:Print("/wbt a all --> Announces timers for all bosses.");
         WBT:Print("/wbt show --> Shows the timers frame.");
         WBT:Print("/wbt hide --> Hides the timers frame.");
+        WBT:Print("/wbt send disable--> Disables send timer data in auto announce.");
+        WBT:Print("/wbt send enable --> Enables send timer data in auto announce.");
         WBT:Print("/wbt sound disable --> Disables sound alerts.");
         WBT:Print("/wbt sound enable --> Enables sound alerts.");
         --WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'.");
         --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'.");
         WBT:Print("/wbt ann disable --> Disables automatic announcements.");
         WBT:Print("/wbt ann enable --> Enables automatic announcements.");
+    end
+
+    local function GetColoredStatus(status_var)
+        local color = COLOR_RED;
+        local status = "disabled";
+        if status_var then
+            color = COLOR_GREEN;
+            status = "enabled";
+        end
+
+        return color .. status .. BASE_COLOR;
     end
 
     if arg1 == "hide" then
@@ -653,27 +667,26 @@ local function SlashHandler(input)
         else
             AnnounceSpawnTime(false, true);
         end
-
-    elseif arg1 == "ann" then
-        local function GetColoredStatus()
-            local color = COLOR_RED;
-            local status = "disabled";
-            if WBT.db.global.do_announce then
-                color = COLOR_GREEN;
-                status = "enabled";
-            end
-
-            return color .. status .. BASE_COLOR;
-
+    elseif arg1 == "send" then
+        local base_str = "Data sending in auto announce is now ";
+        if arg2 == "enable" then
+            WBT.db.global.send_data = true;
+            WBT:Print(base_str .. GetColoredStatus(WBT.db.global.send_data) .. ".");
+        elseif arg2 == "disable" then
+            WBT.db.global.send_data = false;
+            WBT:Print(base_str .. GetColoredStatus(WBT.db.global.send_data) .. ".");
+        else
+            WBT:Print("Sending data in announcement is currently " ..  GetColoredStatus() .. ".");
+            WBT:Print("Please enter enable/disable as second argument.");
         end
-
+    elseif arg1 == "ann" then
         local base_str = "Automatic announcements are now ";
         if arg2 == "enable" then
             WBT.db.global.do_announce = true;
-            WBT:Print(base_str .. GetColoredStatus() .. ".");
+            WBT:Print(base_str .. GetColoredStatus(WBT.db.global.do_announce) .. ".");
         elseif arg2 == "disable" then
             WBT.db.global.do_announce = false;
-            WBT:Print(base_str .. GetColoredStatus() .. ".");
+            WBT:Print(base_str .. GetColoredStatus(WBT.db.global.do_announce) .. ".");
         else
             WBT:Print("Automatic announcements are currently " ..  GetColoredStatus() .. ".");
             WBT:Print("Please enter enable/disable as second argument.");
