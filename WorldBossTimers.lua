@@ -617,20 +617,19 @@ local function SlashHandler(input)
 
     local function PrintHelp()
         local indent = "   ";
-        WBT:Print("How to use: /wbt <arg1> <arg2>");
-        WBT:Print("arg1: \'r\' --> resets all kill info.");
-        WBT:Print("arg1: \'s\' --> prints your saved bosses.");
-        WBT:Print("arg1: \'a\' --> announces timers for boss in zone (and all if arg2 == \'all\').");
-        WBT:Print("arg1: \'show\' --> shows the timers frame.");
-        WBT:Print("arg1: \'hide\' --> hides the timers frame.");
-        WBT:Print("arg1: \'sound\' --> ...");
-        WBT:Print("arg2: " .. indent .. "\'disable\'");
-        WBT:Print("arg2: " .. indent .. "\'enable\'");
-        WBT:Print("arg2: " .. indent .. "\'classic\' --> War drum alert.");
-        WBT:Print("arg2: " .. indent .. "\'fancy\' --> Sometimes custom fancy alerts.");
-        WBT:Print("arg1: \'ann\' --> ...");
-        WBT:Print("arg2: " .. indent .. "\'disable\' --> Disables automatic announcements.");
-        WBT:Print("arg2: " .. indent .. "\'enable\' --> Enables automatic announcements.");
+        WBT:Print("WorldBossTimers slash commands:");
+        WBT:Print("/wbt reset --> Resets all kill info.");
+        WBT:Print("/wbt saved --> Prints your saved bosses.");
+        WBT:Print("/wbt a --> Announces timers for boss in zone.");
+        WBT:Print("/wbt a all --> Announces timers for all bosses.");
+        WBT:Print("/wbt show --> Shows the timers frame.");
+        WBT:Print("/wbt hide --> Hides the timers frame.");
+        WBT:Print("/wbt sound disable --> Disables sound alerts.");
+        WBT:Print("/wbt sound enable --> Enables sound alerts.");
+        --WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'.");
+        --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'.");
+        WBT:Print("/wbt ann disable --> Disables automatic announcements.");
+        WBT:Print("/wbt ann enable --> Enables automatic announcements.");
     end
 
     if arg1 == "hide" then
