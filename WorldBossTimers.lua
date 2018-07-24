@@ -441,7 +441,7 @@ local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
         for name, timers in pairs(spawn_timers) do
             local spawn_time = timers[1];
             local server_death_time = timers[2];
-            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time .. server_death_time .. " ... WorldBossTimers addon is now on curse, check it out!";
+            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time .. server_death_time;
             SendChatMessage(msg, channel, nil, nil);
         end
     else
