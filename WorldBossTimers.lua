@@ -420,12 +420,6 @@ end
 
 local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
 
-    current_zone_only = string.lower(current_zone_only);
-
-    if current_zone_only == "0" or current_zone_only == "false" or current_zone_only == "all" then
-        current_zone_only = false;
-    end
-
     local current_zone = GetZoneText();
     local spawn_timers = {};
     local entries = 0; -- No way to get size of table :(
@@ -464,7 +458,7 @@ local function StartWorldBossDeathTimer(...)
                 and SetContainsValue(announce_times, remaining_time)
                 and IsInZoneOfBoss(boss_name)
                 and IsKillInfoSafe({}) then
-            AnnounceSpawnTime("true", false);
+            AnnounceSpawnTime(true, false);
         end
     end
 
@@ -641,21 +635,21 @@ local function SlashHandler(input)
     elseif arg1 == "show" then
         ShowGUI();
     elseif arg1 == "a" or arg1 == "announce" or arg1 == "yell" or arg1 == "tell" then
-        if arg2 == "all" then
-            input = "false";
+
+        local current_zone_only = arg2 ~= "all";
+        if current_zone_only then
+            local error_msgs = {};
+            if IsInBossZone() and not IsKillInfoSafe(error_msgs) then
+                SendChatMessage("{cross}Warning{cross}: Timer might be incorrect!", "SAY", nil, nil);
+                for i, v in ipairs(error_msgs) do
+                    SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
+                end
+            end
+            AnnounceSpawnTime(true, true);
         else
-            input = "true";
+            AnnounceSpawnTime(false, true);
         end
 
-        -- Only check for warnings in boss zones.
-        local error_msgs = {};
-        if IsInBossZone() and not IsKillInfoSafe(error_msgs) then
-            SendChatMessage("{cross}Warning{cross}: Timer might be incorrect!", "SAY", nil, nil);
-            for i, v in ipairs(error_msgs) do
-                SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
-            end
-        end
-        AnnounceSpawnTime(input, true);
     elseif arg1 == "ann" then
         local function GetColoredStatus()
             local color = COLOR_RED;
@@ -719,7 +713,7 @@ local function StartVisibilityHandler()
 end
 
 local function ShareTimers()
-    AnnounceSpawnTime("true", true);
+    AnnounceSpawnTime(true, true);
 end
 
 function WBT:GetGui()
