@@ -139,6 +139,10 @@ local function BossesInCurrentZone()
     return bosses_in_zone;
 end
 
+local function IsInBossZone()
+    return not TableIsEmpty(BossesInCurrentZone());
+end
+
 local function GetRealmType()
     local pvpStyle = GetZonePVPInfo();
     if pvpStyle == nil then
@@ -643,8 +647,9 @@ local function SlashHandler(input)
             input = "true";
         end
 
+        -- Only check for warnings in boss zones.
         local error_msgs = {};
-        if not IsKillInfoSafe(error_msgs) then
+        if IsInBossZone() and not IsKillInfoSafe(error_msgs) then
             SendChatMessage("{cross}Warning{cross}: Timer might be incorrect!", "SAY", nil, nil);
             for i, v in ipairs(error_msgs) do
                 SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
