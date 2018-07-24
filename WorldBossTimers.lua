@@ -19,6 +19,7 @@ local defaults = {
         gui = nil,
         sound_enabled = true,
         sound_type = SOUND_CLASSIC,
+        do_announce = true,
     },
     char = {
         boss = {},
@@ -29,6 +30,8 @@ local REALM_TYPE_PVE = "PvE";
 local REALM_TYPE_PVP = "PvP";
 
 local BASE_COLOR = "|cffffffff";
+local COLOR_RED = "|cffff0000";
+local COLOR_GREEN = "|cff00ff00";
 local INDENT = "--";
 local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
@@ -452,8 +455,9 @@ end
 local function StartWorldBossDeathTimer(...)
 
     local function MaybeAnnounceSpawnTimer(remaining_time, boss_name)
-        local announce_times = {1, 2, 3, 4, 5, 10, 30, 1*60, 5*60, 10*60};
-        if SetContainsValue(announce_times, remaining_time)
+        local announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
+        if WBT.db.global.do_announce
+                and SetContainsValue(announce_times, remaining_time)
                 and IsInZoneOfBoss(boss_name)
                 and IsKillInfoSafe({}) then
             AnnounceSpawnTime("true", false);
@@ -624,16 +628,22 @@ local function SlashHandler(input)
         WBT:Print("arg2: " .. indent .. "\'enable\'");
         WBT:Print("arg2: " .. indent .. "\'classic\' --> War drum alert.");
         WBT:Print("arg2: " .. indent .. "\'fancy\' --> Sometimes custom fancy alerts.");
+        WBT:Print("arg1: \'ann\' --> ...");
+        WBT:Print("arg2: " .. indent .. "\'disable\' --> Disables automatic announcements.");
+        WBT:Print("arg2: " .. indent .. "\'enable\' --> Enables automatic announcements.");
     end
 
     if arg1 == "hide" then
         HideGUI();
     elseif arg1 == "show" then
         ShowGUI();
-    elseif arg1 == "ann" or arg1 == "a" or arg1 == "announce" or arg1 == "yell" or arg1 == "tell" then
-        if arg2 == nil then
+    elseif arg1 == "a" or arg1 == "announce" or arg1 == "yell" or arg1 == "tell" then
+        if arg2 == "all" then
+            input = "false";
+        else
             input = "true";
         end
+
         local error_msgs = {};
         if not IsKillInfoSafe(error_msgs) then
             SendChatMessage("{cross}Warning{cross}: Timer might be incorrect!", "SAY", nil, nil);
@@ -642,6 +652,30 @@ local function SlashHandler(input)
             end
         end
         AnnounceSpawnTime(input, true);
+    elseif arg1 == "ann" then
+        local function GetColoredStatus()
+            local color = COLOR_RED;
+            local status = "disabled";
+            if WBT.db.global.do_announce then
+                color = COLOR_GREEN;
+                status = "enabled";
+            end
+
+            return color .. status .. BASE_COLOR;
+
+        end
+
+        local base_str = "Automatic announcements are now ";
+        if arg2 == "enable" then
+            WBT.db.global.do_announce = true;
+            WBT:Print(base_str .. GetColoredStatus() .. ".");
+        elseif arg2 == "disable" then
+            WBT.db.global.do_announce = false;
+            WBT:Print(base_str .. GetColoredStatus() .. ".");
+        else
+            WBT:Print("Automatic announcements are currently " ..  GetColoredStatus() .. ".");
+            WBT:Print("Please enter enable/disable as second argument.");
+        end
     elseif arg1 == "r" or arg1 == "reset" or arg1 == "restart" then
         ResetKillInfo();
     elseif arg1 == "s" or arg1 == "saved" or arg1 == "save" then
