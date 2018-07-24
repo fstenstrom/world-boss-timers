@@ -176,10 +176,10 @@ local function IsKillInfoSafe(error_msgs)
     if not kill_info.safe then
         table.insert(error_msgs, "Player was in a group during previous kill.");
     end
-    if not kill_info.realm_type == realm_type then
+    if not (kill_info.realm_type == realm_type) then
         table.insert(error_msgs, "Kill was made on a " .. kill_info.realm_type .. " realm, but are now on a " .. realm_type .. " realm.");
     end
-    if not kill_info.realmName == realmName then
+    if not (kill_info.realmName == realmName) then
         table.insert(error_msgs, "Kill was made on " .. kill_info.realmName .. ", but are now on " .. realmName .. ".");
     end
 
