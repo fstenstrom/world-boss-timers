@@ -10,12 +10,15 @@ local gui;
 local boss_death_frame;
 local boss_combat_frame;
 
+local SOUND_CLASSIC = "CLASSIC"
+local SOUND_FANCY = "FANCY";
+
 local defaults = {
     global = {
         boss = {},
         gui = nil,
         sound_enabled = true,
-        sound_type = "fancy",
+        sound_type = SOUND_CLASSIC,
     },
     char = {
         boss = {},
@@ -438,7 +441,7 @@ local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
         for name, timers in pairs(spawn_timers) do
             local spawn_time = timers[1];
             local server_death_time = timers[2];
-            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time .. server_death_time;
+            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time .. server_death_time .. " ... WorldBossTimers addon is now on curse, check it out!";
             SendChatMessage(msg, channel, nil, nil);
         end
     else
@@ -531,7 +534,7 @@ local function PlayAlertSound(boss_name)
     local sound_enabled = WBT.db.global.sound_enabled;
 
     local soundfile = REGISTERED_BOSSES[boss_name].soundfile;
-    if sound_type == "classic" then
+    if sound_type == SOUND_CLASSIC then
         soundfile = DEFAULT_SOUND_FILE;
     end
 
