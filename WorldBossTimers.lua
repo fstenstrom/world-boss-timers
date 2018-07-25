@@ -676,7 +676,7 @@ local function SlashHandler(input)
             WBT.db.global.send_data = false;
             WBT:Print(base_str .. GetColoredStatus(WBT.db.global.send_data) .. ".");
         else
-            WBT:Print("Sending data in announcement is currently " ..  GetColoredStatus() .. ".");
+            WBT:Print("Sending data in announcement is currently " ..  GetColoredStatus(WBT.db.global.send_data) .. ".");
             WBT:Print("Please enter enable/disable as second argument.");
         end
     elseif arg1 == "ann" then
@@ -688,7 +688,7 @@ local function SlashHandler(input)
             WBT.db.global.do_announce = false;
             WBT:Print(base_str .. GetColoredStatus(WBT.db.global.do_announce) .. ".");
         else
-            WBT:Print("Automatic announcements are currently " ..  GetColoredStatus() .. ".");
+            WBT:Print("Automatic announcements are currently " ..  GetColoredStatus(WBT.db.global.do_announce) .. ".");
             WBT:Print("Please enter enable/disable as second argument.");
         end
     elseif arg1 == "r" or arg1 == "reset" or arg1 == "restart" then
