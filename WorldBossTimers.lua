@@ -627,7 +627,7 @@ local function SlashHandler(input)
         WBT:Print("/wbt a all --> Announces timers for all bosses.");
         WBT:Print("/wbt show --> Shows the timers frame.");
         WBT:Print("/wbt hide --> Hides the timers frame.");
-        WBT:Print("/wbt send disable--> Disables send timer data in auto announce.");
+        WBT:Print("/wbt send disable --> Disables send timer data in auto announce.");
         WBT:Print("/wbt send enable --> Enables send timer data in auto announce.");
         WBT:Print("/wbt sound disable --> Disables sound alerts.");
         WBT:Print("/wbt sound enable --> Enables sound alerts.");
