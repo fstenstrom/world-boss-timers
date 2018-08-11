@@ -155,9 +155,9 @@ end
 
 local function GetKillInfoFromZone()
     local current_zone = GetZoneText();
-    for name, kill_info in pairs(REGISTERED_BOSSES) do
-        if kill_info.zone == current_zone then
-            return WBT.db.global.boss[kill_info.name];
+    for name, boss_info in pairs(REGISTERED_BOSSES) do
+        if boss_info.zone == current_zone then
+            return WBT.db.global.boss[boss_info.name];
         end
     end
 
