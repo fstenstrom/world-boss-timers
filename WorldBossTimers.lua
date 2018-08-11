@@ -70,7 +70,7 @@ local REGISTERED_BOSSES = {
     ["Sha of Anger"] = {
         name = "Sha of Anger",
         color = "|cff8a1a9f",
-        zone = "Valley of the Four Winds",
+        zone = "Kun-Lai Summit",
         soundfile = DEFAULT_SOUND_FILE,
     },
     --[[
