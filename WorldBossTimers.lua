@@ -604,7 +604,7 @@ local function PrintKilledBosses()
 end
 
 local function ResetKillInfo()
-    WBT:Print("Reseting all kill info.");
+    WBT:Print("Resetting all kill info.");
     for k, v in pairs(WBT.db.global.boss) do
         WBT.db.global.boss[k].timer.kill = true;
         WBT.db.global.boss[k] = nil;
