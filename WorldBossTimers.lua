@@ -424,7 +424,7 @@ local function InitGUI()
     local height = 100;
     gui:SetWidth(width);
     gui:SetHeight(height);
-    gui:SetCallback("OnClose", function(widget) AceGUI:Release(widget) end);
+    gui:SetCallback("OnClose", function(widget) AceGUI:Release(widget) end); -- Keep watch on this line.
     gui:SetTitle("World Boss Timers");
     gui:SetLayout("List");
     gui:EnableResize(false);
@@ -646,7 +646,7 @@ local function StartWorldBossDeathTimer(...)
                 if (self.TimeSinceLastUpdate > UpdateInterval) then
 
                     if self.kill then
-                        --KillUpdateFrame(self);
+                        KillUpdateFrame(self);
                         UpdateGUIVisibility();
                         return;
                     end
