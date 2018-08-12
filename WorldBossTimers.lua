@@ -21,6 +21,7 @@ local defaults = {
         sound_type = SOUND_CLASSIC,
         do_announce = true,
         send_data = true,
+        cyclic = false,
     },
     char = {
         boss = {},
@@ -30,7 +31,7 @@ local defaults = {
 local REALM_TYPE_PVE = "PvE";
 local REALM_TYPE_PVP = "PvP";
 
-local BASE_COLOR = "|cffffffff";
+local COLOR_DEFAULT = "|cffffffff";
 local COLOR_RED = "|cffff0000";
 local COLOR_GREEN = "|cff00ff00";
 
@@ -42,12 +43,20 @@ local RANDOM_DELIM = " - ";
 local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
 
-local MAX_RESPAWN_TIME = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:58.
+local MAX_RESPAWN_TIME = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:59.
 local MIN_RESPAWN_TIME_RANDOM = 12*60; -- Conservative guesses. Actual values are not known.
 local MAX_RESPAWN_TIME_RANDOM = 18*60; -- Conservative guesses. Actual values are not known.
+--@do-not-package@
+--[[
+local MAX_RESPAWN_TIME = 4; -- Minus 1, since they tend to spawn after 14:59.
+local MIN_RESPAWN_TIME_RANDOM = 5; -- Conservative guesses. Actual values are not known.
+local MAX_RESPAWN_TIME_RANDOM = 10; -- Conservative guesses. Actual values are not known.
+]]--
+--@end-do-not-package@
 
 local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
-local DEFAULT_SOUND_FILE = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
+local SOUND_FILE_DEFAULT = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
+local SOUND_FILE_PREPARE = "Sound\\creature\\EadricThePure\\AC_Eadric_Aggro01.ogg";
 
 
 local REGISTERED_BOSSES = {
@@ -69,21 +78,21 @@ local REGISTERED_BOSSES = {
         name = "Galleon",
         color = "|cffc1f973",
         zone = "Valley of the Four Winds",
-        soundfile = DEFAULT_SOUND_FILE,
+        soundfile = SOUND_FILE_DEFAULT,
         random_spawn_time = false,
     },
     ["Nalak"] = {
         name = "Nalak",
         color = "|cff0081cc",
         zone = "Isle of Thunder",
-        soundfile = DEFAULT_SOUND_FILE,
+        soundfile = SOUND_FILE_DEFAULT,
         random_spawn_time = true,
     },
     ["Sha of Anger"] = {
         name = "Sha of Anger",
         color = "|cff8a1a9f",
         zone = "Kun-Lai Summit",
-        soundfile = DEFAULT_SOUND_FILE,
+        soundfile = SOUND_FILE_DEFAULT,
         random_spawn_time = true,
     },
     --@do-not-package@
@@ -119,8 +128,16 @@ local REGISTERED_BOSSES = {
     --@end-do-not-package@
 }
 
+local function CyclicEnabled()
+    return WBT.db.global.cyclic;
+end
+
+local function SetCyclic(state)
+    WBT.db.global.cyclic = state;
+end
+
 local function GetColoredBossName(name)
-    return REGISTERED_BOSSES[name].color .. REGISTERED_BOSSES[name].name .. BASE_COLOR;
+    return REGISTERED_BOSSES[name].color .. REGISTERED_BOSSES[name].name .. COLOR_DEFAULT;
 end
 
 local function SetContainsKey(set, key)
@@ -205,6 +222,9 @@ local function IsKillInfoSafe(error_msgs)
     if not kill_info.safe then
         table.insert(error_msgs, "Player was in a group during previous kill.");
     end
+    if kill_info.cyclic then
+        table.insert(error_msgs, "Last kill wasn't recorded. This is just an estimate.");
+    end
     if not (kill_info.realm_type == realm_type) then
         table.insert(error_msgs, "Kill was made on a " .. kill_info.realm_type .. " realm, but are now on a " .. realm_type .. " realm.");
     end
@@ -229,6 +249,7 @@ local function SetDeathTime(time, name)
     WBT.db.global.boss[name].realmName = GetRealmName();
     WBT.db.global.boss[name].realm_type = GetRealmType();
     WBT.db.global.boss[name].safe = not IsInGroup();
+    WBT.db.global.boss[name].cyclic = false;
 end
 
 local function GetServerDeathTime(name)
@@ -293,6 +314,15 @@ local function GetSpawnTime(name)
 
         return FormatTimeSeconds(spawn_time_sec);
     end
+end
+
+local function GetSpawnTimeOutput(name)
+    local text = GetSpawnTime(name);
+    if WBT.db.global.boss[name].cyclic then
+        text = COLOR_RED .. text .. COLOR_DEFAULT;
+    end
+
+    return text;
 end
 
 local function IsBossZone()
@@ -385,11 +415,11 @@ local function InitGUI()
         self:ReleaseChildren();
 
         for name, boss in pairs(WBT.db.global.boss) do
-            if IsDead(name) then
+            if IsDead(name) and (not(boss.cyclic) or CyclicEnabled()) then
                 local label = AceGUI:Create("InteractiveLabel");
                 label:SetWidth(170);
-                label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTime(name));
-                label:SetCallback("OnClick", function() WBT:Print(name) end);
+                label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTimeOutput(name));
+                label:SetCallback("OnClick", function() WBT:Print(name) end); -- TODO: change/disable this.
                 -- Add the button to the container
                 self:AddChild(label);
                 --WBT:Print(label:IsShown());
@@ -528,6 +558,22 @@ local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
     AnnounceSpawnTimers(bosses, num_entries, send_data_for_parsing);
 end
 
+local function KillTag(timer, state)
+    timer.kill = state;
+end
+
+-- For bosses with non-random spawn. Modify the result for other bosses.
+local function EstimationNextSpawn(name)
+    local t_spawn = WBT.db.global.boss[name].t_death;
+    local t_now = GetServerTime();
+    while t_spawn < t_now do
+        t_spawn = t_spawn + MAX_RESPAWN_TIME;
+    end
+
+    local t_death_new = t_spawn - MAX_RESPAWN_TIME;
+    return t_death_new, t_spawn;
+end
+
 local function StartWorldBossDeathTimer(...)
 
     local function MaybeAnnounceSpawnTimer(remaining_time, boss_name)
@@ -548,15 +594,17 @@ local function StartWorldBossDeathTimer(...)
         return not IsDead(name);
     end
 
-    local function StartTimer(boss, time, freq, text)
+    local function StartTimer(boss, duration, freq, text)
         -- Always kill the previous frame and start a new one.
         if boss.timer ~= nil then
-            boss.timer.kill = true;
+            KillTag(boss.timer, true);
         end
-        boss.timer = CreateFrame("Frame");
-        boss.timer.kill = false;
 
-        local until_time = GetServerTime() + time;
+        -- Create new frame.
+        boss.timer = CreateFrame("Frame");
+        KillTag(boss.timer, false);
+
+        local until_time = GetServerTime() + duration;
         local UpdateInterval = freq;
         boss.timer:SetScript("OnUpdate", function(self, elapsed)
                 if self.TimeSinceLastUpdate == nil then
@@ -565,15 +613,36 @@ local function StartWorldBossDeathTimer(...)
                 self.TimeSinceLastUpdate = self.TimeSinceLastUpdate + elapsed;
 
                 if (self.TimeSinceLastUpdate > UpdateInterval) then
+
+                    if self.kill then
+                        --KillUpdateFrame(self);
+                        UpdateGUIVisibility();
+                        return;
+                    end
+
                     self.remaining_time = until_time - GetServerTime();
 
                     MaybeAnnounceSpawnTimer(self.remaining_time, boss.name);
 
-                    if self.remaining_time < 0 or self.kill then
+                    if self.remaining_time < 0 then
                         if IsInZoneOfBoss(boss.name) then
                             FlashClientIcon();
                         end
-                        KillUpdateFrame(self);
+
+                        if CyclicEnabled() then
+                            local t_death_new, t_spawn = EstimationNextSpawn(boss.name);
+                            boss.t_death = t_death_new
+                            if REGISTERED_BOSSES[boss.name].random_spawn_time then
+                                until_time = t_spawn - MAX_RESPAWN_TIME + MAX_RESPAWN_TIME_RANDOM;
+                            else
+                                until_time = t_spawn;
+                            end
+
+                            boss.cyclic = true;
+                        else
+                            --KillUpdateFrame(self);
+                        end
+
                         UpdateGUIVisibility();
                     end
 
@@ -587,9 +656,9 @@ local function StartWorldBossDeathTimer(...)
     end
 
     for _, name in ipairs({...}) do -- To iterate varargs, note that they have to be in a table. They will be expanded otherwise.
-        if WBT.db.global.boss[name] and not HasRespawned(name) then
+        if WBT.db.global.boss[name] and (not(HasRespawned(name)) or CyclicEnabled()) then
             local timer_duration = GetSpawnTimeSec(name);
-            StartTimer(WBT.db.global.boss[name], timer_duration, 1, REGISTERED_BOSSES[name].color .. name .. BASE_COLOR .. ": ");
+            StartTimer(WBT.db.global.boss[name], timer_duration, 1, REGISTERED_BOSSES[name].color .. name .. COLOR_DEFAULT .. ": ");
         end
     end
 end
@@ -617,7 +686,7 @@ local function PlayAlertSound(boss_name)
 
     local soundfile = REGISTERED_BOSSES[boss_name].soundfile;
     if sound_type == SOUND_CLASSIC then
-        soundfile = DEFAULT_SOUND_FILE;
+        soundfile = SOUND_FILE_DEFAULT;
     end
 
     if sound_enabled then
@@ -681,7 +750,7 @@ end
 local function ResetKillInfo()
     WBT:Print("Resetting all kill info.");
     for k, v in pairs(WBT.db.global.boss) do
-        WBT.db.global.boss[k].timer.kill = true;
+        KillTag(WBT.db.global.boss[k].timer, true);
         WBT.db.global.boss[k] = nil;
     end
 end
@@ -710,6 +779,7 @@ local function SlashHandler(input)
         --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'.");
         WBT:Print("/wbt ann disable --> Disables automatic announcements.");
         WBT:Print("/wbt ann enable --> Enables automatic announcements.");
+        WBT:Print("/wbt cyclic --> Toggle cyclic timers.");
     end
 
     local function GetColoredStatus(status_var)
@@ -720,9 +790,14 @@ local function SlashHandler(input)
             status = "enabled";
         end
 
-        return color .. status .. BASE_COLOR;
+        return color .. status .. COLOR_DEFAULT;
     end
 
+    local function PrintFormattedStatus(output, status_var)
+        WBT:Print(output .. " " .. GetColoredStatus(status_var) .. ".");
+    end
+
+    local new_state = nil;
     if arg1 == "hide" then
         HideGUI();
     elseif arg1 == "show" then
@@ -788,6 +863,10 @@ local function SlashHandler(input)
         else
             PrintHelp();
         end
+    elseif arg1 == "cycle" or arg1 == "cyclic" then
+        new_state = not CyclicEnabled()
+        SetCyclic(new_state);
+        PrintFormattedStatus("Cyclic mode is now", new_state);
     else
         PrintHelp();
     end
