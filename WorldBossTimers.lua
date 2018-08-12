@@ -363,8 +363,16 @@ local function IsBossZone()
 end
 
 local function IsDead(name)
-    if WBT.db.global.boss[name] == nil then
+    local kill_info = WBT.db.global.boss[name];
+    if not kill_info then
         return false;
+    end
+    if kill_info.cyclic then
+        if CyclicEnabled() then
+            return true;
+        else
+            return false;
+        end
     end
     if HasRandomSpawnTime(name) then
         local _, t_upper = GetSpawnTimesRandom(name);
@@ -375,17 +383,16 @@ local function IsDead(name)
 end
 
 local function AnyDead()
-    local any_dead = false;
     for name, boss in pairs(REGISTERED_BOSSES) do
         if IsDead(name) then
-            any_dead = true;
+            return true;
         end
     end
-    return any_dead;
+    return false;
 end
 
 local function ShouldShowGUI()
-    return AnyDead() or IsBossZone();
+    return IsBossZone() or AnyDead();
 end
 
 local function GetBossNames()
@@ -875,6 +882,7 @@ local function SlashHandler(input)
 
         new_state = not CyclicEnabled()
         SetCyclic(new_state);
+        UpdateGUIVisibility();
         PrintFormattedStatus("Cyclic mode is now", new_state);
     else
         PrintHelp();
