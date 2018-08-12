@@ -33,11 +33,19 @@ local REALM_TYPE_PVP = "PvP";
 local BASE_COLOR = "|cffffffff";
 local COLOR_RED = "|cffff0000";
 local COLOR_GREEN = "|cff00ff00";
+
+local CHANNEL_ANNOUNCE = "SAY";
+local ICON_SKULL = "{skull}";
 local INDENT = "--";
+local RANDOM_DELIM = " - ";
+
 local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
+
 local MAX_RESPAWN_TIME = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:58.
---local MAX_RESPAWN_TIME = 50 - 1; -- Minus 1, since they tend to spawn after 14:58.
+local MIN_RESPAWN_TIME_RANDOM = 12*60; -- Conservative guesses. Actual values are not known.
+local MAX_RESPAWN_TIME_RANDOM = 18*60; -- Conservative guesses. Actual values are not known.
+
 local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
 local DEFAULT_SOUND_FILE = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
 
@@ -48,31 +56,37 @@ local REGISTERED_BOSSES = {
         color = "|cff21ffa3",
         zone = "Isle of Giants",
         soundfile = SOUND_DIR .. "oondasta3.mp3",
+        random_spawn_time = false,
     },
     ["Rukhmar"] = {
         name = "Rukhmar",
         color = "|cfffa6e06",
         zone = "Spires of Arak",
         soundfile = SOUND_DIR .. "rukhmar1.mp3",
+        random_spawn_time = false,
     },
     ["Galleon"] = {
         name = "Galleon",
         color = "|cffc1f973",
         zone = "Valley of the Four Winds",
         soundfile = DEFAULT_SOUND_FILE,
+        random_spawn_time = false,
     },
     ["Nalak"] = {
         name = "Nalak",
         color = "|cff0081cc",
         zone = "Isle of Thunder",
         soundfile = DEFAULT_SOUND_FILE,
+        random_spawn_time = true,
     },
     ["Sha of Anger"] = {
         name = "Sha of Anger",
         color = "|cff8a1a9f",
         zone = "Kun-Lai Summit",
         soundfile = DEFAULT_SOUND_FILE,
+        random_spawn_time = true,
     },
+    --@do-not-package@
     --[[
     -- Dummy.
     ["Vale Moth"] = {
@@ -80,14 +94,18 @@ local REGISTERED_BOSSES = {
         color = "|cff1f3d4a",
         zone = "Azuremyst Isle",
         soundfile = SOUND_DIR .. "vale_moth1.mp3",
+        random_spawn_time = false,
     },
+    ]]--
     -- Dummy.
     ["Grellkin"] = {
         name = "Grellkin",
         color = "|cffffff00",
         zone = "Shadowglen",
         soundfile = SOUND_DIR .. "grellkin2.mp3",
+        random_spawn_time = true,
     },
+    --[[
     -- Dummy.
     -- This entry won't work for everything since two mobs reside in same zone.
     ["Young Nightsaber"] = {
@@ -95,8 +113,10 @@ local REGISTERED_BOSSES = {
         color = "|cffff3d4a",
         zone =  "_Shadowglen",
         soundfile = SOUND_DIR .. "vale_moth1.mp3",
+        random_spawn_time = false,
     },
     ]]--
+    --@end-do-not-package@
 }
 
 local function GetColoredBossName(name)
@@ -151,6 +171,10 @@ local function GetRealmType()
     end
 
     return REALM_TYPE_PVP;
+end
+
+local function HasRandomSpawnTime(name)
+    return REGISTERED_BOSSES[name].random_spawn_time;
 end
 
 local function GetKillInfoFromZone()
@@ -225,19 +249,50 @@ local function FormatTimeSeconds(seconds)
     end
 end
 
-local function GetSpawnTimeSec(name)
+local function GetTimeSinceDeath(name)
     local boss = WBT.db.global.boss[name]
     if boss ~= nil then
-        return boss.t_death + MAX_RESPAWN_TIME - GetServerTime();
+        return GetServerTime() - boss.t_death;
+    end
+
+    return nil;
+end
+
+local function GetSpawnTimesRandom(name)
+    local t_since_death = GetTimeSinceDeath(name);
+    local t_lower_bound = MIN_RESPAWN_TIME_RANDOM - t_since_death;
+    local t_upper_bound = MAX_RESPAWN_TIME_RANDOM - t_since_death;
+
+    return t_lower_bound, t_upper_bound;
+end
+
+local function GetSpawnTimeSec(name)
+    if HasRandomSpawnTime(name) then
+        local _, t_upper = GetSpawnTimesRandom(name);
+        return t_upper;
+    else
+        return MAX_RESPAWN_TIME - GetTimeSinceDeath(name);
     end
 end
 
 local function GetSpawnTime(name)
-    local spawnTimeSec = GetSpawnTimeSec(name);
-    if spawnTimeSec == nil or spawnTimeSec < 0 then
-        return -1;
+    if HasRandomSpawnTime(name) then
+        local t_lower, t_upper = GetSpawnTimesRandom(name);
+        if t_lower == nil or t_upper == nil then
+            return -1;
+        elseif t_lower < 0 then
+            return "0s" .. RANDOM_DELIM .. FormatTimeSeconds(t_upper)
+        else
+            return  FormatTimeSeconds(t_lower) .. RANDOM_DELIM .. FormatTimeSeconds(t_upper)
+        end
+    else
+        local spawn_time_sec = GetSpawnTimeSec(name);
+        if spawn_time_sec == nil or spawn_time_sec < 0 then
+            return -1;
+        end
+
+        return FormatTimeSeconds(spawn_time_sec);
     end
-    return FormatTimeSeconds(spawnTimeSec);
 end
 
 local function IsBossZone()
@@ -257,7 +312,12 @@ local function IsDead(name)
     if WBT.db.global.boss[name] == nil then
         return false;
     end
-    return GetSpawnTimeSec(name) >= 0;
+    if HasRandomSpawnTime(name) then
+        local _, t_upper = GetSpawnTimesRandom(name);
+        return t_upper >= 0;
+    else
+        return GetSpawnTimeSec(name) >= 0;
+    end
 end
 
 local function AnyDead()
@@ -299,7 +359,7 @@ local function InitGUI()
     local gui_container = AceGUI:Create("SimpleGroup");
     gui = AceGUI:Create("Window");
 
-    local width = 200;
+    local width = 204; -- Longest possible name is "Sha of Anger: XXm YYs - MMm SSs", make sure it doesn't wrap over.
     local height = 100;
     gui:SetWidth(width);
     gui:SetHeight(height);
@@ -419,36 +479,53 @@ local function UpdateGUIVisibility()
     end
 end
 
-local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
-
+local function GetBossesToAnnounceInCurrentZone(current_zone_only)
     local current_zone = GetZoneText();
-    local spawn_timers = {};
-    local entries = 0; -- No way to get size of table :(
+    local bosses = {};
+    local num_entries = 0; -- No way to get size of table :(
     for name, boss in pairs(REGISTERED_BOSSES) do
         if (not current_zone_only) or current_zone == boss.zone then
             if IsDead(name) then
-                local server_death_time = "";
-                if send_data_for_parsing then
-                    server_death_time = " (" .. SERVER_DEATH_TIME_PREFIX .. GetServerDeathTime(name) .. ")";
-                end
-                spawn_timers[name] = {GetSpawnTime(name), server_death_time};
-                entries = entries + 1;
+                bosses[name] = name;
+                num_entries = num_entries + 1;
             end
         end
     end
 
-    if entries > 0 then
-        local channel = "SAY";
-        local SKULL = "{skull}";
-        for name, timers in pairs(spawn_timers) do
-            local spawn_time = timers[1];
-            local server_death_time = timers[2];
-            local msg = SKULL .. name .. SKULL .. ": " .. spawn_time .. server_death_time;
-            SendChatMessage(msg, channel, nil, nil);
+    return bosses, num_entries;
+end
+
+local function CreateServerDeathTimeParseable(name, send_data_for_parsing)
+    local server_death_time = "";
+    if send_data_for_parsing then
+        server_death_time = " (" .. SERVER_DEATH_TIME_PREFIX .. GetServerDeathTime(name) .. ")";
+    end
+
+    return server_death_time;
+end
+
+local function CreateAnnounceMessage(name, timer, send_data_for_parsing)
+    local spawn_time = GetSpawnTime(name);
+    local server_death_time = CreateServerDeathTimeParseable(name, send_data_for_parsing);
+
+    local msg = ICON_SKULL .. name .. ICON_SKULL .. ": " .. spawn_time .. server_death_time;
+
+    return msg;
+end
+
+local function AnnounceSpawnTimers(spawn_timers, num_entries, send_data_for_parsing)
+    if num_entries > 0 then
+        for name, timer in pairs(spawn_timers) do
+            SendChatMessage(CreateAnnounceMessage(name, timer, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
         end
     else
         WBT:Print("No spawn timers registered");
     end
+end
+
+local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
+    bosses, num_entries = GetBossesToAnnounceInCurrentZone(current_zone_only);
+    AnnounceSpawnTimers(bosses, num_entries, send_data_for_parsing);
 end
 
 local function StartWorldBossDeathTimer(...)
@@ -468,9 +545,7 @@ local function StartWorldBossDeathTimer(...)
     end
 
     local function HasRespawned(name)
-        local t_death = WBT.db.global.boss[name].t_death;
-        local t_now = GetServerTime();
-        return (t_now - t_death > MAX_RESPAWN_TIME);
+        return not IsDead(name);
     end
 
     local function StartTimer(boss, time, freq, text)
