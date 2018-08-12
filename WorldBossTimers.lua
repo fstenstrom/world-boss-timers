@@ -19,7 +19,7 @@ local defaults = {
         gui = nil,
         sound_enabled = true,
         sound_type = SOUND_CLASSIC,
-        do_announce = true,
+        auto_announce = true,
         send_data = true,
         cyclic = false,
     },
@@ -134,6 +134,30 @@ end
 
 local function SetCyclic(state)
     WBT.db.global.cyclic = state;
+end
+
+local function SendDataEnabled()
+    return WBT.db.global.send_data;
+end
+
+local function SetSendData(state)
+    WBT.db.global.send_data = state;
+end
+
+local function AutoAnnounceEnabled()
+    return WBT.db.global.auto_announce;
+end
+
+local function SetAutoAnnounce(state)
+    WBT.db.global.auto_announce = state;
+end
+
+local function SoundEnabled()
+    return WBT.db.global.sound_enabled;
+end
+
+local function SetSound(state)
+    WBT.db.global.sound_enabled = state;
 end
 
 local function GetColoredBossName(name)
@@ -582,11 +606,11 @@ local function StartWorldBossDeathTimer(...)
         --local announce_times = {1 , 10, 19, 28, 37, 46, 55, 64, 73, 82, 91, 100, 109, 118, 127, 136, 145, 154, 163, 172, 181, 190, 199, 208, 217, 226, 235, 244, 253, 262, 271, 280, 289, 298, 307, 316, 325, 334, 343, 352, 361, 370, 379, 388, 397, 406, 415, 424, 433, 442, 451, 460, 469, 478, 487, 496, 505, 514, 523, 532, 541, 550, 559, 568, 577, 586, 595, 604, 613, 622, 631, 640, 649, 658, 667, 676, 685, 694, 703, 712, 721, 730, 739, 748, 757, 766, 775, 784, 793, 802, 811, 820, 829, 838, 847, 856, 865, 874, 883, 892}
         --@end-do-not-package@
         local announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
-        if WBT.db.global.do_announce
+        if WBT.db.global.auto_announce
                 and SetContainsValue(announce_times, remaining_time)
                 and IsInZoneOfBoss(boss_name)
                 and IsKillInfoSafe({}) then
-            AnnounceSpawnTime(true, WBT.db.global.send_data);
+            AnnounceSpawnTime(true, SendDataEnabled());
         end
     end
 
@@ -765,20 +789,17 @@ local function SlashHandler(input)
     local function PrintHelp()
         local indent = "   ";
         WBT:Print("WorldBossTimers slash commands:");
-        WBT:Print("/wbt reset --> Resets all kill info.");
-        WBT:Print("/wbt saved --> Prints your saved bosses.");
-        WBT:Print("/wbt a --> Announces timers for boss in zone.");
-        WBT:Print("/wbt a all --> Announces timers for all bosses.");
-        WBT:Print("/wbt show --> Shows the timers frame.");
-        WBT:Print("/wbt hide --> Hides the timers frame.");
-        WBT:Print("/wbt send disable --> Disables send timer data in auto announce.");
-        WBT:Print("/wbt send enable --> Enables send timer data in auto announce.");
-        WBT:Print("/wbt sound disable --> Disables sound alerts.");
-        WBT:Print("/wbt sound enable --> Enables sound alerts.");
+        WBT:Print("/wbt reset --> Reset all kill info.");
+        WBT:Print("/wbt saved --> Print your saved bosses.");
+        WBT:Print("/wbt say --> Announce timers for boss in zone.");
+        WBT:Print("/wbt say all --> Announce timers for all bosses.");
+        WBT:Print("/wbt show --> Show the timers frame.");
+        WBT:Print("/wbt hide --> Hide the timers frame.");
+        WBT:Print("/wbt send --> Toggle send timer data in auto announce.");
+        WBT:Print("/wbt sound --> Toggle sound alerts.");
         --WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'.");
         --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'.");
-        WBT:Print("/wbt ann disable --> Disables automatic announcements.");
-        WBT:Print("/wbt ann enable --> Enables automatic announcements.");
+        WBT:Print("/wbt ann --> Toggle automatic announcements.");
         WBT:Print("/wbt cyclic --> Toggle cyclic timers.");
     end
 
@@ -802,7 +823,11 @@ local function SlashHandler(input)
         HideGUI();
     elseif arg1 == "show" then
         ShowGUI();
-    elseif arg1 == "a" or arg1 == "announce" or arg1 == "yell" or arg1 == "tell" then
+    elseif arg1 == "say"
+        or arg1 == "a"
+        or arg1 == "announce"
+        or arg1 == "yell"
+        or arg1 == "tell" then
 
         local current_zone_only = arg2 ~= "all";
         if current_zone_only then
@@ -818,52 +843,36 @@ local function SlashHandler(input)
             AnnounceSpawnTime(false, true);
         end
     elseif arg1 == "send" then
-        local base_str = "Data sending in auto announce is now ";
-        if arg2 == "enable" then
-            WBT.db.global.send_data = true;
-            WBT:Print(base_str .. GetColoredStatus(WBT.db.global.send_data) .. ".");
-        elseif arg2 == "disable" then
-            WBT.db.global.send_data = false;
-            WBT:Print(base_str .. GetColoredStatus(WBT.db.global.send_data) .. ".");
-        else
-            WBT:Print("Sending data in announcement is currently " ..  GetColoredStatus(WBT.db.global.send_data) .. ".");
-            WBT:Print("Please enter enable/disable as second argument.");
-        end
+        new_state = not SendDataEnabled();
+        SetSendData(new_state);
+        PrintFormattedStatus("Data sending in auto announce is now", new_state);
     elseif arg1 == "ann" then
-        local base_str = "Automatic announcements are now ";
-        if arg2 == "enable" then
-            WBT.db.global.do_announce = true;
-            WBT:Print(base_str .. GetColoredStatus(WBT.db.global.do_announce) .. ".");
-        elseif arg2 == "disable" then
-            WBT.db.global.do_announce = false;
-            WBT:Print(base_str .. GetColoredStatus(WBT.db.global.do_announce) .. ".");
-        else
-            WBT:Print("Automatic announcements are currently " ..  GetColoredStatus(WBT.db.global.do_announce) .. ".");
-            WBT:Print("Please enter enable/disable as second argument.");
-        end
-    elseif arg1 == "r" or arg1 == "reset" or arg1 == "restart" then
+        new_state = not AutoAnnounceEnabled();
+        SetAutoAnnounce(new_state);
+        PrintFormattedStatus("Automatic announcements are now", new_state);
+    elseif arg1 == "r"
+        or arg1 == "reset"
+        or arg1 == "restart" then
         ResetKillInfo();
-    elseif arg1 == "s" or arg1 == "saved" or arg1 == "save" then
+    elseif arg1 == "s"
+        or arg1 == "saved"
+        or arg1 == "save" then
         PrintKilledBosses();
     elseif arg1 == "request" then
         RequestKillData();
     elseif arg1 == "sound" then
         sound_type_args = {"classic", "fancy"};
-        enable_args = {"enable", "unmute"};
-        disable_args = {"disable", "mute"};
         if SetContainsValue(sound_type_args, arg2) then
             WBT.db.global.sound_type = arg2;
             WBT:Print("SoundType: " .. arg2);
-        elseif SetContainsValue(enable_args, arg2) then
-            WBT.db.global.sound_enabled = true;
-            WBT:Print("Sound: " .. "enabled");
-        elseif SetContainsValue(disable_args, arg2) then
-            WBT.db.global.sound_enabled = false;
-            WBT:Print("Sound: " .. "disabled");
         else
-            PrintHelp();
+            new_state = not SoundEnabled();
+            SetSound(new_state);
+            PrintFormattedStatus("Sound is now", new_state);
         end
-    elseif arg1 == "cycle" or arg1 == "cyclic" then
+    elseif arg1 == "cycle"
+        or arg1 == "cyclic" then
+
         new_state = not CyclicEnabled()
         SetCyclic(new_state);
         PrintFormattedStatus("Cyclic mode is now", new_state);
