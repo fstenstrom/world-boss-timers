@@ -38,7 +38,7 @@ local COLOR_GREEN = "|cff00ff00";
 local CHANNEL_ANNOUNCE = "SAY";
 local ICON_SKULL = "{skull}";
 local INDENT = "--";
-local RANDOM_DELIM = " - ";
+local RANDOM_DELIM = "-";
 
 local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
@@ -420,7 +420,7 @@ local function InitGUI()
     local gui_container = AceGUI:Create("SimpleGroup");
     gui = AceGUI:Create("Window");
 
-    local width = 204; -- Longest possible name is "Sha of Anger: XXm YYs - MMm SSs", make sure it doesn't wrap over.
+    local width = 200; -- Longest possible name is "Sha of Anger: XXm YYs - MMm SSs", make sure it doesn't wrap over.
     local height = 100;
     gui:SetWidth(width);
     gui:SetHeight(height);
