@@ -580,7 +580,7 @@ local function AnnounceSpawnTimers(spawn_timers, num_entries, send_data_for_pars
             SendChatMessage(CreateAnnounceMessage(name, timer, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
         end
     else
-        WBT:Print("No spawn timers registered");
+        WBT:Print("No spawn timers registered.");
     end
 end
 
