@@ -280,8 +280,11 @@ local function GetServerDeathTime(name)
     return WBT.db.global.boss[name].t_death;
 end
 
-local function KillUpdateFrame(frame)
-    frame:SetScript("OnUpdate", nil);
+local function KillUpdateFrame(name)
+    local kill_info = WBT.db.global.boss[name];
+    kill_info.timer:SetScript("OnUpdate", nil);
+    kill_info.timer = nil;
+    WBT.db.global.boss[name] = nil;
 end
 
 local function FormatTimeSeconds(seconds)
@@ -414,6 +417,26 @@ local function RequestKillData()
     end
 end
 
+local function KillTag(timer, state)
+    timer.kill = state;
+end
+
+local function UserAction_ResetBoss(name)
+    local kill_info = WBT.db.global.boss[name];
+    if not kill_info then
+        return;
+    end
+
+    if not kill_info.cyclic then
+        local cyclic_mode = COLOR_RED .. "Cyclid Mode" .. COLOR_DEFAULT;
+        WBT:Print("Clicking a world boss that is in " .. cyclic_mode .. " will reset it."
+            .. " Try '/wbt cyclic' for more info.");
+    else
+        KillTag(kill_info.timer, true);
+        WBT:Print(GetColoredBossName(name) .. " has been reset.");
+    end
+end
+
 local function InitGUI()
 
     local AceGUI = LibStub("AceGUI-3.0"); -- Need to create AceGUI 'OnInit or OnEnabled'
@@ -450,7 +473,7 @@ local function InitGUI()
                 local label = AceGUI:Create("InteractiveLabel");
                 label:SetWidth(170);
                 label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTimeOutput(name));
-                label:SetCallback("OnClick", function() WBT:Print(name) end); -- TODO: change/disable this.
+                label:SetCallback("OnClick", function() UserAction_ResetBoss(name) end); -- TODO: change/disable this.
                 -- Add the button to the container
                 self:AddChild(label);
                 --WBT:Print(label:IsShown());
@@ -589,10 +612,6 @@ local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
     AnnounceSpawnTimers(bosses, num_entries, send_data_for_parsing);
 end
 
-local function KillTag(timer, state)
-    timer.kill = state;
-end
-
 -- For bosses with non-random spawn. Modify the result for other bosses.
 local function EstimationNextSpawn(name)
     local t_spawn = WBT.db.global.boss[name].t_death;
@@ -646,7 +665,7 @@ local function StartWorldBossDeathTimer(...)
                 if (self.TimeSinceLastUpdate > UpdateInterval) then
 
                     if self.kill then
-                        KillUpdateFrame(self);
+                        KillUpdateFrame(boss.name);
                         UpdateGUIVisibility();
                         return;
                     end
@@ -884,6 +903,9 @@ local function SlashHandler(input)
         SetCyclic(new_state);
         UpdateGUIVisibility();
         PrintFormattedStatus("Cyclic mode is now", new_state);
+        local red_text = COLOR_RED .. "red text" .. COLOR_DEFAULT;
+        WBT:Print("This mode will repeat the boss timers if you miss the kill. A timer in " .. red_text
+            .. " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.");
     else
         PrintHelp();
     end
