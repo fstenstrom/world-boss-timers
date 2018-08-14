@@ -15,7 +15,7 @@ local SOUND_FANCY = "FANCY";
 
 local defaults = {
     global = {
-        boss = {},
+        kill_infos = {},
         gui = nil,
         sound_enabled = true,
         sound_type = SOUND_CLASSIC,
@@ -59,7 +59,7 @@ local SOUND_FILE_DEFAULT = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
 local SOUND_FILE_PREPARE = "Sound\\creature\\EadricThePure\\AC_Eadric_Aggro01.ogg";
 
 
-local REGISTERED_BOSSES = {
+local TRACKED_BOSSES = {
     ["Oondasta"] = {
         name = "Oondasta",
         color = "|cff21ffa3",
@@ -161,7 +161,7 @@ local function SetSound(state)
 end
 
 local function GetColoredBossName(name)
-    return REGISTERED_BOSSES[name].color .. REGISTERED_BOSSES[name].name .. COLOR_DEFAULT;
+    return TRACKED_BOSSES[name].color .. TRACKED_BOSSES[name].name .. COLOR_DEFAULT;
 end
 
 local function SetContainsKey(set, key)
@@ -183,16 +183,16 @@ local function SetContainsValue(set, value)
 end
 
 local function IsBoss(name)
-    return SetContainsKey(REGISTERED_BOSSES, name);
+    return SetContainsKey(TRACKED_BOSSES, name);
 end
 
 local function IsInZoneOfBoss(name)
-    return GetZoneText() == REGISTERED_BOSSES[name].zone;
+    return GetZoneText() == TRACKED_BOSSES[name].zone;
 end
 
 local function BossesInCurrentZone()
     local bosses_in_zone = {}
-    for name, boss in pairs(REGISTERED_BOSSES) do
+    for name, boss in pairs(TRACKED_BOSSES) do
         if IsInZoneOfBoss(name) then
             bosses_in_zone[name] = name;
         end
@@ -215,14 +215,14 @@ local function GetRealmType()
 end
 
 local function HasRandomSpawnTime(name)
-    return REGISTERED_BOSSES[name].random_spawn_time;
+    return TRACKED_BOSSES[name].random_spawn_time;
 end
 
 local function GetKillInfoFromZone()
     local current_zone = GetZoneText();
-    for name, boss_info in pairs(REGISTERED_BOSSES) do
+    for name, boss_info in pairs(TRACKED_BOSSES) do
         if boss_info.zone == current_zone then
-            return WBT.db.global.boss[boss_info.name];
+            return WBT.db.global.kill_infos[boss_info.name];
         end
     end
 
@@ -264,27 +264,27 @@ local function IsKillInfoSafe(error_msgs)
 end
 
 local function SetDeathTime(time, name)
-    if WBT.db.global.boss[name] == nil then
+    if WBT.db.global.kill_infos[name] == nil then
         local boss = {};
-        WBT.db.global.boss[name] = boss;
+        WBT.db.global.kill_infos[name] = boss;
     end
-    WBT.db.global.boss[name].t_death = time;
-    WBT.db.global.boss[name].name = name;
-    WBT.db.global.boss[name].realmName = GetRealmName();
-    WBT.db.global.boss[name].realm_type = GetRealmType();
-    WBT.db.global.boss[name].safe = not IsInGroup();
-    WBT.db.global.boss[name].cyclic = false;
+    WBT.db.global.kill_infos[name].t_death = time;
+    WBT.db.global.kill_infos[name].name = name;
+    WBT.db.global.kill_infos[name].realmName = GetRealmName();
+    WBT.db.global.kill_infos[name].realm_type = GetRealmType();
+    WBT.db.global.kill_infos[name].safe = not IsInGroup();
+    WBT.db.global.kill_infos[name].cyclic = false;
 end
 
 local function GetServerDeathTime(name)
-    return WBT.db.global.boss[name].t_death;
+    return WBT.db.global.kill_infos[name].t_death;
 end
 
 local function KillUpdateFrame(name)
-    local kill_info = WBT.db.global.boss[name];
+    local kill_info = WBT.db.global.kill_infos[name];
     kill_info.timer:SetScript("OnUpdate", nil);
     kill_info.timer = nil;
-    WBT.db.global.boss[name] = nil;
+    WBT.db.global.kill_infos[name] = nil;
 end
 
 local function FormatTimeSeconds(seconds)
@@ -298,7 +298,7 @@ local function FormatTimeSeconds(seconds)
 end
 
 local function GetTimeSinceDeath(name)
-    local boss = WBT.db.global.boss[name]
+    local boss = WBT.db.global.kill_infos[name]
     if boss ~= nil then
         return GetServerTime() - boss.t_death;
     end
@@ -345,7 +345,7 @@ end
 
 local function GetSpawnTimeOutput(name)
     local text = GetSpawnTime(name);
-    if WBT.db.global.boss[name].cyclic then
+    if WBT.db.global.kill_infos[name].cyclic then
         text = COLOR_RED .. text .. COLOR_DEFAULT;
     end
 
@@ -356,7 +356,7 @@ local function IsBossZone()
     local current_zone = GetZoneText();
 
     local is_boss_zone = false;
-    for name, boss in pairs(REGISTERED_BOSSES) do
+    for name, boss in pairs(TRACKED_BOSSES) do
         if boss.zone == current_zone then
             is_boss_zone = true;
         end
@@ -366,7 +366,7 @@ local function IsBossZone()
 end
 
 local function IsDead(name)
-    local kill_info = WBT.db.global.boss[name];
+    local kill_info = WBT.db.global.kill_infos[name];
     if not kill_info then
         return false;
     end
@@ -386,7 +386,7 @@ local function IsDead(name)
 end
 
 local function AnyDead()
-    for name, boss in pairs(REGISTERED_BOSSES) do
+    for name, boss in pairs(TRACKED_BOSSES) do
         if IsDead(name) then
             return true;
         end
@@ -401,7 +401,7 @@ end
 local function GetBossNames()
     local boss_names = {};
     local i = 1; -- Don't start on index = 0... >-<
-    for name, _ in pairs(REGISTERED_BOSSES) do
+    for name, _ in pairs(TRACKED_BOSSES) do
         boss_names[i] = name;
         i = i + 1;
     end
@@ -422,7 +422,7 @@ local function KillTag(timer, state)
 end
 
 local function UserAction_ResetBoss(name)
-    local kill_info = WBT.db.global.boss[name];
+    local kill_info = WBT.db.global.kill_infos[name];
     if not kill_info then
         return;
     end
@@ -468,7 +468,7 @@ local function InitGUI()
     function gui:Update()
         self:ReleaseChildren();
 
-        for name, boss in pairs(WBT.db.global.boss) do
+        for name, boss in pairs(WBT.db.global.kill_infos) do
             if IsDead(name) and (not(boss.cyclic) or CyclicEnabled()) then
                 local label = AceGUI:Create("InteractiveLabel");
                 label:SetWidth(170);
@@ -567,7 +567,7 @@ local function GetBossesToAnnounceInCurrentZone(current_zone_only)
     local current_zone = GetZoneText();
     local bosses = {};
     local num_entries = 0; -- No way to get size of table :(
-    for name, boss in pairs(REGISTERED_BOSSES) do
+    for name, boss in pairs(TRACKED_BOSSES) do
         if (not current_zone_only) or current_zone == boss.zone then
             if IsDead(name) then
                 bosses[name] = name;
@@ -614,7 +614,7 @@ end
 
 -- For bosses with non-random spawn. Modify the result for other bosses.
 local function EstimationNextSpawn(name)
-    local t_spawn = WBT.db.global.boss[name].t_death;
+    local t_spawn = WBT.db.global.kill_infos[name].t_death;
     local t_now = GetServerTime();
     while t_spawn < t_now do
         t_spawn = t_spawn + MAX_RESPAWN_TIME;
@@ -682,7 +682,7 @@ local function StartWorldBossDeathTimer(...)
                         if CyclicEnabled() then
                             local t_death_new, t_spawn = EstimationNextSpawn(boss.name);
                             boss.t_death = t_death_new
-                            if REGISTERED_BOSSES[boss.name].random_spawn_time then
+                            if TRACKED_BOSSES[boss.name].random_spawn_time then
                                 until_time = t_spawn - MAX_RESPAWN_TIME + MAX_RESPAWN_TIME_RANDOM;
                             else
                                 until_time = t_spawn;
@@ -706,9 +706,9 @@ local function StartWorldBossDeathTimer(...)
     end
 
     for _, name in ipairs({...}) do -- To iterate varargs, note that they have to be in a table. They will be expanded otherwise.
-        if WBT.db.global.boss[name] and (not(HasRespawned(name)) or CyclicEnabled()) then
+        if WBT.db.global.kill_infos[name] and (not(HasRespawned(name)) or CyclicEnabled()) then
             local timer_duration = GetSpawnTimeSec(name);
-            StartTimer(WBT.db.global.boss[name], timer_duration, 1, REGISTERED_BOSSES[name].color .. name .. COLOR_DEFAULT .. ": ");
+            StartTimer(WBT.db.global.kill_infos[name], timer_duration, 1, TRACKED_BOSSES[name].color .. name .. COLOR_DEFAULT .. ": ");
         end
     end
 end
@@ -734,7 +734,7 @@ local function PlayAlertSound(boss_name)
     local sound_type = WBT.db.global.sound_type;
     local sound_enabled = WBT.db.global.sound_enabled;
 
-    local soundfile = REGISTERED_BOSSES[boss_name].soundfile;
+    local soundfile = TRACKED_BOSSES[boss_name].soundfile;
     if sound_type == SOUND_CLASSIC then
         soundfile = SOUND_FILE_DEFAULT;
     end
@@ -799,9 +799,9 @@ end
 
 local function ResetKillInfo()
     WBT:Print("Resetting all kill info.");
-    for k, v in pairs(WBT.db.global.boss) do
-        KillTag(WBT.db.global.boss[k].timer, true);
-        WBT.db.global.boss[k] = nil;
+    for k, v in pairs(WBT.db.global.kill_infos) do
+        KillTag(WBT.db.global.kill_infos[k].timer, true);
+        WBT.db.global.kill_infos[k] = nil;
     end
 end
 
