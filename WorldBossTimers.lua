@@ -15,7 +15,11 @@ local SOUND_FANCY = "FANCY";
 
 local defaults = {
     global = {
-        kill_infos = {},
+        kill_infos = {
+            timer = nil,
+            cyclic = false,
+            TimeSinceLastUpdate = nil,
+        },
         gui = nil,
         sound_enabled = true,
         sound_type = SOUND_CLASSIC,
@@ -265,8 +269,8 @@ end
 
 local function SetDeathTime(time, name)
     if WBT.db.global.kill_infos[name] == nil then
-        local boss = {};
-        WBT.db.global.kill_infos[name] = boss;
+        local kill_info = {};
+        WBT.db.global.kill_infos[name] = kill_info;
     end
     WBT.db.global.kill_infos[name].t_death = time;
     WBT.db.global.kill_infos[name].name = name;
@@ -280,13 +284,6 @@ local function GetServerDeathTime(name)
     return WBT.db.global.kill_infos[name].t_death;
 end
 
-local function KillUpdateFrame(name)
-    local kill_info = WBT.db.global.kill_infos[name];
-    kill_info.timer:SetScript("OnUpdate", nil);
-    kill_info.timer = nil;
-    WBT.db.global.kill_infos[name] = nil;
-end
-
 local function FormatTimeSeconds(seconds)
     local mins = math.floor(seconds / 60);
     local secs = math.floor(seconds % 60);
@@ -298,9 +295,9 @@ local function FormatTimeSeconds(seconds)
 end
 
 local function GetTimeSinceDeath(name)
-    local boss = WBT.db.global.kill_infos[name]
-    if boss ~= nil then
-        return GetServerTime() - boss.t_death;
+    local kill_info = WBT.db.global.kill_infos[name]
+    if kill_info ~= nil then
+        return GetServerTime() - kill_info.t_death;
     end
 
     return nil;
@@ -468,8 +465,8 @@ local function InitGUI()
     function gui:Update()
         self:ReleaseChildren();
 
-        for name, boss in pairs(WBT.db.global.kill_infos) do
-            if IsDead(name) and (not(boss.cyclic) or CyclicEnabled()) then
+        for name, kill_info in pairs(WBT.db.global.kill_infos) do
+            if IsDead(name) and not(kill_info.timer.killed) and (not(kill_info.cyclic) or CyclicEnabled()) then
                 local label = AceGUI:Create("InteractiveLabel");
                 label:SetWidth(170);
                 label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTimeOutput(name));
@@ -644,53 +641,55 @@ local function StartWorldBossDeathTimer(...)
         return not IsDead(name);
     end
 
-    local function StartTimer(boss, duration, freq, text)
+    local function StartTimer(kill_info, duration, freq, text)
         -- Always kill the previous frame and start a new one.
-        if boss.timer ~= nil then
-            KillTag(boss.timer, true);
+        if kill_info.timer ~= nil then
+            KillTag(kill_info.timer, true);
         end
 
         -- Create new frame.
-        boss.timer = CreateFrame("Frame");
-        KillTag(boss.timer, false);
+        kill_info.timer = CreateFrame("Frame");
+        KillTag(kill_info.timer, false);
 
-        local until_time = GetServerTime() + duration;
+        kill_info.timer.until_time = GetServerTime() + duration;
+        kill_info.timer.killed = false;
         local UpdateInterval = freq;
-        boss.timer:SetScript("OnUpdate", function(self, elapsed)
+        kill_info.timer:SetScript("OnUpdate", function(self, elapsed)
                 if self.TimeSinceLastUpdate == nil then
                     self.TimeSinceLastUpdate = 0;
                 end
                 self.TimeSinceLastUpdate = self.TimeSinceLastUpdate + elapsed;
 
                 if (self.TimeSinceLastUpdate > UpdateInterval) then
-
                     if self.kill then
-                        KillUpdateFrame(boss.name);
+                        -- Note: Inside of frames, never operate on objects that might be updated before the SetScript function is called!
+                        -- If possible, try to operate on <self>.
+                        self:SetScript("OnUpdate", nil);
+                        self.killed = true;
                         UpdateGUIVisibility();
+                        if gui ~= nil then
+                            gui:Update();
+                        end
                         return;
                     end
 
-                    self.remaining_time = until_time - GetServerTime();
-
-                    MaybeAnnounceSpawnTimer(self.remaining_time, boss.name);
-
+                    self.remaining_time = self.until_time - GetServerTime();
+                    MaybeAnnounceSpawnTimer(self.remaining_time, kill_info.name);
                     if self.remaining_time < 0 then
-                        if IsInZoneOfBoss(boss.name) then
+                        if IsInZoneOfBoss(kill_info.name) then
                             FlashClientIcon();
                         end
 
                         if CyclicEnabled() then
-                            local t_death_new, t_spawn = EstimationNextSpawn(boss.name);
-                            boss.t_death = t_death_new
-                            if TRACKED_BOSSES[boss.name].random_spawn_time then
-                                until_time = t_spawn - MAX_RESPAWN_TIME + MAX_RESPAWN_TIME_RANDOM;
+                            local t_death_new, t_spawn = EstimationNextSpawn(kill_info.name);
+                            kill_info.t_death = t_death_new
+                            if TRACKED_BOSSES[kill_info.name].random_spawn_time then
+                                self.until_time = t_spawn - MAX_RESPAWN_TIME + MAX_RESPAWN_TIME_RANDOM;
                             else
-                                until_time = t_spawn;
+                                self.until_time = t_spawn;
                             end
 
-                            boss.cyclic = true;
-                        else
-                            --KillUpdateFrame(self);
+                            kill_info.cyclic = true;
                         end
 
                         UpdateGUIVisibility();
@@ -699,6 +698,7 @@ local function StartWorldBossDeathTimer(...)
                     if gui ~= nil then
                         gui:Update();
                     end
+
                     self.TimeSinceLastUpdate = 0;
                 end
             end);
@@ -1006,4 +1006,18 @@ end
 
 function WBT:OnDisable()
 end
+
+--@do-not-package@
+function d(min, sec)
+    if not min then
+        min = 17;
+        sec = 55;
+    end
+    local decr = (60 * min + sec)
+    local kill_info = WBT.db.global.kill_infos["Grellkin"];
+    kill_info.t_death = kill_info.t_death - decr;
+    kill_info.timer.until_time = kill_info.timer.until_time - decr;
+
+end
+--@end-do-not-package@
 
