@@ -15,11 +15,7 @@ local SOUND_FANCY = "FANCY";
 
 local defaults = {
     global = {
-        kill_infos = {
-            timer = nil,
-            cyclic = false,
-            TimeSinceLastUpdate = nil,
-        },
+        kill_infos = {},
         gui = nil,
         sound_enabled = true,
         sound_type = SOUND_CLASSIC,
