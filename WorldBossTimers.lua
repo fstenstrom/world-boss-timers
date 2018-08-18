@@ -29,127 +29,6 @@ local defaults = {
     },
 };
 
-local REALM_TYPE_PVE = "PvE";
-local REALM_TYPE_PVP = "PvP";
-
-local COLOR_DEFAULT = "|cffffffff";
-local COLOR_RED = "|cffff0000";
-local COLOR_GREEN = "|cff00ff00";
-
-local CHANNEL_ANNOUNCE = "SAY";
-local ICON_SKULL = "{skull}";
-local INDENT = "--";
-local RANDOM_DELIM = "-";
-
-local CHAT_MSG_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
-local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:"; -- Free advertising.
-
-local MAX_RESPAWN = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:59.
--- Conservative guesses. Actual values are not known.
-local MIN_RESPAWN_SHA = 12*60;
-local MAX_RESPAWN_SHA = 18*60;
-local MIN_RESPAWN_NALAK = 12*60;
-local MAX_RESPAWN_NALAK = 18*60;
-local MIN_RESPAWN_HUOLON = 30*60;
-local MAX_RESPAWN_HUOLON = 60*60;
-
-local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
-local SOUND_FILE_DEFAULT = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
-local SOUND_FILE_PREPARE = "Sound\\creature\\EadricThePure\\AC_Eadric_Aggro01.ogg";
-
-
-local TRACKED_BOSSES = {
-    ["Oondasta"] = {
-        name = "Oondasta",
-        color = "|cff21ffa3",
-        zone = "Isle of Giants",
-        soundfile = SOUND_DIR .. "oondasta3.mp3",
-        min_respawn = MAX_RESPAWN,
-        max_respawn = MAX_RESPAWN,
-        random_spawn_time = false,
-    },
-    ["Rukhmar"] = {
-        name = "Rukhmar",
-        color = "|cfffa6e06",
-        zone = "Spires of Arak",
-        soundfile = SOUND_DIR .. "rukhmar1.mp3",
-        min_respawn = MAX_RESPAWN,
-        max_respawn = MAX_RESPAWN,
-        random_spawn_time = false,
-    },
-    ["Galleon"] = {
-        name = "Galleon",
-        color = "|cffc1f973",
-        zone = "Valley of the Four Winds",
-        soundfile = SOUND_FILE_DEFAULT,
-        min_respawn = MAX_RESPAWN,
-        max_respawn = MAX_RESPAWN,
-        random_spawn_time = false,
-    },
-    ["Nalak"] = {
-        name = "Nalak",
-        color = "|cff0081cc",
-        zone = "Isle of Thunder",
-        soundfile = SOUND_FILE_DEFAULT,
-        min_respawn = MIN_RESPAWN_NALAK,
-        max_respawn = MAX_RESPAWN_NALAK,
-        random_spawn_time = true,
-    },
-    ["Sha of Anger"] = {
-        name = "Sha of Anger",
-        color = "|cff8a1a9f",
-        zone = "Kun-Lai Summit",
-        soundfile = SOUND_FILE_DEFAULT,
-        min_respawn = MIN_RESPAWN_SHA,
-        max_respawn = MAX_RESPAWN_SHA,
-        random_spawn_time = true,
-    },
-    ["Huolon"] = {
-        name = "Huolon",
-        color = "|cfff7f713",
-        zone = "Timless Isle",
-        soundfile = SOUND_FILE_DEFAULT,
-        min_respawn = MIN_RESPAWN_HUOLON,
-        max_respawn = MAX_RESPAWN_HUOLON,
-        random_spawn_time = true,
-    },
-    --@do-not-package@
-    --[[
-    -- Dummy.
-    ["Vale Moth"] = {
-        name = "Vale Moth",
-        color = "|cff1f3d4a",
-        zone = "Azuremyst Isle",
-        soundfile = SOUND_DIR .. "vale_moth1.mp3",
-        min_respawn = MIN_RESPAWN_SHA,
-        max_respawn = MAX_RESPAWN_SHA,
-        random_spawn_time = false,
-    },
-    -- Dummy.
-    ["Grellkin"] = {
-        name = "Grellkin",
-        color = "|cffffff00",
-        zone = "Shadowglen",
-        soundfile = SOUND_DIR .. "grellkin2.mp3",
-        min_respawn = MIN_RESPAWN_SHA,
-        max_respawn = MAX_RESPAWN_SHA,
-        random_spawn_time = true,
-    },
-    -- Dummy.
-    -- This entry won't work for everything since two mobs reside in same zone.
-    ["Young Nightsaber"] = {
-        name = "Young Nightsaber",
-        color = "|cffff3d4a",
-        zone =  "_Shadowglen",
-        soundfile = SOUND_DIR .. "vale_moth1.mp3",
-        min_respawn = MIN_RESPAWN_SHA,
-        max_respawn = MIN_RESPAWN_SHA,
-        random_spawn_time = false,
-    },
-    ]]--
-    --@end-do-not-package@
-}
-
 local function CyclicEnabled()
     return WBT.db.global.cyclic;
 end
@@ -180,10 +59,6 @@ end
 
 local function SetSound(state)
     WBT.db.global.sound_enabled = state;
-end
-
-local function GetColoredBossName(name)
-    return TRACKED_BOSSES[name].color .. TRACKED_BOSSES[name].name .. COLOR_DEFAULT;
 end
 
 local function SetContainsKey(set, key)
@@ -236,11 +111,6 @@ local function GetRealmType()
     return REALM_TYPE_PVP;
 end
 
-local function HasRandomSpawnTime(name)
-    local boss = TRACKED_BOSSES[name];
-    return boss.min_respawn ~= boss.max_respawn;
-end
-
 local function GetKillInfoFromZone()
     local current_zone = GetZoneText();
     for name, boss_info in pairs(TRACKED_BOSSES) do
@@ -252,58 +122,6 @@ local function GetKillInfoFromZone()
     return nil;
 end
 
--- The data for the kill can be incorrect. This might happen
--- when a player records a kill and then appear on another
--- server shard.
--- If this happens, we don't want the data to propagate
--- to other players.
-local function IsKillInfoSafe(error_msgs)
-
-    local kill_info = GetKillInfoFromZone();
-
-    -- It's possible to have one char with war mode, and one
-    -- without on the same server.
-    local realm_type = GetRealmType();
-    local realmName = GetRealmName();
-
-    if not kill_info.safe then
-        table.insert(error_msgs, "Player was in a group during previous kill.");
-    end
-    if kill_info.cyclic then
-        table.insert(error_msgs, "Last kill wasn't recorded. This is just an estimate.");
-    end
-    if not (kill_info.realm_type == realm_type) then
-        table.insert(error_msgs, "Kill was made on a " .. kill_info.realm_type .. " realm, but are now on a " .. realm_type .. " realm.");
-    end
-    if not (kill_info.realmName == realmName) then
-        table.insert(error_msgs, "Kill was made on " .. kill_info.realmName .. ", but are now on " .. realmName .. ".");
-    end
-
-    if TableIsEmpty(error_msgs) then
-        return true;
-    end
-
-    return false;
-end
-
-local function SetDeathTime(time, name)
-    if g_kill_infos[name] == nil then
-        local kill_info = {};
-        g_kill_infos[name] = kill_info;
-    end
-    g_kill_infos[name].t_death = time;
-    g_kill_infos[name].name = name;
-    g_kill_infos[name].realmName = GetRealmName();
-    g_kill_infos[name].realm_type = GetRealmType();
-    g_kill_infos[name].safe = not IsInGroup();
-    g_kill_infos[name].cyclic = false;
-    g_kill_infos[name].timer_killed = false;
-end
-
-local function GetServerDeathTime(name)
-    return g_kill_infos[name].t_death;
-end
-
 local function FormatTimeSeconds(seconds)
     local mins = math.floor(seconds / 60);
     local secs = math.floor(seconds % 60);
@@ -311,52 +129,6 @@ local function FormatTimeSeconds(seconds)
         return mins .. "m " .. secs .. "s";
     else
         return secs .. "s";
-    end
-end
-
-local function GetTimeSinceDeath(name)
-    local kill_info = g_kill_infos[name]
-    if kill_info ~= nil then
-        return GetServerTime() - kill_info.t_death;
-    end
-
-    return nil;
-end
-
-local function GetSpawnTimesSecRandom(name)
-    local t_since_death = GetTimeSinceDeath(name);
-    local t_lower_bound = TRACKED_BOSSES[name].min_respawn - t_since_death;
-    local t_upper_bound = TRACKED_BOSSES[name].max_respawn - t_since_death;
-
-    return t_lower_bound, t_upper_bound;
-end
-
-local function GetSpawnTimeSec(name)
-    if HasRandomSpawnTime(name) then
-        local _, t_upper = GetSpawnTimesSecRandom(name);
-        return t_upper;
-    else
-        return TRACKED_BOSSES[name].min_respawn - GetTimeSinceDeath(name);
-    end
-end
-
-local function GetSpawnTimeAsText(name)
-    if HasRandomSpawnTime(name) then
-        local t_lower, t_upper = GetSpawnTimesSecRandom(name);
-        if t_lower == nil or t_upper == nil then
-            return -1;
-        elseif t_lower < 0 then
-            return "0s" .. RANDOM_DELIM .. FormatTimeSeconds(t_upper)
-        else
-            return  FormatTimeSeconds(t_lower) .. RANDOM_DELIM .. FormatTimeSeconds(t_upper)
-        end
-    else
-        local spawn_time_sec = GetSpawnTimeSec(name);
-        if spawn_time_sec == nil or spawn_time_sec < 0 then
-            return -1;
-        end
-
-        return FormatTimeSeconds(spawn_time_sec);
     end
 end
 
@@ -380,30 +152,6 @@ local function IsBossZone()
     end
 
     return is_boss_zone;
-end
-
-local function HasBeenManuallyReset(name)
-    return g_kill_infos[name].timer_killed;
-end
-
-local function IsDead(name)
-    local kill_info = g_kill_infos[name];
-    if not kill_info or HasBeenManuallyReset(name) then
-        return false;
-    end
-    if kill_info.cyclic then
-        if CyclicEnabled() then
-            return true;
-        else
-            return false;
-        end
-    end
-    if HasRandomSpawnTime(name) then
-        local _, t_upper = GetSpawnTimesSecRandom(name);
-        return t_upper >= 0;
-    else
-        return GetSpawnTimeSec(name) >= 0;
-    end
 end
 
 local function AnyDead()
@@ -600,12 +348,8 @@ local function GetBossesToAnnounceInCurrentZone(current_zone_only)
     return bosses, num_entries;
 end
 
-local function KillInfo_StaticData(kill_info)
-    return TRACKED_BOSSES[kill_info.name];
-end
-
 local function ServerSpawnTime(kill_info)
-    local data = KillInfo_StaticData(kill_info)
+    local data = TRACKED_BOSSES[kill_info.name];
     return kill_info.t_death + data.max_respawn;
 end
 
@@ -650,111 +394,6 @@ local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
     AnnounceSpawnTimers(bosses, num_entries, send_data_for_parsing);
 end
 
--- For bosses with non-random spawn. Modify the result for other bosses.
-local function EstimationNextSpawn(name)
-    local t_spawn = g_kill_infos[name].t_death;
-    local t_now = GetServerTime();
-    local max_respawn = TRACKED_BOSSES[name].max_respawn;
-    while t_spawn < t_now do
-        t_spawn = t_spawn + max_respawn;
-    end
-
-    local t_death_new = t_spawn - max_respawn;
-    return t_death_new, t_spawn;
-end
-
-local function StartWorldBossDeathTimer(...)
-
-    local function MaybeAnnounceSpawnTimer(remaining_time, boss_name)
-        --@do-not-package@
-        -- Debug
-        --local announce_times = {1 , 10, 19, 28, 37, 46, 55, 64, 73, 82, 91, 100, 109, 118, 127, 136, 145, 154, 163, 172, 181, 190, 199, 208, 217, 226, 235, 244, 253, 262, 271, 280, 289, 298, 307, 316, 325, 334, 343, 352, 361, 370, 379, 388, 397, 406, 415, 424, 433, 442, 451, 460, 469, 478, 487, 496, 505, 514, 523, 532, 541, 550, 559, 568, 577, 586, 595, 604, 613, 622, 631, 640, 649, 658, 667, 676, 685, 694, 703, 712, 721, 730, 739, 748, 757, 766, 775, 784, 793, 802, 811, 820, 829, 838, 847, 856, 865, 874, 883, 892}
-        --@end-do-not-package@
-        local announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
-        if WBT.db.global.auto_announce
-                and SetContainsValue(announce_times, remaining_time)
-                and IsInZoneOfBoss(boss_name)
-                and IsKillInfoSafe({}) then
-            AnnounceSpawnTime(true, SendDataEnabled());
-        end
-    end
-
-    local function HasRespawned(name)
-        return not IsDead(name);
-    end
-
-    local function StartTimer(kill_info, duration, freq, text)
-        -- Always kill the previous frame and start a new one.
-        if kill_info.timer ~= nil then
-            KillTag(kill_info.timer, true);
-        end
-
-        -- Create new frame.
-        kill_info.timer = CreateFrame("Frame");
-        KillTag(kill_info.timer, false);
-
-        kill_info.timer.until_time = GetServerTime() + duration;
-        local UpdateInterval = freq;
-        kill_info.timer:SetScript("OnUpdate", function(self, elapsed)
-                if self.TimeSinceLastUpdate == nil then
-                    self.TimeSinceLastUpdate = 0;
-                    UpdateGUIVisibility();
-                end
-                self.TimeSinceLastUpdate = self.TimeSinceLastUpdate + elapsed;
-
-                if (self.TimeSinceLastUpdate > UpdateInterval) then
-                    if self.kill then
-                        -- Note: Inside of frames, never operate on objects that might be updated before the SetScript function is called!
-                        -- If possible, try to operate on <self>.
-                        self:SetScript("OnUpdate", nil);
-
-                        -- Need to check if a new timer is created before this OnUpdate function is reached.
-                        if self == kill_info.timer then
-                            kill_info.timer_killed = true;
-                        end
-                        UpdateGUIVisibility();
-                        if gui ~= nil then
-                            gui:Update();
-                        end
-                        return;
-                    end
-
-                    self.remaining_time = self.until_time - GetServerTime();
-                    MaybeAnnounceSpawnTimer(self.remaining_time, kill_info.name);
-                    if self.remaining_time < 0 then
-                        if IsInZoneOfBoss(kill_info.name) then
-                            FlashClientIcon();
-                        end
-
-                        if CyclicEnabled() then
-                            local t_death_new, t_spawn = EstimationNextSpawn(kill_info.name);
-                            kill_info.t_death = t_death_new
-                            self.until_time = t_spawn;
-                            kill_info.cyclic = true;
-                        end
-
-                        UpdateGUIVisibility();
-                    end
-
-                    if gui ~= nil then
-                        gui:Update();
-                    end
-
-                    self.TimeSinceLastUpdate = 0;
-                end
-            end);
-        return timer;
-    end
-
-    for _, name in ipairs({...}) do -- To iterate varargs, note that they have to be in a table. They will be expanded otherwise.
-        local kill_info = g_kill_infos[name];
-        if kill_info and (not(HasRespawned(name)) or (CyclicEnabled() and not(HasBeenManuallyReset(name)))) then
-            local timer_duration = GetSpawnTimeSec(name);
-            StartTimer(g_kill_infos[name], timer_duration, 1, TRACKED_BOSSES[name].color .. name .. COLOR_DEFAULT .. ": ");
-        end
-    end
-end
-
 local function InitDeathTrackerFrame()
     if boss_death_frame ~= nil then
         return
@@ -766,8 +405,9 @@ local function InitDeathTrackerFrame()
 		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo()
 
              if eventType == "UNIT_DIED" and IsBoss(destName) then
-                 SetDeathTime(GetServerTime(), destName); -- Don't use timestamp from varags. It's not synchronized with server time.
-                 StartWorldBossDeathTimer(destName);
+                 local ki = g_kill_infos[name] or KillInfo:New(GetServerTime(), destName);
+                 g_kill_infos[name] = ki;
+                 ki:StartWorldBossDeathTimer();
              end
         end);
 end
