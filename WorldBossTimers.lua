@@ -233,7 +233,7 @@ local function GetKillInfoFromZone()
     local current_zone = GetZoneText();
     for name, boss_info in pairs(TRACKED_BOSSES) do
         if boss_info.zone == current_zone then
-            return WBT.db.global.kill_infos[boss_info.name];
+            return g_kill_infos[boss_info.name];
         end
     end
 
@@ -275,20 +275,20 @@ local function IsKillInfoSafe(error_msgs)
 end
 
 local function SetDeathTime(time, name)
-    if WBT.db.global.kill_infos[name] == nil then
+    if g_kill_infos[name] == nil then
         local kill_info = {};
-        WBT.db.global.kill_infos[name] = kill_info;
+        g_kill_infos[name] = kill_info;
     end
-    WBT.db.global.kill_infos[name].t_death = time;
-    WBT.db.global.kill_infos[name].name = name;
-    WBT.db.global.kill_infos[name].realmName = GetRealmName();
-    WBT.db.global.kill_infos[name].realm_type = GetRealmType();
-    WBT.db.global.kill_infos[name].safe = not IsInGroup();
-    WBT.db.global.kill_infos[name].cyclic = false;
+    g_kill_infos[name].t_death = time;
+    g_kill_infos[name].name = name;
+    g_kill_infos[name].realmName = GetRealmName();
+    g_kill_infos[name].realm_type = GetRealmType();
+    g_kill_infos[name].safe = not IsInGroup();
+    g_kill_infos[name].cyclic = false;
 end
 
 local function GetServerDeathTime(name)
-    return WBT.db.global.kill_infos[name].t_death;
+    return g_kill_infos[name].t_death;
 end
 
 local function FormatTimeSeconds(seconds)
@@ -302,7 +302,7 @@ local function FormatTimeSeconds(seconds)
 end
 
 local function GetTimeSinceDeath(name)
-    local kill_info = WBT.db.global.kill_infos[name]
+    local kill_info = g_kill_infos[name]
     if kill_info ~= nil then
         return GetServerTime() - kill_info.t_death;
     end
@@ -349,7 +349,7 @@ end
 
 local function GetSpawnTimeOutput(name)
     local text = GetSpawnTime(name);
-    if WBT.db.global.kill_infos[name].cyclic then
+    if g_kill_infos[name].cyclic then
         text = COLOR_RED .. text .. COLOR_DEFAULT;
     end
 
@@ -370,7 +370,7 @@ local function IsBossZone()
 end
 
 local function IsDead(name)
-    local kill_info = WBT.db.global.kill_infos[name];
+    local kill_info = g_kill_infos[name];
     if not kill_info then
         return false;
     end
@@ -426,7 +426,7 @@ local function KillTag(timer, state)
 end
 
 local function UserAction_ResetBoss(name)
-    local kill_info = WBT.db.global.kill_infos[name];
+    local kill_info = g_kill_infos[name];
     if not kill_info then
         return;
     end
@@ -472,7 +472,7 @@ local function InitGUI()
     function gui:Update()
         self:ReleaseChildren();
 
-        for name, kill_info in pairs(WBT.db.global.kill_infos) do
+        for name, kill_info in pairs(g_kill_infos) do
             if IsDead(name) and not(kill_info.timer.killed) and (not(kill_info.cyclic) or CyclicEnabled()) then
                 local label = AceGUI:Create("InteractiveLabel");
                 label:SetWidth(170);
@@ -618,7 +618,7 @@ end
 
 -- For bosses with non-random spawn. Modify the result for other bosses.
 local function EstimationNextSpawn(name)
-    local t_spawn = WBT.db.global.kill_infos[name].t_death;
+    local t_spawn = g_kill_infos[name].t_death;
     local t_now = GetServerTime();
     while t_spawn < t_now do
         t_spawn = t_spawn + MAX_RESPAWN_TIME;
@@ -713,9 +713,9 @@ local function StartWorldBossDeathTimer(...)
     end
 
     for _, name in ipairs({...}) do -- To iterate varargs, note that they have to be in a table. They will be expanded otherwise.
-        if WBT.db.global.kill_infos[name] and (not(HasRespawned(name)) or CyclicEnabled()) then
+        if g_kill_infos[name] and (not(HasRespawned(name)) or CyclicEnabled()) then
             local timer_duration = GetSpawnTimeSec(name);
-            StartTimer(WBT.db.global.kill_infos[name], timer_duration, 1, TRACKED_BOSSES[name].color .. name .. COLOR_DEFAULT .. ": ");
+            StartTimer(g_kill_infos[name], timer_duration, 1, TRACKED_BOSSES[name].color .. name .. COLOR_DEFAULT .. ": ");
         end
     end
 end
@@ -806,9 +806,9 @@ end
 
 local function ResetKillInfo()
     WBT:Print("Resetting all kill info.");
-    for k, v in pairs(WBT.db.global.kill_infos) do
-        KillTag(WBT.db.global.kill_infos[k].timer, true);
-        WBT.db.global.kill_infos[k] = nil;
+    for k, v in pairs(g_kill_infos) do
+        KillTag(g_kill_infos[k].timer, true);
+        g_kill_infos[k] = nil;
     end
 end
 
@@ -987,6 +987,7 @@ end
 
 function WBT:OnEnable()
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
+    g_kill_infos = WBT.db.global.kill_infos
     -- self.db.global = defaults.global; -- Resets the global profile in case I mess up the table
     -- /run for k, v in pairs(WBT.db.global) do WBT.db.global[k] = nil end -- Also resets global profile, but from in-game
 
@@ -1021,7 +1022,7 @@ function d(min, sec)
         sec = 55;
     end
     local decr = (60 * min + sec)
-    local kill_info = WBT.db.global.kill_infos["Grellkin"];
+    local kill_info = g_kill_infos["Grellkin"];
     kill_info.t_death = kill_info.t_death - decr;
     kill_info.timer.until_time = kill_info.timer.until_time - decr;
 
