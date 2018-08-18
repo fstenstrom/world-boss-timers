@@ -7,5 +7,6 @@
 
 embeds.xml
 
+KillInfo.lua
 WorldBossTimers.lua
 

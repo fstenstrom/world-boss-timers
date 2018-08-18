@@ -1109,5 +1109,10 @@ function reset()
     end
     WBT.db.global.kill_infos = {};
 end
+
+function test_KillInfo()
+    local ki = WBT.KillInfo:New({name = "Testy",})
+    ki:Print()
+end
 --@end-do-not-package@
 
