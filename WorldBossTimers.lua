@@ -1052,5 +1052,50 @@ function d(min, sec)
     kill_info.timer.until_time = kill_info.timer.until_time - decr;
 
 end
+
+local function start_sim(name, t)
+    t = t or GetServerTime();
+    SetDeathTime(t, name);
+    StartWorldBossDeathTimer(name);
+end
+
+function dsim()
+    local function death_in_sec(name, t)
+        return GetServerTime() - TRACKED_BOSSES[name].max_respawn + t;
+    end
+
+    for name, data in pairs(TRACKED_BOSSES) do
+        start_sim(name, death_in_sec(name, 3));
+    end
+
+end
+
+-- Relog, and make sure it works after.
+function dsim2()
+    local function death_in_sec(name, t)
+        return GetServerTime() - TRACKED_BOSSES[name].max_respawn + t;
+    end
+
+    for name, data in pairs(TRACKED_BOSSES) do
+        start_sim(name, death_in_sec(name, 25));
+    end
+end
+
+function sim()
+    start_sim(sha);
+    start_sim(galleon);
+end
+
+function killsim()
+    KillTag(g_kill_infos[galleon].timer, true);
+    KillTag(g_kill_infos[sha].timer, true);
+end
+
+function reset()
+    for name, kill_info in pairs(g_kill_infos) do
+        KillTag(kill_info.timer, true);
+    end
+    WBT.db.global.kill_infos = {};
+end
 --@end-do-not-package@
 
