@@ -2,9 +2,10 @@
 --  A persistent timer for World Bosses.
 -- ----------------------------------------------------------------------------
 
-local _, L = ...;
+-- addonName, addonTable = ...;
+local _, WBT = ...;
 
-WBT = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
+WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 
 local gui;
 local boss_death_frame;
@@ -813,7 +814,7 @@ local function InitCombatScannerFrame()
     boss_combat_frame:SetScript("OnEvent", boss_combat_frame.DoScanWorldBossCombat);
 end
 
-function WBT:OnInitialize()
+function WBT.AceAddon:OnInitialize()
 end
 
 local function PrintKilledBosses()
@@ -967,11 +968,11 @@ local function ShareTimers()
     AnnounceSpawnTime(true, true);
 end
 
-function WBT:GetGui()
+function WBT.AceAddon:GetGui()
     return gui;
 end
 
-function WBT:InitChatParsing()
+function WBT.AceAddon:InitChatParsing()
 
     local function InitRequestParsing()
         local function PlayerSentRequest(sender)
@@ -1019,7 +1020,7 @@ function WBT:InitChatParsing()
 
 end
 
-function WBT:OnEnable()
+function WBT.AceAddon:OnEnable()
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
     g_kill_infos = WBT.db.global.kill_infos
     -- self.db.global = defaults.global; -- Resets the global profile in case I mess up the table
@@ -1048,7 +1049,7 @@ function WBT:OnEnable()
 
 end
 
-function WBT:OnDisable()
+function WBT.AceAddon:OnDisable()
 end
 
 --@do-not-package@
