@@ -65,6 +65,8 @@ local TRACKED_BOSSES = {
         color = "|cff21ffa3",
         zone = "Isle of Giants",
         soundfile = SOUND_DIR .. "oondasta3.mp3",
+        max_respawn = MAX_RESPAWN_TIME,
+        min_respawn = MAX_RESPAWN_TIME,
         random_spawn_time = false,
     },
     ["Rukhmar"] = {
@@ -72,6 +74,8 @@ local TRACKED_BOSSES = {
         color = "|cfffa6e06",
         zone = "Spires of Arak",
         soundfile = SOUND_DIR .. "rukhmar1.mp3",
+        max_respawn = MAX_RESPAWN_TIME,
+        min_respawn = MAX_RESPAWN_TIME,
         random_spawn_time = false,
     },
     ["Galleon"] = {
@@ -79,6 +83,8 @@ local TRACKED_BOSSES = {
         color = "|cffc1f973",
         zone = "Valley of the Four Winds",
         soundfile = SOUND_FILE_DEFAULT,
+        max_respawn = MAX_RESPAWN_TIME,
+        min_respawn = MAX_RESPAWN_TIME,
         random_spawn_time = false,
     },
     ["Nalak"] = {
@@ -86,6 +92,8 @@ local TRACKED_BOSSES = {
         color = "|cff0081cc",
         zone = "Isle of Thunder",
         soundfile = SOUND_FILE_DEFAULT,
+        max_respawn = MAX_RESPAWN_TIME_RANDOM_SHA_NALAK,
+        min_respawn = MIN_RESPAWN_TIME_RANDOM_SHA_NALAK,
         random_spawn_time = true,
     },
     ["Sha of Anger"] = {
@@ -93,6 +101,8 @@ local TRACKED_BOSSES = {
         color = "|cff8a1a9f",
         zone = "Kun-Lai Summit",
         soundfile = SOUND_FILE_DEFAULT,
+        max_respawn = MAX_RESPAWN_TIME_RANDOM_SHA_NALAK,
+        min_respawn = MIN_RESPAWN_TIME_RANDOM_SHA_NALAK,
         random_spawn_time = true,
     },
     --@do-not-package@
@@ -215,7 +225,8 @@ local function GetRealmType()
 end
 
 local function HasRandomSpawnTime(name)
-    return TRACKED_BOSSES[name].random_spawn_time;
+    local boss = TRACKED_BOSSES[name];
+    return boss.min_respawn ~= boss.max_respawn;
 end
 
 local function GetKillInfoFromZone()
@@ -679,7 +690,7 @@ local function StartWorldBossDeathTimer(...)
                         if CyclicEnabled() then
                             local t_death_new, t_spawn = EstimationNextSpawn(kill_info.name);
                             kill_info.t_death = t_death_new
-                            if TRACKED_BOSSES[kill_info.name].random_spawn_time then
+                            if HasRandomSpawnTime(kill_info.name) then
                                 self.until_time = t_spawn - MAX_RESPAWN_TIME + MAX_RESPAWN_TIME_RANDOM;
                             else
                                 self.until_time = t_spawn;
