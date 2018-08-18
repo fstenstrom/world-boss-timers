@@ -49,6 +49,8 @@ local MIN_RESPAWN_SHA = 12*60;
 local MAX_RESPAWN_SHA = 18*60;
 local MIN_RESPAWN_NALAK = 12*60;
 local MAX_RESPAWN_NALAK = 18*60;
+local MIN_RESPAWN_HUOLON = 30*60;
+local MAX_RESPAWN_HUOLON = 60*60;
 
 local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
 local SOUND_FILE_DEFAULT = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
@@ -99,6 +101,15 @@ local TRACKED_BOSSES = {
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
+        random_spawn_time = true,
+    },
+    ["Huolon"] = {
+        name = "Huolon",
+        color = "|cfff7f713",
+        zone = "Timeless Isle",
+        soundfile = SOUND_FILE_DEFAULT,
+        min_respawn = MIN_RESPAWN_HUOLON,
+        max_respawn = MAX_RESPAWN_HUOLON,
         random_spawn_time = true,
     },
     --@do-not-package@
