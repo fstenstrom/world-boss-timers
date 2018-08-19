@@ -5,11 +5,19 @@
 -- addonName, addonTable = ...;
 local _, WBT = ...;
 
+ad = WBT; -- MYTODO: Remove
+local KillInfo = WBT.KillInfo;
+local Util = WBT.Util;
+local BossData = WBT.BossData;
+
+
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
+WBT.Print = WBT.AceAddon.Print;
 
 local gui;
 local boss_death_frame;
 local boss_combat_frame;
+local g_kill_infos = {};
 
 local SOUND_CLASSIC = "CLASSIC"
 local SOUND_FANCY = "FANCY";
@@ -61,35 +69,26 @@ local function SetSound(state)
     WBT.db.global.sound_enabled = state;
 end
 
-local function SetContainsKey(set, key)
-    return set[key] ~= nil;
-end
-
-local function TableIsEmpty(tbl)
-    return next(tbl) == nil
-end
-
-local function SetContainsValue(set, value)
-    for k, v in pairs(set) do
-        if v == value then
-            return true;
-        end
+local function IsDead(name)
+    local ki = g_kill_infos[name];
+    if ki then
+        print(ki.name);
+        print(ki.IsDead);
+        return ki:IsDead();
     end
-
-    return false;
 end
 
 local function IsBoss(name)
-    return SetContainsKey(TRACKED_BOSSES, name);
+    return Util.SetContainsKey(BossData.GetAll(), name);
 end
 
 local function IsInZoneOfBoss(name)
-    return GetZoneText() == TRACKED_BOSSES[name].zone;
+    return GetZoneText() == BossData.Get(name).zone;
 end
 
 local function BossesInCurrentZone()
     local bosses_in_zone = {}
-    for name, boss in pairs(TRACKED_BOSSES) do
+    for name, boss in pairs(BossData.Get()) do
         if IsInZoneOfBoss(name) then
             bosses_in_zone[name] = name;
         end
@@ -102,34 +101,15 @@ local function IsInBossZone()
     return not TableIsEmpty(BossesInCurrentZone());
 end
 
-local function GetRealmType()
-    local pvpStyle = GetZonePVPInfo();
-    if pvpStyle == nil then
-        return REALM_TYPE_PVE;
-    end
-
-    return REALM_TYPE_PVP;
-end
-
 local function GetKillInfoFromZone()
     local current_zone = GetZoneText();
-    for name, boss_info in pairs(TRACKED_BOSSES) do
+    for name, boss_info in pairs(BossData.GetAll()) do
         if boss_info.zone == current_zone then
             return g_kill_infos[boss_info.name];
         end
     end
 
     return nil;
-end
-
-local function FormatTimeSeconds(seconds)
-    local mins = math.floor(seconds / 60);
-    local secs = math.floor(seconds % 60);
-    if mins > 0 then
-        return mins .. "m " .. secs .. "s";
-    else
-        return secs .. "s";
-    end
 end
 
 local function GetSpawnTimeOutput(name)
@@ -145,7 +125,7 @@ local function IsBossZone()
     local current_zone = GetZoneText();
 
     local is_boss_zone = false;
-    for name, boss in pairs(TRACKED_BOSSES) do
+    for name, boss in pairs(BossData.GetAll()) do
         if boss.zone == current_zone then
             is_boss_zone = true;
         end
@@ -155,7 +135,7 @@ local function IsBossZone()
 end
 
 local function AnyDead()
-    for name, boss in pairs(TRACKED_BOSSES) do
+    for name, boss in pairs(BossData.GetAll()) do
         if IsDead(name) then
             return true;
         end
@@ -170,7 +150,7 @@ end
 local function GetBossNames()
     local boss_names = {};
     local i = 1; -- Don't start on index = 0... >-<
-    for name, _ in pairs(TRACKED_BOSSES) do
+    for name, _ in pairs(BossData.GetAll()) do
         boss_names[i] = name;
         i = i + 1;
     end
@@ -186,22 +166,19 @@ local function RequestKillData()
     end
 end
 
-local function KillTag(timer, state)
-    timer.kill = state;
+local function GetColoredBossName(name)
+    return BossData.Get(name).name_colored;
 end
 
 local function UserAction_ResetBoss(name)
     local kill_info = g_kill_infos[name];
-    if not kill_info then
-        return;
-    end
 
     if not kill_info.cyclic then
         local cyclic_mode = COLOR_RED .. "Cyclid Mode" .. COLOR_DEFAULT;
         WBT:Print("Clicking a world boss that is in " .. cyclic_mode .. " will reset it."
             .. " Try '/wbt cyclic' for more info.");
     else
-        KillTag(kill_info.timer, true);
+        kill_info:Reset();
         WBT:Print(GetColoredBossName(name) .. " has been reset.");
     end
 end
@@ -336,7 +313,7 @@ local function GetBossesToAnnounceInCurrentZone(current_zone_only)
     local current_zone = GetZoneText();
     local bosses = {};
     local num_entries = 0; -- No way to get size of table :(
-    for name, boss in pairs(TRACKED_BOSSES) do
+    for name, boss in pairs(BossData.GetAll()) do
         if (not current_zone_only) or current_zone == boss.zone then
             if IsDead(name) then
                 bosses[name] = name;
@@ -349,7 +326,7 @@ local function GetBossesToAnnounceInCurrentZone(current_zone_only)
 end
 
 local function ServerSpawnTime(kill_info)
-    local data = TRACKED_BOSSES[kill_info.name];
+    local data = BossData.Get(kill_info.name);
     return kill_info.t_death + data.max_respawn;
 end
 
@@ -370,28 +347,40 @@ local function CreateServerDeathTimeParseable(name, send_data_for_parsing)
     return server_death_time;
 end
 
-local function CreateAnnounceMessage(name, timer, send_data_for_parsing)
-    local spawn_time = GetSpawnTimeAsText(name);
-    local server_death_time = CreateServerDeathTimeParseable(name, send_data_for_parsing);
+local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
+    local spawn_time = kill_info:GetSpawnTimeAsText();
+    local server_death_time = CreateServerDeathTimeParseable(kill_info.name, send_data_for_parsing);
 
     local msg = ICON_SKULL .. name .. ICON_SKULL .. ": " .. spawn_time .. server_death_time;
 
     return msg;
 end
 
-local function AnnounceSpawnTimers(spawn_timers, num_entries, send_data_for_parsing)
-    if num_entries > 0 then
-        for name, timer in pairs(spawn_timers) do
-            SendChatMessage(CreateAnnounceMessage(name, timer, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
-        end
-    else
+local function AnnounceSpawnTimers(kill_infos, send_data_for_parsing)
+    local n = 0;
+    for name, kill_info in pairs(kill_infos) do
+        SendChatMessage(CreateAnnounceMessage(name, kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
+        n = n + 1;
+    end
+    if n == 0 then
         WBT:Print("No spawn timers registered.");
     end
 end
 
-local function AnnounceSpawnTime(current_zone_only, send_data_for_parsing)
+local function AnnounceSpawnTime(send_data_for_parsing)
     bosses, num_entries = GetBossesToAnnounceInCurrentZone(current_zone_only);
     AnnounceSpawnTimers(bosses, num_entries, send_data_for_parsing);
+end
+
+local function SetKillInfo(name, server_death_time)
+ local ki = g_kill_infos[name];
+    if ki then
+        ki:RegisterDeath(server_death_time);
+    else
+        ki = KillInfo:New(server_death_time, name);
+    end
+
+    g_kill_infos[name] = ki;
 end
 
 local function InitDeathTrackerFrame()
@@ -405,9 +394,7 @@ local function InitDeathTrackerFrame()
 		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo()
 
              if eventType == "UNIT_DIED" and IsBoss(destName) then
-                 local ki = g_kill_infos[name] or KillInfo:New(GetServerTime(), destName);
-                 g_kill_infos[name] = ki;
-                 ki:StartWorldBossDeathTimer();
+                 SetKillInfo(destName, GetServerTime());
              end
         end);
 end
@@ -416,7 +403,7 @@ local function PlayAlertSound(boss_name)
     local sound_type = WBT.db.global.sound_type;
     local sound_enabled = WBT.db.global.sound_enabled;
 
-    local soundfile = TRACKED_BOSSES[boss_name].soundfile;
+    local soundfile = BossData.Get(boss_name).soundfile;
     if sound_type == SOUND_CLASSIC then
         soundfile = SOUND_FILE_DEFAULT;
     end
@@ -647,8 +634,10 @@ function WBT.AceAddon:InitChatParsing()
                     local boss_name, server_death_time = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
                     if IsBoss(boss_name) and not IsDead(boss_name) then
                         WBT:Print("Received " .. GetColoredBossName(boss_name) .. " timer from: " .. sender);
-                        SetDeathTime(server_death_time, boss_name);
+
+                        SetKillInfo(name, server_death_time);
                         StartWorldBossDeathTimer(boss_name);
+
                     end
                 end
             end
@@ -657,28 +646,72 @@ function WBT.AceAddon:InitChatParsing()
 
     InitRequestParsing();
     InitSharedTimersParsing();
+end
 
+local function InitSerializedKillInfos()
+    -- I think it's a good idea to always let a kill_info work on the table stored in globals.kill_infos.
+    -- Do that tomorrow!
+    for name, serialized in pairs(WBT.db.global.kill_infos) do
+        g_kill_infos[name] = KillInfo:Deserialize(serialized);
+    end
+    
+end
+
+local function InitKillInfoManager()
+    g_kill_infos = {};
+    InitSerializedKillInfos();
+
+    local kill_info_manager = CreateFrame("Frame");
+    kill_info_manager.since_update = 0;
+    local t_update = 1;
+    kill_info_manager:SetScript("OnUpdate", function(self, elapsed)
+            self.since_update = self.since_update + elapsed;
+            if (self.since_update > t_update) then
+
+                for _, kill_info in pairs(g_kill_infos) do
+                    kill_info:Update();
+                    if kill_info:Killed() then
+                        return
+                    end
+                    if kill_info:ShouldAnnounce() then
+                        AnnounceSpawnTime(kill_info, true, SendDataEnabled());
+                    end
+                    if kill_info:Expired() then
+                        if IsInZoneOfBoss(kill_info.name) then
+                            FlashClientIcon();
+                        end
+                        if CyclicEnabled() then
+                            local t_death_new, t_spawn = EstimationNextSpawn(kill_info.name);
+                            kill_info.t_death = t_death_new
+                            self.until_time = t_spawn;
+                            kill_info.cyclic = true;
+                        end
+                    end
+                end
+
+                UpdateGUIVisibility();
+
+                self.since_update = 0;
+            end
+        end);
 end
 
 function WBT.AceAddon:OnEnable()
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
-    g_kill_infos = WBT.db.global.kill_infos
     -- self.db.global = defaults.global; -- Resets the global profile in case I mess up the table
     -- /run for k, v in pairs(WBT.db.global) do WBT.db.global[k] = nil end -- Also resets global profile, but from in-game
 
     InitDeathTrackerFrame(); -- Todo: make sure this can't be called twice in same session
     InitCombatScannerFrame();
-    InitGUI();
+    if AnyDead() or IsBossZone() then
+        RegisterEvents();
+    end
 
     UpdateCyclicStates();
 
-    if AnyDead() or IsBossZone() then
-        RegisterEvents();
-        StartWorldBossDeathTimer(unpack(GetBossNames()));
-        ShowGUI();
-    else
-        HideGUI();
-    end
+    InitKillInfoManager();
+
+    InitGUI();
 
     StartVisibilityHandler();
 
@@ -686,7 +719,6 @@ function WBT.AceAddon:OnEnable()
     self:RegisterChatCommand("worldbosstimers", SlashHandler);
 
     self:InitChatParsing();
-
 end
 
 function WBT.AceAddon:OnDisable()
@@ -706,17 +738,15 @@ function d(min, sec)
 end
 
 local function start_sim(name, t)
-    t = t or GetServerTime();
-    SetDeathTime(t, name);
-    StartWorldBossDeathTimer(name);
+    SetKillInfo(name, t);
 end
 
 function dsim()
     local function death_in_sec(name, t)
-        return GetServerTime() - TRACKED_BOSSES[name].max_respawn + t;
+        return GetServerTime() - BossData.Get(name).max_respawn + t;
     end
 
-    for name, data in pairs(TRACKED_BOSSES) do
+    for name, data in pairs(BossData.GetAll()) do
         start_sim(name, death_in_sec(name, 3));
     end
 
@@ -725,10 +755,10 @@ end
 -- Relog, and make sure it works after.
 function dsim2()
     local function death_in_sec(name, t)
-        return GetServerTime() - TRACKED_BOSSES[name].max_respawn + t;
+        return GetServerTime() - BossData.Get(name).max_respawn + t;
     end
 
-    for name, data in pairs(TRACKED_BOSSES) do
+    for name, data in pairs(BossData.GetAll()) do
         start_sim(name, death_in_sec(name, 25));
     end
 end

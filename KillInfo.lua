@@ -10,20 +10,33 @@
 
 local _, WBT = ...;
 
+local Util = WBT.Util;
+
 local KillInfo = {}
 WBT.KillInfo = KillInfo;
 
+
 function KillInfo:New(time, name)
+    local db = WBT.BossData.Get(name);
     local ki = {
         name = name,
         t_death = time, 
         realmName = GetRealmName(),
-        realm_type = GetRealmType(),
+        realm_type = Util.GetRealmType(),
         safe = not IsInGroup(),
         cyclic = false,
-        timer_killed = false,
-        db = WBT.BossData.Get(name),
+        reset = false,
+        db = db,
+        announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
+        until_time = t_death + db.max_respawn;
     }
+    setmetatable(ki, self);
+    self.__index = self;
+    return ki;
+end
+
+function KillInfo:Deserialize(serialized)
+    local ki = serialized;
     setmetatable(ki, self);
     self.__index = self;
     return ki;
@@ -106,9 +119,9 @@ function KillInfo:GetSpawnTimeAsText()
         if t_lower == nil or t_upper == nil then
             return -1;
         elseif t_lower < 0 then
-            return "0s" .. RANDOM_DELIM .. FormatTimeSeconds(t_upper)
+            return "0s" .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
         else
-            return FormatTimeSeconds(t_lower) .. RANDOM_DELIM .. FormatTimeSeconds(t_upper)
+            return Util.FormatTimeSeconds(t_lower) .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
         end
     else
         local spawn_time_sec = self:GetSpawnTimeSec();
@@ -116,13 +129,15 @@ function KillInfo:GetSpawnTimeAsText()
             return -1;
         end
 
-        return FormatTimeSeconds(spawn_time_sec);
+        return Util.FormatTimeSeconds(spawn_time_sec);
     end
 end
 
 
+
 function KillInfo:IsDead()
-    if self:HasBeenManuallyReset() then
+    print("YO");
+    if self.reset then
         return false;
     end
     if self.cyclic then
@@ -144,98 +159,37 @@ function KillInfo:HasRespawned()
     return not self:IsDead();
 end
 
-function KillInfo:StartWorldBossDeathTimer()
-    if not(self:HasRespawned()) or (CyclicEnabled() and not(self:HasBeenManuallyReset())) then
+function KillInfo.StartWorldBossDeathTimer()
+    if not(self:HasRespawned()) or (CyclicEnabled() and not(self.reset)) then
         local timer_duration = self:GetSpawnTimeSec();
         local pretty_name = self.db.color .. name .. COLOR_DEFAULT .. ": ";
         self:StartTimer(timer_duration, 1, pretty_name);
     end
 end
 
-local function MaybeAnnounceSpawnTimer(remaining_time)
+function KillInfo:ShouldAnnounce()
     --@do-not-package@
     -- Debug
     --local announce_times = {1 , 10, 19, 28, 37, 46, 55, 64, 73, 82, 91, 100, 109, 118, 127, 136, 145, 154, 163, 172, 181, 190, 199, 208, 217, 226, 235, 244, 253, 262, 271, 280, 289, 298, 307, 316, 325, 334, 343, 352, 361, 370, 379, 388, 397, 406, 415, 424, 433, 442, 451, 460, 469, 478, 487, 496, 505, 514, 523, 532, 541, 550, 559, 568, 577, 586, 595, 604, 613, 622, 631, 640, 649, 658, 667, 676, 685, 694, 703, 712, 721, 730, 739, 748, 757, 766, 775, 784, 793, 802, 811, 820, 829, 838, 847, 856, 865, 874, 883, 892}
     --@end-do-not-package@
-    local announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
-    if WBT.db.global.auto_announce
-            and SetContainsValue(announce_times, remaining_time)
+    return WBT.db.global.auto_announce
+            and Util:SetContainsValue(self.announce_times, self.remaining_time)
             and IsInZoneOfBoss(self.name)
-            and self:IsKillInfoSafe({}) then
-        AnnounceSpawnTime(true, SendDataEnabled());
-    end
+            and self:IsKillInfoSafe({});
 end
 
-function KillInfo:StartTimer(duration, freq, text)
-    -- Always kill the previous frame and start a new one.
-    if self.timer ~= nil then
-        KillTag(self.timer, true);
-    end
-
-    -- Create new frame.
-    self.timer = CreateFrame("Frame");
-    KillTag(self.timer, false);
-
-    self.timer.until_time = GetServerTime() + duration;
-    local UpdateInterval = freq;
-    local kill_info = self;
-    self.timer:SetScript("OnUpdate", function(self, elapsed)
-            if self.TimeSinceLastUpdate == nil then
-                self.TimeSinceLastUpdate = 0;
-                UpdateGUIVisibility();
-            end
-            self.TimeSinceLastUpdate = self.TimeSinceLastUpdate + elapsed;
-
-            if (self.TimeSinceLastUpdate > UpdateInterval) then
-                if self.kill then
-                    -- Note: Inside of frames, never operate on objects that might be updated before the SetScript function is called!
-                    -- If possible, try to operate on <self>.
-                    self:SetScript("OnUpdate", nil);
-
-                    -- Need to check if a new timer is created before this OnUpdate function is reached.
-                    if self == kill_info.timer then
-                        kill_info.timer_killed = true;
-                    end
-                    UpdateGUIVisibility();
-                    if gui ~= nil then
-                        gui:Update();
-                    end
-                    return;
-                end
-
-                self.remaining_time = self.until_time - GetServerTime();
-                MaybeAnnounceSpawnTimer(self.remaining_time, kill_info.name);
-                if self.remaining_time < 0 then
-                    if IsInZoneOfBoss(kill_info.name) then
-                        FlashClientIcon();
-                    end
-
-                    if CyclicEnabled() then
-                        local t_death_new, t_spawn = EstimationNextSpawn(kill_info.name);
-                        kill_info.t_death = t_death_new
-                        self.until_time = t_spawn;
-                        kill_info.cyclic = true;
-                    end
-
-                    UpdateGUIVisibility();
-                end
-
-                if gui ~= nil then
-                    gui:Update();
-                end
-
-                self.TimeSinceLastUpdate = 0;
-            end
-        end);
-    return timer;
+function KillInfo:MaybeAnnounceSpawnTimer(remaining_time)
 end
 
-function self:HasBeenManuallyReset()
-    return g_kill_infos[name].timer_killed;
+function KillInfo:Update()
+    if self.reset then
+        return;
+    end
+    self.remaining_time = self.until_time - GetServerTime();
 end
 
 -- For bosses with non-random spawn. Modify the result for other bosses.
-function self:EstimationNextSpawn()
+function KillInfo:EstimationNextSpawn()
     local t_spawn = self.t_death;
     local t_now = GetServerTime();
     local max_respawn = self.db.max_respawn;
@@ -247,3 +201,6 @@ function self:EstimationNextSpawn()
     return t_death_new, t_spawn;
 end
 
+function KillInfo:Reset()
+    self.reset = true;
+end

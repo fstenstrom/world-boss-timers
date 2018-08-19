@@ -5,6 +5,11 @@
 -- addonName, addonTable = ...;
 local _, WBT = ...;
 
+local Util = WBT.Util;
+
+local BossData = {};
+WBT.BossData = BossData;
+
 local SOUND_CLASSIC = "CLASSIC"
 local SOUND_FANCY = "FANCY";
 
@@ -21,7 +26,7 @@ local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
 local SOUND_FILE_DEFAULT = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
 local SOUND_FILE_PREPARE = "Sound\\creature\\EadricThePure\\AC_Eadric_Aggro01.ogg";
 
-local TRACKED_BOSSES = {
+BossData.TRACKED_BOSSES = {
     ["Oondasta"] = {
         name = "Oondasta",
         color = "|cff21ffa3",
@@ -89,6 +94,7 @@ local TRACKED_BOSSES = {
         random_spawn_time = false,
     },
     -- Dummy.
+    ]]--
     ["Grellkin"] = {
         name = "Grellkin",
         color = "|cffffff00",
@@ -98,6 +104,7 @@ local TRACKED_BOSSES = {
         max_respawn = MAX_RESPAWN_SHA,
         random_spawn_time = true,
     },
+    --[[
     -- Dummy.
     -- This entry won't work for everything since two mobs reside in same zone.
     ["Young Nightsaber"] = {
@@ -113,6 +120,14 @@ local TRACKED_BOSSES = {
     --@end-do-not-package@
 }
 
-function WBT.BossData.Get(name)
-    return TRACKED_BOSSES[name];
+function BossData.Get(name)
+    return BossData.TRACKED_BOSSES[name];
+end
+
+function BossData.GetAll()
+    return BossData.TRACKED_BOSSES;
+end
+
+for name, data in pairs(BossData.TRACKED_BOSSES) do
+    data.name_colored = data.color .. data.name .. Util.COLOR_DEFAULT;
 end
