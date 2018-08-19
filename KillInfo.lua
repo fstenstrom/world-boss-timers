@@ -15,23 +15,38 @@ local Util = WBT.Util;
 local KillInfo = {}
 WBT.KillInfo = KillInfo;
 
+local RANDOM_DELIM = "-"
 
-function KillInfo:New(time, name)
-    local db = WBT.BossData.Get(name);
+function KillInfo:SetInitialValues()
+    self.cyclic = false;
+    self.reset = false;
+    self.safe = not IsInGroup();
+end
+
+function KillInfo:SetNewDeath(t_death)
+    self:SetInitialValues();
+
+    self.t_death = t_death;
+    self.until_time = self.t_death + self.db.max_respawn;
+    self.reset = false;
+
+    return self.until_time < GetServerTime();
+end
+
+function KillInfo:New(t_death, name)
     local ki = {
         name = name,
-        t_death = time, 
         realmName = GetRealmName(),
         realm_type = Util.GetRealmType(),
-        safe = not IsInGroup(),
-        cyclic = false,
-        reset = false,
-        db = db,
+        db = WBT.BossData.Get(name),
         announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
-        until_time = t_death + db.max_respawn;
     }
+
     setmetatable(ki, self);
     self.__index = self;
+
+    ki:SetNewDeath(t_death);
+
     return ki;
 end
 
@@ -59,13 +74,13 @@ end
 -- server shard.
 -- If this happens, we don't want the data to propagate
 -- to other players.
-function KillInfo:IsKillInfoSafe(error_msgs)
+function KillInfo:IsCompletelySafe(error_msgs)
 
     --local kill_info = GetKillInfoFromZone();
 
     -- It's possible to have one char with war mode, and one
     -- without on the same server.
-    local realm_type = GetRealmType();
+    local realm_type = Util.GetRealmType();
     local realmName = GetRealmName();
 
     if not self.safe then
@@ -81,7 +96,7 @@ function KillInfo:IsKillInfoSafe(error_msgs)
         table.insert(error_msgs, "Kill was made on " .. self.realmName .. ", but are now on " .. realmName .. ".");
     end
 
-    if TableIsEmpty(error_msgs) then
+    if Util.TableIsEmpty(error_msgs) then
         return true;
     end
 
@@ -89,7 +104,7 @@ function KillInfo:IsKillInfoSafe(error_msgs)
 end
 
 function KillInfo:GetServerDeathTime()
-    return t_death;
+    return self.t_death;
 end
 
 function KillInfo:GetTimeSinceDeath()
@@ -133,15 +148,12 @@ function KillInfo:GetSpawnTimeAsText()
     end
 end
 
-
-
 function KillInfo:IsDead()
-    print("YO");
     if self.reset then
         return false;
     end
     if self.cyclic then
-        if CyclicEnabled() then
+        if WBT.CyclicEnabled() then
             return true;
         else
             return false;
@@ -175,10 +187,7 @@ function KillInfo:ShouldAnnounce()
     return WBT.db.global.auto_announce
             and Util:SetContainsValue(self.announce_times, self.remaining_time)
             and IsInZoneOfBoss(self.name)
-            and self:IsKillInfoSafe({});
-end
-
-function KillInfo:MaybeAnnounceSpawnTimer(remaining_time)
+            and self:IsCompletelySafe({});
 end
 
 function KillInfo:Update()
@@ -203,4 +212,8 @@ end
 
 function KillInfo:Reset()
     self.reset = true;
+end
+
+function KillInfo:Expired()
+    return self.until_time < GetServerTime();
 end

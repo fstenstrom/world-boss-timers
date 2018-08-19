@@ -9,6 +9,8 @@ local Util = {};
 WBT.Util = Util;
 
 Util.COLOR_DEFAULT = "|cffffffff";
+Util.COLOR_RED = "|cffff0000";
+Util.COLOR_GREEN = "|cff00ff00";
 
 function Util.TableIsEmpty(tbl)
     return next(tbl) == nil

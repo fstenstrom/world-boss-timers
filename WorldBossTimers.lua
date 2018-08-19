@@ -12,15 +12,22 @@ local BossData = WBT.BossData;
 
 
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
-WBT.Print = WBT.AceAddon.Print;
+
+-- Workaround to keep the nice WBT:Print function.
+WBT.Print = function(self, text) WBT.AceAddon:Print(text) end
 
 local gui;
 local boss_death_frame;
 local boss_combat_frame;
 local g_kill_infos = {};
 
-local SOUND_CLASSIC = "CLASSIC"
+local SOUND_CLASSIC = "CLASSIC";
 local SOUND_FANCY = "FANCY";
+
+local CHANNEL_ANNOUNCE = "SAY";
+
+local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
+local ICON_SKULL = "{skull}";
 
 local defaults = {
     global = {
@@ -37,9 +44,11 @@ local defaults = {
     },
 };
 
-local function CyclicEnabled()
+function WBT.CyclicEnabled()
     return WBT.db.global.cyclic;
 end
+
+local CyclicEnabled = WBT.CyclicEnabled;
 
 local function SetCyclic(state)
     WBT.db.global.cyclic = state;
@@ -72,8 +81,6 @@ end
 local function IsDead(name)
     local ki = g_kill_infos[name];
     if ki then
-        print(ki.name);
-        print(ki.IsDead);
         return ki:IsDead();
     end
 end
@@ -86,19 +93,18 @@ local function IsInZoneOfBoss(name)
     return GetZoneText() == BossData.Get(name).zone;
 end
 
-local function BossesInCurrentZone()
-    local bosses_in_zone = {}
-    for name, boss in pairs(BossData.Get()) do
+local function BossInCurrentZone()
+    for name, boss in pairs(BossData.GetAll()) do
         if IsInZoneOfBoss(name) then
-            bosses_in_zone[name] = name;
+            return boss;
         end
     end
 
-    return bosses_in_zone;
+    return nil;
 end
 
 local function IsInBossZone()
-    return not TableIsEmpty(BossesInCurrentZone());
+    return not not BossInCurrentZone();
 end
 
 local function GetKillInfoFromZone()
@@ -112,10 +118,10 @@ local function GetKillInfoFromZone()
     return nil;
 end
 
-local function GetSpawnTimeOutput(name)
-    local text = GetSpawnTimeAsText(name);
-    if g_kill_infos[name].cyclic then
-        text = COLOR_RED .. text .. COLOR_DEFAULT;
+local function GetSpawnTimeOutput(kill_info)
+    local text = kill_info:GetSpawnTimeAsText();
+    if kill_info.cyclic then
+        text = Util.COLOR_RED .. text .. Util.COLOR_DEFAULT;
     end
 
     return text;
@@ -174,12 +180,18 @@ local function UserAction_ResetBoss(name)
     local kill_info = g_kill_infos[name];
 
     if not kill_info.cyclic then
-        local cyclic_mode = COLOR_RED .. "Cyclid Mode" .. COLOR_DEFAULT;
+        local cyclic_mode = Util.COLOR_RED .. "Cyclid Mode" .. Util.COLOR_DEFAULT;
         WBT:Print("Clicking a world boss that is in " .. cyclic_mode .. " will reset it."
             .. " Try '/wbt cyclic' for more info.");
     else
         kill_info:Reset();
         WBT:Print(GetColoredBossName(name) .. " has been reset.");
+    end
+end
+
+local function UpdateGUI()
+    if gui ~= nil then
+        gui:Update();
     end
 end
 
@@ -218,7 +230,7 @@ local function InitGUI()
             if IsDead(name) and (not(kill_info.cyclic) or CyclicEnabled()) then
                 local label = AceGUI:Create("InteractiveLabel");
                 label:SetWidth(170);
-                label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTimeOutput(name));
+                label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTimeOutput(kill_info));
                 label:SetCallback("OnClick", function() UserAction_ResetBoss(name) end); -- TODO: change/disable this.
                 -- Add the button to the container
                 self:AddChild(label);
@@ -309,22 +321,6 @@ local function UpdateGUIVisibility()
     end
 end
 
-local function GetBossesToAnnounceInCurrentZone(current_zone_only)
-    local current_zone = GetZoneText();
-    local bosses = {};
-    local num_entries = 0; -- No way to get size of table :(
-    for name, boss in pairs(BossData.GetAll()) do
-        if (not current_zone_only) or current_zone == boss.zone then
-            if IsDead(name) then
-                bosses[name] = name;
-                num_entries = num_entries + 1;
-            end
-        end
-    end
-
-    return bosses, num_entries;
-end
-
 local function ServerSpawnTime(kill_info)
     local data = BossData.Get(kill_info.name);
     return kill_info.t_death + data.max_respawn;
@@ -338,46 +334,35 @@ local function UpdateCyclicStates()
     end
 end
 
-local function CreateServerDeathTimeParseable(name, send_data_for_parsing)
-    local server_death_time = "";
+local function CreateServerDeathTimeParseable(kill_info, send_data_for_parsing)
+    local t_death_parseable = "";
     if send_data_for_parsing then
-        server_death_time = " (" .. SERVER_DEATH_TIME_PREFIX .. GetServerDeathTime(name) .. ")";
+        t_death_parseable = " (" .. SERVER_DEATH_TIME_PREFIX .. kill_info:GetServerDeathTime() .. ")";
     end
 
-    return server_death_time;
+    return t_death_parseable;
 end
 
 local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
     local spawn_time = kill_info:GetSpawnTimeAsText();
-    local server_death_time = CreateServerDeathTimeParseable(kill_info.name, send_data_for_parsing);
+    local t_death_parseable = CreateServerDeathTimeParseable(kill_info, send_data_for_parsing);
 
-    local msg = ICON_SKULL .. name .. ICON_SKULL .. ": " .. spawn_time .. server_death_time;
+    local msg = ICON_SKULL .. name .. ICON_SKULL .. ": " .. spawn_time .. t_death_parseable;
 
     return msg;
 end
 
-local function AnnounceSpawnTimers(kill_infos, send_data_for_parsing)
-    local n = 0;
-    for name, kill_info in pairs(kill_infos) do
-        SendChatMessage(CreateAnnounceMessage(name, kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
-        n = n + 1;
-    end
-    if n == 0 then
-        WBT:Print("No spawn timers registered.");
-    end
+local function AnnounceSpawnTime(kill_info, send_data_for_parsing)
+    SendChatMessage(CreateAnnounceMessage(kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
+    WBT:Print("No spawn timers registered.");
 end
 
-local function AnnounceSpawnTime(send_data_for_parsing)
-    bosses, num_entries = GetBossesToAnnounceInCurrentZone(current_zone_only);
-    AnnounceSpawnTimers(bosses, num_entries, send_data_for_parsing);
-end
-
-local function SetKillInfo(name, server_death_time)
- local ki = g_kill_infos[name];
+local function SetKillInfo(name, t_death)
+    local ki = g_kill_infos[name];
     if ki then
-        ki:RegisterDeath(server_death_time);
+        ki:SetNewDeath(t_death);
     else
-        ki = KillInfo:New(server_death_time, name);
+        ki = KillInfo:New(t_death, name);
     end
 
     g_kill_infos[name] = ki;
@@ -395,6 +380,7 @@ local function InitDeathTrackerFrame()
 
              if eventType == "UNIT_DIED" and IsBoss(destName) then
                  SetKillInfo(destName, GetServerTime());
+                 UpdateGUI();
              end
         end);
 end
@@ -410,8 +396,6 @@ local function PlayAlertSound(boss_name)
 
     if sound_enabled then
         PlaySoundFile(soundfile, "Master");
-    else
-        WBT:Print("Sound is off: enable with /WBT sound enable");
     end
 end
 
@@ -468,10 +452,8 @@ end
 
 local function ResetKillInfo()
     WBT:Print("Resetting all kill info.");
-    for k, v in pairs(g_kill_infos) do
-        KillTag(g_kill_infos[k].timer, true);
-        g_kill_infos[k] = nil;
-    end
+    WBT.db.global.kill_infos = {};
+    g_kill_infos = WBT.db.global.kill_infos;
 end
 
 local function SlashHandler(input)
@@ -499,14 +481,14 @@ local function SlashHandler(input)
     end
 
     local function GetColoredStatus(status_var)
-        local color = COLOR_RED;
+        local color = Util.COLOR_RED;
         local status = "disabled";
         if status_var then
-            color = COLOR_GREEN;
+            color = Util.COLOR_GREEN;
             status = "enabled";
         end
 
-        return color .. status .. COLOR_DEFAULT;
+        return color .. status .. Util.COLOR_DEFAULT;
     end
 
     local function PrintFormattedStatus(output, status_var)
@@ -524,19 +506,27 @@ local function SlashHandler(input)
         or arg1 == "yell"
         or arg1 == "tell" then
 
-        local current_zone_only = arg2 ~= "all";
-        if current_zone_only then
-            local error_msgs = {};
-            if IsInBossZone() and not IsKillInfoSafe(error_msgs) then
-                SendChatMessage("{cross}Warning{cross}: Timer might be incorrect!", "SAY", nil, nil);
-                for i, v in ipairs(error_msgs) do
-                    SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
-                end
-            end
-            AnnounceSpawnTime(true, true);
-        else
-            AnnounceSpawnTime(false, true);
+
+        local boss = BossInCurrentZone();
+        if not boss then
+            WBT:Print("You can't announce outside of boss zone.");
+            return;
         end
+
+        local kill_info = g_kill_infos[boss.name];
+        if not kill_info then
+            WBT:Print("No spawn timer for " .. GetColoredBossName(boss.name) .. ".");
+            return;
+        end
+
+        local error_msgs = {};
+        if not kill_info:IsCompletelySafe(error_msgs) then
+            SendChatMessage("{cross}Warning{cross}: Timer might be incorrect!", "SAY", nil, nil);
+            for i, v in ipairs(error_msgs) do
+                SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
+            end
+        end
+        AnnounceSpawnTime(kill_info, true);
     elseif arg1 == "send" then
         new_state = not SendDataEnabled();
         SetSendData(new_state);
@@ -557,7 +547,7 @@ local function SlashHandler(input)
         RequestKillData();
     elseif arg1 == "sound" then
         sound_type_args = {"classic", "fancy"};
-        if SetContainsValue(sound_type_args, arg2) then
+        if Util.SetContainsValue(sound_type_args, arg2) then
             WBT.db.global.sound_type = arg2;
             WBT:Print("SoundType: " .. arg2);
         else
@@ -572,7 +562,7 @@ local function SlashHandler(input)
         SetCyclic(new_state);
         UpdateGUIVisibility();
         PrintFormattedStatus("Cyclic mode is now", new_state);
-        local red_text = COLOR_RED .. "red text" .. COLOR_DEFAULT;
+        local red_text = Util.COLOR_RED .. "red text" .. Util.COLOR_DEFAULT;
         WBT:Print("This mode will repeat the boss timers if you miss the kill. A timer in " .. red_text
             .. " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.");
     else
@@ -614,9 +604,9 @@ function WBT.AceAddon:InitChatParsing()
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY"
                         and msg == CHAT_MSG_TIMER_REQUEST
-                        and not SetContainsKey(answered_requesters, sender)
+                        and not Util.SetContainsKey(answered_requesters, sender)
                         and not PlayerSentRequest(sender)
-                        and IsKillInfoSafe({}) then
+                        and IsCompletelySafe({}) then
 
                     ShareTimers();
                     answered_requesters[sender] = sender;
@@ -631,11 +621,11 @@ function WBT.AceAddon:InitChatParsing()
         timer_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
-                    local boss_name, server_death_time = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
+                    local boss_name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
                     if IsBoss(boss_name) and not IsDead(boss_name) then
                         WBT:Print("Received " .. GetColoredBossName(boss_name) .. " timer from: " .. sender);
 
-                        SetKillInfo(name, server_death_time);
+                        SetKillInfo(name, t_death);
                         StartWorldBossDeathTimer(boss_name);
 
                     end
@@ -658,7 +648,7 @@ local function InitSerializedKillInfos()
 end
 
 local function InitKillInfoManager()
-    g_kill_infos = {};
+    g_kill_infos = WBT.db.global.kill_infos;
     InitSerializedKillInfos();
 
     local kill_info_manager = CreateFrame("Frame");
@@ -670,7 +660,7 @@ local function InitKillInfoManager()
 
                 for _, kill_info in pairs(g_kill_infos) do
                     kill_info:Update();
-                    if kill_info:Killed() then
+                    if kill_info.reset then
                         return
                     end
                     if kill_info:ShouldAnnounce() then
@@ -681,7 +671,7 @@ local function InitKillInfoManager()
                             FlashClientIcon();
                         end
                         if CyclicEnabled() then
-                            local t_death_new, t_spawn = EstimationNextSpawn(kill_info.name);
+                            local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
                             kill_info.t_death = t_death_new
                             self.until_time = t_spawn;
                             kill_info.cyclic = true;
@@ -774,10 +764,7 @@ function killsim()
 end
 
 function reset()
-    for name, kill_info in pairs(g_kill_infos) do
-        KillTag(kill_info.timer, true);
-    end
-    WBT.db.global.kill_infos = {};
+    ResetKillInfo();
 end
 
 function test_KillInfo()
