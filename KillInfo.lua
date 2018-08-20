@@ -57,10 +57,6 @@ function KillInfo:Deserialize(serialized)
     return ki;
 end
 
-function KillInfo:Print()
-    print("|cffff0000" .. self.name .. "|cffffffff");
-end
-
 function KillInfo:GetColoredBossName(name)
     return self.db.color .. name .. COLOR_DEFAULT;
 end
@@ -180,14 +176,15 @@ function KillInfo.StartWorldBossDeathTimer()
 end
 
 function KillInfo:ShouldAnnounce()
-    --@do-not-package@
-    -- Debug
-    --local announce_times = {1 , 10, 19, 28, 37, 46, 55, 64, 73, 82, 91, 100, 109, 118, 127, 136, 145, 154, 163, 172, 181, 190, 199, 208, 217, 226, 235, 244, 253, 262, 271, 280, 289, 298, 307, 316, 325, 334, 343, 352, 361, 370, 379, 388, 397, 406, 415, 424, 433, 442, 451, 460, 469, 478, 487, 496, 505, 514, 523, 532, 541, 550, 559, 568, 577, 586, 595, 604, 613, 622, 631, 640, 649, 658, 667, 676, 685, 694, 703, 712, 721, 730, 739, 748, 757, 766, 775, 784, 793, 802, 811, 820, 829, 838, 847, 856, 865, 874, 883, 892}
-    --@end-do-not-package@
     return WBT.db.global.auto_announce
-            and Util:SetContainsValue(self.announce_times, self.remaining_time)
-            and IsInZoneOfBoss(self.name)
+            and Util.SetContainsValue(self.announce_times, self.remaining_time)
+            and WBT.IsInZoneOfBoss(self.name)
             and self:IsCompletelySafe({});
+end
+
+function KillInfo:ShouldFlash()
+    local t_now = GetServerTime();
+    return self.until_time <= t_now and t_now <= (self.until_time + 1) and WBT.IsInZoneOfBoss(self.name);
 end
 
 function KillInfo:Update()

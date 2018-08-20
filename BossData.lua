@@ -26,7 +26,7 @@ local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
 local SOUND_FILE_DEFAULT = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
 local SOUND_FILE_PREPARE = "Sound\\creature\\EadricThePure\\AC_Eadric_Aggro01.ogg";
 
-BossData.TRACKED_BOSSES = {
+local tracked_bosses = {
     ["Oondasta"] = {
         name = "Oondasta",
         color = "|cff21ffa3",
@@ -121,13 +121,13 @@ BossData.TRACKED_BOSSES = {
 }
 
 function BossData.Get(name)
-    return BossData.TRACKED_BOSSES[name];
+    return tracked_bosses[name];
 end
 
 function BossData.GetAll()
-    return BossData.TRACKED_BOSSES;
+    return tracked_bosses;
 end
 
-for name, data in pairs(BossData.TRACKED_BOSSES) do
+for name, data in pairs(tracked_bosses) do
     data.name_colored = data.color .. data.name .. Util.COLOR_DEFAULT;
 end

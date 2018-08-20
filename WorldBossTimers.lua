@@ -25,9 +25,9 @@ local SOUND_CLASSIC = "CLASSIC";
 local SOUND_FANCY = "FANCY";
 
 local CHANNEL_ANNOUNCE = "SAY";
-
-local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
 local ICON_SKULL = "{skull}";
+local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
+local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 
 local defaults = {
     global = {
@@ -89,13 +89,13 @@ local function IsBoss(name)
     return Util.SetContainsKey(BossData.GetAll(), name);
 end
 
-local function IsInZoneOfBoss(name)
+function WBT.IsInZoneOfBoss(name)
     return GetZoneText() == BossData.Get(name).zone;
 end
 
 local function BossInCurrentZone()
     for name, boss in pairs(BossData.GetAll()) do
-        if IsInZoneOfBoss(name) then
+        if WBT.IsInZoneOfBoss(name) then
             return boss;
         end
     end
@@ -153,27 +153,22 @@ local function ShouldShowGUI()
     return IsBossZone() or AnyDead();
 end
 
-local function GetBossNames()
-    local boss_names = {};
-    local i = 1; -- Don't start on index = 0... >-<
-    for name, _ in pairs(BossData.GetAll()) do
-        boss_names[i] = name;
-        i = i + 1;
-    end
-
-    return boss_names;
-end
-
 local last_request_time = 0;
 local function RequestKillData()
     if GetServerTime() - last_request_time > 5 then
-        SendChatMessage(CHAT_MSG_TIMER_REQUEST, "SAY");
+        SendChatMessage(CHAT_MESSAGE_TIMER_REQUEST, "SAY");
         last_request_time = GetServerTime();
     end
 end
 
 local function GetColoredBossName(name)
     return BossData.Get(name).name_colored;
+end
+
+local function UpdateGUI()
+    if gui ~= nil then
+        gui:Update();
+    end
 end
 
 local function UserAction_ResetBoss(name)
@@ -185,18 +180,12 @@ local function UserAction_ResetBoss(name)
             .. " Try '/wbt cyclic' for more info.");
     else
         kill_info:Reset();
+        UpdateGUI();
         WBT:Print(GetColoredBossName(name) .. " has been reset.");
     end
 end
 
-local function UpdateGUI()
-    if gui ~= nil then
-        gui:Update();
-    end
-end
-
 local function InitGUI()
-
     local AceGUI = LibStub("AceGUI-3.0"); -- Need to create AceGUI 'OnInit or OnEnabled'
     local gui_container = AceGUI:Create("SimpleGroup");
     gui = AceGUI:Create("Window");
@@ -267,7 +256,6 @@ local function InitGUI()
                 xOfs = xOfs,
                 yOfs = yOfs,
             };
-            -- print(WBT.db.char.gui_position.point, WBT.db.char.gui_position.relativeToName, WBT.db.char.gui_position.relativePoint, WBT.db.char.gui_position.xOfs, WBT.db.char.gui_position.yOfs);
         end
         hooksecurefunc(gui.frame, "StopMovingOrSizing", SaveGuiPoint);
     end
@@ -321,14 +309,9 @@ local function UpdateGUIVisibility()
     end
 end
 
-local function ServerSpawnTime(kill_info)
-    local data = BossData.Get(kill_info.name);
-    return kill_info.t_death + data.max_respawn;
-end
-
 local function UpdateCyclicStates()
-    for name, kill_info in pairs(g_kill_infos) do
-        if ServerSpawnTime(kill_info) < GetServerTime() then
+    for _, kill_info in pairs(g_kill_infos) do
+        if kill_info:Expired() then
             kill_info.cyclic = true;
         end
     end
@@ -347,14 +330,13 @@ local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
     local spawn_time = kill_info:GetSpawnTimeAsText();
     local t_death_parseable = CreateServerDeathTimeParseable(kill_info, send_data_for_parsing);
 
-    local msg = ICON_SKULL .. name .. ICON_SKULL .. ": " .. spawn_time .. t_death_parseable;
+    local msg = ICON_SKULL .. kill_info.name .. ICON_SKULL .. ": " .. spawn_time .. t_death_parseable;
 
     return msg;
 end
 
 local function AnnounceSpawnTime(kill_info, send_data_for_parsing)
     SendChatMessage(CreateAnnounceMessage(kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
-    WBT:Print("No spawn timers registered.");
 end
 
 local function SetKillInfo(name, t_death)
@@ -366,6 +348,8 @@ local function SetKillInfo(name, t_death)
     end
 
     g_kill_infos[name] = ki;
+
+    UpdateGUI();
 end
 
 local function InitDeathTrackerFrame()
@@ -454,14 +438,12 @@ local function ResetKillInfo()
     WBT:Print("Resetting all kill info.");
     WBT.db.global.kill_infos = {};
     g_kill_infos = WBT.db.global.kill_infos;
+
+    UpdateGUI();
 end
 
 local function SlashHandler(input)
-
-    -- print(input);
-    -- input = input:trim();
     arg1, arg2 = strsplit(" ", input);
-    -- print(arg1, arg2);
 
     local function PrintHelp()
         local indent = "   ";
@@ -469,7 +451,6 @@ local function SlashHandler(input)
         WBT:Print("/wbt reset --> Reset all kill info.");
         WBT:Print("/wbt saved --> Print your saved bosses.");
         WBT:Print("/wbt say --> Announce timers for boss in zone.");
-        WBT:Print("/wbt say all --> Announce timers for all bosses.");
         WBT:Print("/wbt show --> Show the timers frame.");
         WBT:Print("/wbt hide --> Hide the timers frame.");
         WBT:Print("/wbt send --> Toggle send timer data in auto announce.");
@@ -506,7 +487,6 @@ local function SlashHandler(input)
         or arg1 == "yell"
         or arg1 == "tell" then
 
-
         local boss = BossInCurrentZone();
         if not boss then
             WBT:Print("You can't announce outside of boss zone.");
@@ -526,7 +506,7 @@ local function SlashHandler(input)
                 SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
             end
         end
-        AnnounceSpawnTime(kill_info, true);
+        AnnounceSpawnTime(kill_info, SendDataEnabled());
     elseif arg1 == "send" then
         new_state = not SendDataEnabled();
         SetSendData(new_state);
@@ -568,7 +548,6 @@ local function SlashHandler(input)
     else
         PrintHelp();
     end
-
 end
 
 local function StartVisibilityHandler()
@@ -579,14 +558,6 @@ local function StartVisibilityHandler()
             UpdateGUIVisibility();
         end
     );
-end
-
-local function ShareTimers()
-    AnnounceSpawnTime(true, true);
-end
-
-function WBT.AceAddon:GetGui()
-    return gui;
 end
 
 function WBT.AceAddon:InitChatParsing()
@@ -602,14 +573,19 @@ function WBT.AceAddon:InitChatParsing()
         request_parser:RegisterEvent("CHAT_MSG_SAY");
         request_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
-                if event == "CHAT_MSG_SAY"
-                        and msg == CHAT_MSG_TIMER_REQUEST
+                if event == "CHAT_MSG_SAY" 
+                        and msg == CHAT_MESSAGE_TIMER_REQUEST
                         and not Util.SetContainsKey(answered_requesters, sender)
-                        and not PlayerSentRequest(sender)
-                        and IsCompletelySafe({}) then
+                        and not PlayerSentRequest(sender) then
 
-                    ShareTimers();
-                    answered_requesters[sender] = sender;
+                    local boss = BossInCurrentZone();
+                    if boss then
+                        local kill_info = g_kill_infos[boss.name]
+                        if kill_info and kill_info:IsCompletelySafe({}) then
+                            AnnounceSpawnTime(kill_info, true);
+                            answered_requesters[sender] = sender;
+                        end
+                    end
                 end
             end
         );
@@ -638,7 +614,7 @@ function WBT.AceAddon:InitChatParsing()
     InitSharedTimersParsing();
 end
 
-local function InitSerializedKillInfos()
+local function LoadSerializedKillInfos()
     -- I think it's a good idea to always let a kill_info work on the table stored in globals.kill_infos.
     -- Do that tomorrow!
     for name, serialized in pairs(WBT.db.global.kill_infos) do
@@ -649,7 +625,7 @@ end
 
 local function InitKillInfoManager()
     g_kill_infos = WBT.db.global.kill_infos;
-    InitSerializedKillInfos();
+    LoadSerializedKillInfos();
 
     local kill_info_manager = CreateFrame("Frame");
     kill_info_manager.since_update = 0;
@@ -657,20 +633,21 @@ local function InitKillInfoManager()
     kill_info_manager:SetScript("OnUpdate", function(self, elapsed)
             self.since_update = self.since_update + elapsed;
             if (self.since_update > t_update) then
-
                 for _, kill_info in pairs(g_kill_infos) do
                     kill_info:Update();
+
                     if kill_info.reset then
-                        return
-                    end
-                    if kill_info:ShouldAnnounce() then
-                        AnnounceSpawnTime(kill_info, true, SendDataEnabled());
-                    end
-                    if kill_info:Expired() then
-                        if IsInZoneOfBoss(kill_info.name) then
+                        -- Do nothing.
+                    else
+                        if kill_info:ShouldAnnounce() then
+                            AnnounceSpawnTime(kill_info, SendDataEnabled());
+                        end
+
+                        if kill_info:ShouldFlash() then
                             FlashClientIcon();
                         end
-                        if CyclicEnabled() then
+
+                        if kill_info:Expired() and CyclicEnabled() then
                             local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
                             kill_info.t_death = t_death_new
                             self.until_time = t_spawn;
@@ -688,10 +665,8 @@ end
 
 function WBT.AceAddon:OnEnable()
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
-    -- self.db.global = defaults.global; -- Resets the global profile in case I mess up the table
-    -- /run for k, v in pairs(WBT.db.global) do WBT.db.global[k] = nil end -- Also resets global profile, but from in-game
 
-    InitDeathTrackerFrame(); -- Todo: make sure this can't be called twice in same session
+    InitDeathTrackerFrame();
     InitCombatScannerFrame();
     if AnyDead() or IsBossZone() then
         RegisterEvents();
@@ -724,7 +699,6 @@ function d(min, sec)
     local kill_info = g_kill_infos["Grellkin"];
     kill_info.t_death = kill_info.t_death - decr;
     kill_info.timer.until_time = kill_info.timer.until_time - decr;
-
 end
 
 local function start_sim(name, t)
@@ -737,7 +711,7 @@ function dsim()
     end
 
     for name, data in pairs(BossData.GetAll()) do
-        start_sim(name, death_in_sec(name, 3));
+        start_sim(name, death_in_sec(name, 4));
     end
 
 end
