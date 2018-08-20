@@ -340,6 +340,7 @@ local function AnnounceSpawnTime(kill_info, send_data_for_parsing)
 end
 
 local function SetKillInfo(name, t_death)
+    t_death = tonumber(t_death);
     local ki = g_kill_infos[name];
     if ki then
         ki:SetNewDeath(t_death);
@@ -369,13 +370,13 @@ local function InitDeathTrackerFrame()
         end);
 end
 
-local function PlayAlertSound(boss_name)
+local function PlayAlertSound(name)
     local sound_type = WBT.db.global.sound_type;
     local sound_enabled = WBT.db.global.sound_enabled;
 
-    local soundfile = BossData.Get(boss_name).soundfile;
+    local soundfile = BossData.Get(name).soundfile;
     if sound_type == SOUND_CLASSIC then
-        soundfile = SOUND_FILE_DEFAULT;
+        soundfile = BossData.SOUND_FILE_DEFAULT;
     end
 
     if sound_enabled then
@@ -597,13 +598,10 @@ function WBT.AceAddon:InitChatParsing()
         timer_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
-                    local boss_name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
-                    if IsBoss(boss_name) and not IsDead(boss_name) then
-                        WBT:Print("Received " .. GetColoredBossName(boss_name) .. " timer from: " .. sender);
-
+                    local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
+                    if IsBoss(name) and not IsDead(name) then
                         SetKillInfo(name, t_death);
-                        StartWorldBossDeathTimer(boss_name);
-
+                        WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
                     end
                 end
             end
