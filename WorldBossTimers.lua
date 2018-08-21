@@ -149,10 +149,6 @@ local function AnyDead()
     return false;
 end
 
-local function ShouldShowGUI()
-    return IsBossZone() or AnyDead();
-end
-
 local last_request_time = 0;
 local function RequestKillData()
     if GetServerTime() - last_request_time > 5 then
@@ -165,13 +161,41 @@ local function GetColoredBossName(name)
     return BossData.Get(name).name_colored;
 end
 
+local function RegisterEvents()
+    boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+    boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+end
+
+local function UnregisterEvents()
+    boss_death_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+    boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+end
+
+local function ShouldShowGUI()
+    return (IsBossZone() or AnyDead()) and not(gui.visible);
+end
+
+local function ShouldHideGUI()
+    return not(IsBossZone() or AnyDead()) and gui.visible;
+end
+
+local function UpdateGUIVisibility()
+    if ShouldShowGUI() then
+        RegisterEvents();
+        gui:Show();
+    elseif ShouldHideGUI() then
+        UnregisterEvents();
+        gui:Hide();
+    end
+end
+
 local function UpdateGUI()
     if gui ~= nil then
         gui:Update();
     end
 end
 
-local function UserAction_ResetBoss(name)
+local function ResetBoss(name)
     local kill_info = g_kill_infos[name];
 
     if not kill_info.cyclic then
@@ -205,7 +229,13 @@ local function InitGUI()
     btn:SetText("Request kill data");
     btn:SetCallback("OnClick", RequestKillData);
 
-    hooksecurefunc(gui, "Hide", function() btn.frame:Hide() end);
+    hooksecurefunc(gui, "Show", function()
+        gui.visible = true;
+    end);
+    hooksecurefunc(gui, "Hide", function() 
+        gui.visible = false;
+        btn.frame:Hide();
+    end);
 
     gui_container:AddChild(gui);
     gui_container:AddChild(btn);
@@ -215,9 +245,9 @@ local function InitGUI()
     gui.labels = {};
     for name, data in pairs(BossData.GetAll()) do
         local label = AceGUI:Create("InteractiveLabel");
-        label:SetWidth(170);
+        label:SetWidth(180);
         label:SetCallback("OnClick", function(self)
-                UserAction_ResetBoss(name)
+                ResetBoss(name)
             end);
         gui.labels[name] = label;
         gui:AddChild(label);
@@ -232,6 +262,8 @@ local function InitGUI()
                 label:SetText("");
             end
         end
+
+        UpdateGUIVisibility();
     end
 
     function gui:InitPosition()
@@ -273,46 +305,6 @@ local function InitGUI()
     gui:Show();
 
     RecordGUIPositioning();
-end
-
-local function RegisterEvents()
-    boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-end
-
-local function UnregisterEvents()
-    boss_death_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-end
-
-local function ShowGUI()
-    if gui ~= nil then
-        gui:Hide();
-        gui = nil;
-    end
-    InitGUI();
-end
-
-local function HideGUI()
-    if gui ~= nil then
-        gui:Hide();
-        gui = nil;
-    end
-end
-
-local function RestartGUI()
-    HideGUI();
-    ShowGUI();
-end
-
-local function UpdateGUIVisibility()
-    if ShouldShowGUI() then
-        RegisterEvents();
-        RestartGUI();
-    else
-        UnregisterEvents();
-        HideGUI();
-    end
 end
 
 local function UpdateCyclicStates()
@@ -366,7 +358,6 @@ local function InitDeathTrackerFrame()
 
     boss_death_frame = CreateFrame("Frame");
     boss_death_frame:SetScript("OnEvent", function(event, ...)
-		--local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, extraArg1, extraArg2, extraArg3, extraArg4, extraArg5, extraArg6, extraArg7, extraArg8, extraArg9, extraArg10 = CombatLogGetCurrentEventInfo()
 		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo()
 
              if eventType == "UNIT_DIED" and IsBoss(destName) then
@@ -443,8 +434,9 @@ end
 
 local function ResetKillInfo()
     WBT:Print("Resetting all kill info.");
-    WBT.db.global.kill_infos = {};
-    g_kill_infos = WBT.db.global.kill_infos;
+    for _, kill_info in pairs(g_kill_infos) do
+        kill_info:Reset();
+    end
 
     UpdateGUI();
 end
@@ -485,9 +477,9 @@ local function SlashHandler(input)
 
     local new_state = nil;
     if arg1 == "hide" then
-        HideGUI();
+        gui:Hide();
     elseif arg1 == "show" then
-        ShowGUI();
+        gui:Show();
     elseif arg1 == "say"
         or arg1 == "a"
         or arg1 == "announce"
@@ -619,8 +611,6 @@ function WBT.AceAddon:InitChatParsing()
 end
 
 local function LoadSerializedKillInfos()
-    -- I think it's a good idea to always let a kill_info work on the table stored in globals.kill_infos.
-    -- Do that tomorrow!
     for name, serialized in pairs(WBT.db.global.kill_infos) do
         g_kill_infos[name] = KillInfo:Deserialize(serialized);
     end
@@ -660,7 +650,7 @@ local function InitKillInfoManager()
                     end
                 end
 
-                UpdateGUIVisibility();
+                UpdateGUI();
 
                 self.since_update = 0;
             end
