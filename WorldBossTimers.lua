@@ -212,18 +212,24 @@ local function InitGUI()
 
     gui_container.frame:SetFrameStrata("LOW");
 
-    function gui:Update()
-        self:ReleaseChildren();
+    gui.labels = {};
+    for name, data in pairs(BossData.GetAll()) do
+        local label = AceGUI:Create("InteractiveLabel");
+        label:SetWidth(170);
+        label:SetCallback("OnClick", function(self)
+                UserAction_ResetBoss(name)
+            end);
+        gui.labels[name] = label;
+        gui:AddChild(label);
+    end
 
+    function gui:Update()
         for name, kill_info in pairs(g_kill_infos) do
+            local label = self.labels[name];
             if IsDead(name) and (not(kill_info.cyclic) or CyclicEnabled()) then
-                local label = AceGUI:Create("InteractiveLabel");
-                label:SetWidth(170);
                 label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTimeOutput(kill_info));
-                label:SetCallback("OnClick", function() UserAction_ResetBoss(name) end); -- TODO: change/disable this.
-                -- Add the button to the container
-                self:AddChild(label);
-                --WBT:Print(label:IsShown());
+            else
+                label:SetText("");
             end
         end
     end
