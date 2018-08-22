@@ -10,5 +10,6 @@ embeds.xml
 Util.lua
 BossData.lua
 KillInfo.lua
+GUI.lua
 WorldBossTimers.lua
 

@@ -9,6 +9,7 @@ ad = WBT; -- MYTODO: Remove
 local KillInfo = WBT.KillInfo;
 local Util = WBT.Util;
 local BossData = WBT.BossData;
+local GUI = WBT.GUI;
 
 
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
@@ -78,16 +79,18 @@ local function SetSound(state)
     WBT.db.global.sound_enabled = state;
 end
 
-local function IsDead(name)
+function WBT.IsDead(name)
     local ki = g_kill_infos[name];
     if ki then
         return ki:IsDead();
     end
 end
+local IsDead = WBT.IsDead;
 
-local function IsBoss(name)
+function WBT.IsBoss(name)
     return Util.SetContainsKey(BossData.GetAll(), name);
 end
+local IsBoss = WBT.IsBoss;
 
 function WBT.IsInZoneOfBoss(name)
     return GetZoneText() == BossData.Get(name).zone;
@@ -118,7 +121,7 @@ local function GetKillInfoFromZone()
     return nil;
 end
 
-local function GetSpawnTimeOutput(kill_info)
+function WBT.GetSpawnTimeOutput(kill_info)
     local text = kill_info:GetSpawnTimeAsText();
     if kill_info.cyclic then
         text = Util.COLOR_RED .. text .. Util.COLOR_DEFAULT;
@@ -126,8 +129,9 @@ local function GetSpawnTimeOutput(kill_info)
 
     return text;
 end
+local GetSpawnTimeOutput = WBT.GetSpawnTimeOutput;
 
-local function IsBossZone()
+function WBT.IsBossZone()
     local current_zone = GetZoneText();
 
     local is_boss_zone = false;
@@ -139,8 +143,9 @@ local function IsBossZone()
 
     return is_boss_zone;
 end
+local IsBossZone = WBT.IsBossZone;
 
-local function AnyDead()
+function WBT.AnyDead()
     for name, boss in pairs(BossData.GetAll()) do
         if IsDead(name) then
             return true;
@@ -148,6 +153,7 @@ local function AnyDead()
     end
     return false;
 end
+local AnyDead = WBT.AnyDead;
 
 local last_request_time = 0;
 local function RequestKillData()
@@ -157,9 +163,10 @@ local function RequestKillData()
     end
 end
 
-local function GetColoredBossName(name)
+function WBT.GetColoredBossName(name)
     return BossData.Get(name).name_colored;
 end
+local GetColoredBossName = WBT.GetColoredBossName;
 
 local function RegisterEvents()
     boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
@@ -171,31 +178,13 @@ local function UnregisterEvents()
     boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
 end
 
-local function ShouldShowGUI()
-    return (IsBossZone() or AnyDead()) and not(gui.visible);
-end
-
-local function ShouldHideGUI()
-    return not(IsBossZone() or AnyDead()) and gui.visible;
-end
-
-local function UpdateGUIVisibility()
-    if ShouldShowGUI() then
-        RegisterEvents();
-        gui:Show();
-    elseif ShouldHideGUI() then
-        UnregisterEvents();
-        gui:Hide();
-    end
-end
-
 local function UpdateGUI()
     if gui ~= nil then
         gui:Update();
     end
 end
 
-local function ResetBoss(name)
+function WBT.ResetBoss(name)
     local kill_info = g_kill_infos[name];
 
     if not kill_info.cyclic then
@@ -207,104 +196,6 @@ local function ResetBoss(name)
         UpdateGUI();
         WBT:Print(GetColoredBossName(name) .. " has been reset.");
     end
-end
-
-local function InitGUI()
-    local AceGUI = LibStub("AceGUI-3.0"); -- Need to create AceGUI 'OnInit or OnEnabled'
-    local gui_container = AceGUI:Create("SimpleGroup");
-    gui = AceGUI:Create("Window");
-
-    local width = 200; -- Longest possible name is "Sha of Anger: XXm YYs - MMm SSs", make sure it doesn't wrap over.
-    local height = 110;
-    gui:SetWidth(width);
-    gui:SetHeight(height);
-    gui:SetCallback("OnClose", function(widget) AceGUI:Release(widget) end); -- Keep watch on this line.
-    gui:SetTitle("World Boss Timers");
-    gui:SetLayout("List");
-    gui:EnableResize(false);
-    gui.frame:SetFrameStrata("LOW");
-
-    local btn = AceGUI:Create("Button");
-    btn:SetWidth(width);
-    btn:SetText("Request kill data");
-    btn:SetCallback("OnClick", RequestKillData);
-
-    hooksecurefunc(gui, "Show", function()
-        gui.visible = true;
-    end);
-    hooksecurefunc(gui, "Hide", function() 
-        gui.visible = false;
-        btn.frame:Hide();
-    end);
-
-    gui_container:AddChild(gui);
-    gui_container:AddChild(btn);
-
-    gui_container.frame:SetFrameStrata("LOW");
-
-    gui.labels = {};
-    for name, data in pairs(BossData.GetAll()) do
-        local label = AceGUI:Create("InteractiveLabel");
-        label:SetWidth(180);
-        label:SetCallback("OnClick", function(self)
-                ResetBoss(name)
-            end);
-        gui.labels[name] = label;
-        gui:AddChild(label);
-    end
-
-    function gui:Update()
-        for name, kill_info in pairs(g_kill_infos) do
-            local label = self.labels[name];
-            if IsDead(name) and (not(kill_info.cyclic) or CyclicEnabled()) then
-                label:SetText(GetColoredBossName(name) .. ": " .. GetSpawnTimeOutput(kill_info));
-            else
-                label:SetText("");
-            end
-        end
-
-        UpdateGUIVisibility();
-    end
-
-    function gui:InitPosition()
-        gui_position = WBT.db.char.gui_position;
-        local gp;
-        if gui_position ~= nil then
-            gp = gui_position;
-        else
-            gp = {
-                point = "Center",
-                relativeToName = "UIParrent",
-                realtivePoint = nil,
-                xOfs = 0,
-                yOfs = 0,
-            }
-        end
-        self:ClearAllPoints();
-        self:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
-    end
-
-    local function RecordGUIPositioning()
-        local function SaveGuiPoint()
-            point, relativeTo, relativePoint, xOfs, yOfs = gui:GetPoint();
-            WBT.db.char.gui_position = {
-                point = point,
-                relativeToName = "UIParrent",
-                relativePoint = relativePoint,
-                xOfs = xOfs,
-                yOfs = yOfs,
-            };
-        end
-        hooksecurefunc(gui.frame, "StopMovingOrSizing", SaveGuiPoint);
-    end
-
-    gui:Update();
-
-    gui:InitPosition();
-
-    gui:Show();
-
-    RecordGUIPositioning();
 end
 
 local function UpdateCyclicStates()
@@ -659,6 +550,7 @@ end
 
 function WBT.AceAddon:OnEnable()
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
+    GUI.SetupAceGUI();
 
     InitDeathTrackerFrame();
     InitCombatScannerFrame();
@@ -670,7 +562,7 @@ function WBT.AceAddon:OnEnable()
 
     InitKillInfoManager();
 
-    InitGUI();
+    gui = GUI:New();
 
     StartVisibilityHandler();
 
@@ -678,6 +570,9 @@ function WBT.AceAddon:OnEnable()
     self:RegisterChatCommand("worldbosstimers", SlashHandler);
 
     self:InitChatParsing();
+
+    RegisterEvents(); -- TODO: Update when this and unreg is called!
+    -- UnregisterEvents();
 end
 
 function WBT.AceAddon:OnDisable()
