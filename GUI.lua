@@ -30,11 +30,11 @@ function GUI:Restart()
 end
 
 function GUI:ShouldShow()
-    return (WBT.IsBossZone() or WBT.AnyDead()) and not(self.visible);
+    return (WBT.IsBossZone() or WBT.AnyDead()) and not(self.visible) and not(WBT.db.global.hide_gui);
 end
 
 function GUI:ShouldHide()
-    return not(WBT.IsBossZone() or WBT.AnyDead()) and self.visible;
+    return (not(WBT.IsBossZone() or WBT.AnyDead()) or WBT.db.global.hide_gui) and self.visible;
 end
 
 function GUI:UpdateGUIVisibility()
@@ -105,6 +105,8 @@ function GUI:NewBasicWindow(width, height)
     gui:SetLayout("List");
     gui:EnableResize(false);
 
+    gui.visible = false;
+
     local index_old = getmetatable(gui).__index;
     setmetatable(gui, self);
     self.__index = function(t, k)
@@ -114,7 +116,6 @@ function GUI:NewBasicWindow(width, height)
                 return self[k] or index_old(t, k);
             end
         end
-
 
     return gui;
 end

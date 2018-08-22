@@ -33,12 +33,12 @@ local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill 
 local defaults = {
     global = {
         kill_infos = {},
-        gui = nil,
         sound_enabled = true,
         sound_type = SOUND_CLASSIC,
         auto_announce = true,
         send_data = true,
         cyclic = false,
+        hide_gui = false,
     },
     char = {
         boss = {},
@@ -178,12 +178,6 @@ local function UnregisterEvents()
     boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
 end
 
-local function UpdateGUI()
-    if gui ~= nil then
-        gui:Update();
-    end
-end
-
 function WBT.ResetBoss(name)
     local kill_info = g_kill_infos[name];
 
@@ -193,7 +187,7 @@ function WBT.ResetBoss(name)
             .. " Try '/wbt cyclic' for more info.");
     else
         kill_info:Reset();
-        UpdateGUI();
+        gui:Update();
         WBT:Print(GetColoredBossName(name) .. " has been reset.");
     end
 end
@@ -239,7 +233,7 @@ local function SetKillInfo(name, t_death)
 
     g_kill_infos[name] = ki;
 
-    UpdateGUI();
+    gui:Update();
 end
 
 local function InitDeathTrackerFrame()
@@ -253,7 +247,7 @@ local function InitDeathTrackerFrame()
 
              if eventType == "UNIT_DIED" and IsBoss(destName) then
                  SetKillInfo(destName, GetServerTime());
-                 UpdateGUI();
+                 gui:Update();
              end
         end);
 end
@@ -329,7 +323,7 @@ local function ResetKillInfo()
         kill_info:Reset();
     end
 
-    UpdateGUI();
+    gui:Update();
 end
 
 local function SlashHandler(input)
@@ -368,9 +362,11 @@ local function SlashHandler(input)
 
     local new_state = nil;
     if arg1 == "hide" then
-        gui:Hide();
+        WBT.db.global.hide_gui = true;
+        gui:UpdateGUIVisibility();
     elseif arg1 == "show" then
-        gui:Show();
+        WBT.db.global.hide_gui = false;
+        gui:UpdateGUIVisibility();
     elseif arg1 == "say"
         or arg1 == "a"
         or arg1 == "announce"
@@ -428,9 +424,10 @@ local function SlashHandler(input)
     elseif arg1 == "cycle"
         or arg1 == "cyclic" then
 
-        new_state = not CyclicEnabled()
+        new_state = not CyclicEnabled();
         SetCyclic(new_state);
-        UpdateGUIVisibility();
+        gui:Update();
+
         PrintFormattedStatus("Cyclic mode is now", new_state);
         local red_text = Util.COLOR_RED .. "red text" .. Util.COLOR_DEFAULT;
         WBT:Print("This mode will repeat the boss timers if you miss the kill. A timer in " .. red_text
@@ -445,7 +442,7 @@ local function StartVisibilityHandler()
     visibilty_handler_frame:RegisterEvent("ZONE_CHANGED_NEW_AREA");
     visibilty_handler_frame:SetScript("OnEvent",
         function(e, ...)
-            UpdateGUIVisibility();
+            gui:Update();
         end
     );
 end
@@ -541,7 +538,7 @@ local function InitKillInfoManager()
                     end
                 end
 
-                UpdateGUI();
+                gui:Update();
 
                 self.since_update = 0;
             end
