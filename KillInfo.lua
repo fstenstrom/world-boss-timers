@@ -21,6 +21,8 @@ function KillInfo:SetInitialValues()
     self.cyclic = false;
     self.reset = false;
     self.safe = not IsInGroup();
+    self.realmName = GetRealmName();
+    self.realm_type = Util.GetRealmType();
 end
 
 function KillInfo:SetNewDeath(t_death)
@@ -71,8 +73,6 @@ end
 -- If this happens, we don't want the data to propagate
 -- to other players.
 function KillInfo:IsCompletelySafe(error_msgs)
-
-    --local kill_info = GetKillInfoFromZone();
 
     -- It's possible to have one char with war mode, and one
     -- without on the same server.

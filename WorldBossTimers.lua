@@ -5,7 +5,10 @@
 -- addonName, addonTable = ...;
 local _, WBT = ...;
 
-ad = WBT; -- MYTODO: Remove
+--@do-not-package@
+wbt_addon = WBT;
+--@end-do-not-package@
+
 local KillInfo = WBT.KillInfo;
 local Util = WBT.Util;
 local BossData = WBT.BossData;
