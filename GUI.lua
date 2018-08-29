@@ -128,7 +128,7 @@ function GUI:New()
     local btn = GUI.AceGUI:Create("Button");
     btn:SetWidth(width);
     btn:SetText("Request kill data");
-    btn:SetCallback("OnClick", RequestKillData);
+    btn:SetCallback("OnClick", WBT.RequestKillData);
 
     local gui_container = GUI.AceGUI:Create("SimpleGroup");
     gui_container.frame:SetFrameStrata("LOW");

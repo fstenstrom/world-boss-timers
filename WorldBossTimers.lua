@@ -159,12 +159,13 @@ end
 local AnyDead = WBT.AnyDead;
 
 local last_request_time = 0;
-local function RequestKillData()
+function WBT.RequestKillData()
     if GetServerTime() - last_request_time > 5 then
         SendChatMessage(CHAT_MESSAGE_TIMER_REQUEST, "SAY");
         last_request_time = GetServerTime();
     end
 end
+local RequestKillData = WBT.RequestKillData;
 
 function WBT.GetColoredBossName(name)
     return BossData.Get(name).name_colored;
