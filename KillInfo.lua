@@ -15,6 +15,8 @@ local Util = WBT.Util;
 local KillInfo = {}
 WBT.KillInfo = KillInfo;
 
+local CURRENT_VERSION = "v1";
+
 local RANDOM_DELIM = "-"
 
 
@@ -22,10 +24,14 @@ local RANDOM_DELIM = "-"
 -- the KillInfo class was introduced.
 -- The field self.until_time did not exist then.
 function KillInfo:IsValid()
-    return self.until_time ~= nil;
+    if self.version and self.version == CURRENT_VERSION then
+        return true;
+    end
+    return false;
 end
 
 function KillInfo:SetInitialValues()
+    self.version = CURRENT_VERSION;
     self.cyclic = false;
     self.reset = false;
     self.safe = not IsInGroup();
@@ -133,10 +139,15 @@ function KillInfo:GetSpawnTimeSec(name)
 end
 
 function KillInfo:GetSpawnTimeAsText()
+    local outdated =  "--outdated--";
+    if not self:IsValid() then
+        return outdated;
+    end
+
     if self:HasRandomSpawnTime() then
         local t_lower, t_upper = self:GetSpawnTimesSecRandom();
         if t_lower == nil or t_upper == nil then
-            return -1;
+            return outdated;
         elseif t_lower < 0 then
             return "0s" .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
         else
@@ -145,7 +156,7 @@ function KillInfo:GetSpawnTimeAsText()
     else
         local spawn_time_sec = self:GetSpawnTimeSec();
         if spawn_time_sec == nil or spawn_time_sec < 0 then
-            return -1;
+            return outdated;
         end
 
         return Util.FormatTimeSeconds(spawn_time_sec);
