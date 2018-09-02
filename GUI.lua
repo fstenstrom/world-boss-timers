@@ -48,7 +48,9 @@ end
 function GUI:Update()
     for name, kill_info in pairs(WBT.db.global.kill_infos) do
         local label = self.labels[name];
-        if WBT.IsDead(name) and (not(kill_info.cyclic) or WBT.CyclicEnabled()) then
+        if not BossData.BossExists(name) then
+            -- Do nothing.
+        elseif WBT.IsDead(name) and (not(kill_info.cyclic) or WBT.CyclicEnabled()) then
             label:SetText(WBT.GetColoredBossName(name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info));
         else
             label:SetText("");

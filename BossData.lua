@@ -129,6 +129,16 @@ function BossData.GetAll()
     return tracked_bosses;
 end
 
+function BossData.BossExists(name)
+    for name2, _ in pairs(tracked_bosses) do
+        if name == name2 then
+            return true;
+        end
+    end
+
+    return false;
+end
+
 for name, data in pairs(tracked_bosses) do
     data.name_colored = data.color .. data.name .. Util.COLOR_DEFAULT;
 end
