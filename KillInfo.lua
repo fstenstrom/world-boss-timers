@@ -17,6 +17,14 @@ WBT.KillInfo = KillInfo;
 
 local RANDOM_DELIM = "-"
 
+
+-- A KillInfo is no longer valid if its data was recorded before
+-- the KillInfo class was introduced.
+-- The field self.until_time did not exist then.
+function KillInfo:IsValid()
+    return self.until_time ~= nil;
+end
+
 function KillInfo:SetInitialValues()
     self.cyclic = false;
     self.reset = false;

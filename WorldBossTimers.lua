@@ -520,24 +520,27 @@ local function InitKillInfoManager()
             self.since_update = self.since_update + elapsed;
             if (self.since_update > t_update) then
                 for _, kill_info in pairs(g_kill_infos) do
-                    kill_info:Update();
+                    if kill_info:IsValid() then
 
-                    if kill_info.reset then
-                        -- Do nothing.
-                    else
-                        if kill_info:ShouldAnnounce() then
-                            AnnounceSpawnTime(kill_info, SendDataEnabled());
-                        end
+                        kill_info:Update();
 
-                        if kill_info:ShouldFlash() then
-                            FlashClientIcon();
-                        end
+                        if kill_info.reset then
+                            -- Do nothing.
+                        else
+                            if kill_info:ShouldAnnounce() then
+                                AnnounceSpawnTime(kill_info, SendDataEnabled());
+                            end
 
-                        if kill_info:Expired() and CyclicEnabled() then
-                            local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
-                            kill_info.t_death = t_death_new
-                            self.until_time = t_spawn;
-                            kill_info.cyclic = true;
+                            if kill_info:ShouldFlash() then
+                                FlashClientIcon();
+                            end
+
+                            if kill_info:Expired() and CyclicEnabled() then
+                                local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
+                                kill_info.t_death = t_death_new
+                                self.until_time = t_spawn;
+                                kill_info.cyclic = true;
+                            end
                         end
                     end
                 end
