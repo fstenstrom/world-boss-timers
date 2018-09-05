@@ -30,17 +30,20 @@ function KillInfo:IsValid()
     return false;
 end
 
-function KillInfo:SetInitialValues()
+function KillInfo:SetInitialValues(name)
+    self.name = name;
     self.version = CURRENT_VERSION;
     self.cyclic = false;
     self.reset = false;
     self.safe = not IsInGroup();
     self.realmName = GetRealmName();
     self.realm_type = Util.GetRealmType();
+    self.db = WBT.BossData.Get(self.name);
+    self.announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
 end
 
-function KillInfo:SetNewDeath(t_death)
-    self:SetInitialValues();
+function KillInfo:SetNewDeath(name, t_death)
+    self:SetInitialValues(name);
 
     self.t_death = t_death;
     self.until_time = self.t_death + self.db.max_respawn;
@@ -50,18 +53,12 @@ function KillInfo:SetNewDeath(t_death)
 end
 
 function KillInfo:New(t_death, name)
-    local ki = {
-        name = name,
-        realmName = GetRealmName(),
-        realm_type = Util.GetRealmType(),
-        db = WBT.BossData.Get(name),
-        announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
-    }
+    local ki = {};
 
     setmetatable(ki, self);
     self.__index = self;
 
-    ki:SetNewDeath(t_death);
+    ki:SetNewDeath(name, t_death);
 
     return ki;
 end

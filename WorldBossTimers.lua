@@ -84,7 +84,7 @@ end
 
 function WBT.IsDead(name)
     local ki = g_kill_infos[name];
-    if ki then
+    if ki and ki:IsValid() then
         return ki:IsDead();
     end
 end
@@ -230,7 +230,7 @@ local function SetKillInfo(name, t_death)
     t_death = tonumber(t_death);
     local ki = g_kill_infos[name];
     if ki then
-        ki:SetNewDeath(t_death);
+        ki:SetNewDeath(name, t_death);
     else
         ki = KillInfo:New(t_death, name);
     end
@@ -384,7 +384,7 @@ local function SlashHandler(input)
         end
 
         local kill_info = g_kill_infos[boss.name];
-        if not kill_info then
+        if not kill_info or not(kill_info:IsValid()) then
             WBT:Print("No spawn timer for " .. GetColoredBossName(boss.name) .. ".");
             return;
         end
