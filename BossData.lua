@@ -15,10 +15,10 @@ local SOUND_FANCY = "FANCY";
 
 local MAX_RESPAWN = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:59.
 -- Conservative guesses. Actual values are not known.
-local MIN_RESPAWN_SHA = 12*60;
-local MAX_RESPAWN_SHA = 18*60;
-local MIN_RESPAWN_NALAK = 12*60;
-local MAX_RESPAWN_NALAK = 18*60;
+local MIN_RESPAWN_SHA = 10*60;
+local MAX_RESPAWN_SHA = 20*60;
+local MIN_RESPAWN_NALAK = MIN_RESPAWN_SHA;
+local MAX_RESPAWN_NALAK = MAX_RESPAWN_SHA;
 local MIN_RESPAWN_HUOLON = 30*60;
 local MAX_RESPAWN_HUOLON = 60*60;
 
