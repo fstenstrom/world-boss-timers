@@ -20,7 +20,7 @@ WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 -- Workaround to keep the nice WBT:Print function.
 WBT.Print = function(self, text) WBT.AceAddon:Print(text) end
 
-WBT.gui = {};
+local gui = {};
 local boss_death_frame;
 local boss_combat_frame;
 local g_kill_infos = {};
@@ -191,7 +191,7 @@ function WBT.ResetBoss(name)
             .. " Try '/wbt cyclic' for more info.");
     else
         kill_info:Reset();
-        WBT.gui:Update();
+        gui:Update();
         WBT:Print(GetColoredBossName(name) .. " has been reset.");
     end
 end
@@ -237,7 +237,7 @@ local function SetKillInfo(name, t_death)
 
     g_kill_infos[name] = ki;
 
-    WBT.gui:Update();
+    gui:Update();
 end
 
 local function InitDeathTrackerFrame()
@@ -251,7 +251,7 @@ local function InitDeathTrackerFrame()
 
              if eventType == "UNIT_DIED" and IsBoss(destName) then
                  SetKillInfo(destName, GetServerTime());
-                 WBT.gui:Update();
+                 gui:Update();
              end
         end);
 end
@@ -327,7 +327,7 @@ local function ResetKillInfo()
         kill_info:Reset();
     end
 
-    WBT.gui:Update();
+    gui:Update();
 end
 
 local function SlashHandler(input)
@@ -367,10 +367,10 @@ local function SlashHandler(input)
     local new_state = nil;
     if arg1 == "hide" then
         WBT.db.global.hide_gui = true;
-        WBT.gui:UpdateGUIVisibility();
+        gui:Hide();
     elseif arg1 == "show" then
         WBT.db.global.hide_gui = false;
-        WBT.gui:UpdateGUIVisibility();
+        gui:Show();
     elseif arg1 == "say"
         or arg1 == "a"
         or arg1 == "announce"
@@ -430,7 +430,7 @@ local function SlashHandler(input)
 
         new_state = not CyclicEnabled();
         SetCyclic(new_state);
-        WBT.gui:Update();
+        gui:Update();
 
         PrintFormattedStatus("Cyclic mode is now", new_state);
         local red_text = Util.COLOR_RED .. "red text" .. Util.COLOR_DEFAULT;
@@ -446,7 +446,7 @@ local function StartVisibilityHandler()
     visibilty_handler_frame:RegisterEvent("ZONE_CHANGED_NEW_AREA");
     visibilty_handler_frame:SetScript("OnEvent",
         function(e, ...)
-            WBT.gui:Update();
+            gui:Update();
         end
     );
 end
@@ -545,7 +545,7 @@ local function InitKillInfoManager()
                     end
                 end
 
-                WBT.gui:Update();
+                gui:Update();
 
                 self.since_update = 0;
             end
@@ -566,8 +566,7 @@ function WBT.AceAddon:OnEnable()
 
     InitKillInfoManager();
 
-    WBT.gui = GUI:New();
-    print(WBT.gui);
+    gui = WBT.GUI:New();
 
     StartVisibilityHandler();
 

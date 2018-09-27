@@ -8,46 +8,29 @@ local _, WBT = ...;
 local Util = WBT.Util;
 local BossData = WBT.BossData;
 
+-- Provides the GUI API and performs checks if the GUI is shown etc.
 local GUI = {};
 WBT.GUI = GUI;
 
+WBT.G_window = {};
 
-local EmptyGUI = {};
-function EmptyGUI:New()
-    egui = {};
-    setmetatable(egui, self);
-    self.__index = self;
-
-    return egui;
-end
-
-function EmptyGUI:UpdateGUIVisibility()
-    if WBT.db.global.hide_gui == false then
-        WBT.gui = GUI:New();
-    end
-end
-
-function EmptyGUI:Update() return end
-function EmptyGUI:SaveGuiPoint() return end
-function EmptyGUI:RecordPositioning() return end
-function EmptyGUI.SetupAceGUI() return end
-function EmptyGUI:NewBasicWindow(width, height) print("bad"); return end
+--------------------------------------------------------------------------------
 
 function GUI:CreateLabels()
     self.labels = {};
     for name, data in pairs(BossData.GetAll()) do
-        local label = GUI.AceGUI:Create("InteractiveLabel");
+        local label = self.AceGUI:Create("InteractiveLabel");
         label:SetWidth(180);
         label:SetCallback("OnClick", function(self)
-                WBT.ResetBoss(name)
+                WBT.ResetBoss(name);
             end);
         self.labels[name] = label;
-        self:AddChild(label);
+        self.window:AddChild(label);
     end
 end
 
 function GUI:Restart()
-    self = GUI:New();
+    self:New();
 end
 
 function GUI:ShouldShow()
@@ -58,15 +41,38 @@ function GUI:ShouldHide()
     return (not(WBT.IsBossZone() or WBT.AnyDead()) or WBT.db.global.hide_gui) and self.visible;
 end
 
+function GUI:Show()
+    if self.released then
+        self:Restart();
+    end
+
+    self:Update();
+    self.gui_container.frame:Show();
+    self.visible = true;
+end
+
+function GUI:Hide()
+    if self.released then
+        return;
+    end
+
+    self.gui_container.frame:Hide();
+    self.visible = false;
+end
+
 function GUI:UpdateGUIVisibility()
     if self:ShouldShow() then
-        self:Restart();
+        self:Show();
     elseif self:ShouldHide() then
         self:Hide();
     end
 end
 
 function GUI:Update()
+    if not(self.visible) then
+        return;
+    end
+
     for name, kill_info in pairs(WBT.db.global.kill_infos) do
         local label = self.labels[name];
         if not BossData.BossExists(name) or getmetatable(kill_info) ~= WBT.KillInfo then
@@ -82,7 +88,7 @@ function GUI:Update()
 end
 
 function GUI:InitPosition()
-    gui_position = WBT.db.char.gui_position;
+    local gui_position = WBT.db.char.gui_position;
     local gp;
     if gui_position ~= nil then
         gp = gui_position;
@@ -95,12 +101,12 @@ function GUI:InitPosition()
             yOfs = 0,
         }
     end
-    self:ClearAllPoints();
-    self:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
+    self.window:ClearAllPoints();
+    self.window:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
 end
 
 function GUI:SaveGuiPoint()
-    point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint();
+    local point, relativeTo, relativePoint, xOfs, yOfs = WBT.G_window:GetPoint();
     WBT.db.char.gui_position = {
         point = point,
         relativeToName = "UIParrent",
@@ -111,124 +117,78 @@ function GUI:SaveGuiPoint()
 end
 
 function GUI:RecordPositioning()
-    hooksecurefunc(self.frame, "StopMovingOrSizing", self.SaveGuiPoint);
+    hooksecurefunc(self.window.frame, "StopMovingOrSizing", self.SaveGuiPoint);
 end
 
 function GUI.SetupAceGUI()
     GUI.AceGUI = LibStub("AceGUI-3.0"); -- Need to create AceGUI during/after 'OnInit' or 'OnEnabled'
 end
 
--- Make sure that the AceGUI widgets are restored before
--- they are returned to the widget pool.
-function GUI:CleanUpWidgetAndRelease()
-    print ("CLEANING");
-    -- Restore metatable:
-    setmetatable(self, self.metatable_window);
-
-    -- Release container and children as well (btn, gui, labels).
-    GUI.AceGUI:Release(self.gui_container); 
+function GUI:CleanUpWidgetsAndRelease()
+    GUI.AceGUI:Release(self.gui_container);
 
     -- Remove references to fields. Hopefully the widget is
-    -- not reassigned from the pool before this method
-    -- finishes.
     self.labels = nil;
     self.visible = nil;
-    self.metatable_window = nil;
     self.gui_container = nil;
+    self.window = nil;
 
-    WBT.gui = EmptyGUI:New();
+    self.released = true;
 end
 
 function GUI:NewBasicWindow(width, height)
-    local gui = GUI.AceGUI:Create("Window");
-    gui.metatable_window = getmetatable(gui);
+    local window = GUI.AceGUI:Create("Window");
 
-    gui.frame:SetFrameStrata("LOW");
-    gui:SetWidth(width);
-    gui:SetHeight(height);
+    window.frame:SetFrameStrata("LOW");
+    window:SetWidth(width);
+    window:SetHeight(height);
 
-    gui:SetCallback("OnClose", function(widget)
-        print ("ONCLOSE");
-        widget:CleanUpWidgetAndRelease();
-        WBT.db.global.hide_gui = true;
-    end);
 
-    gui:SetTitle("World Boss Timers");
-    gui:SetLayout("List");
-    gui:EnableResize(false);
+    window:SetTitle("World Boss Timers");
+    window:SetLayout("List");
+    window:EnableResize(false);
 
-    gui.visible = false;
+    self.visible = false;
 
-    local index_old = getmetatable(gui).__index;
-    if index_old then
-        print("ind: ", index_old);
-    end
-    setmetatable(gui, self);
-    self.__index = function(t, k)
-            if type(index_old) == "table" then
-                return self[k] or index_old[k];
-            else
-                return self[k] or index_old(t, k);
-            end
-        end
-
-    print ("func: ", gui.CreateLabels);
-
-    return gui;
+    return window;
 end
 
 function GUI:New()
-    if self and self.gui_container then
-        self:CleanUpWidgetAndRelease();
+    if self.gui_container then
+        self.gui_container:Release();
     end
-    
+
+    self.released = false;
+
     local width = 200;
     local height = 110;
-    print ("b");
-    local gui = GUI:NewBasicWindow(width, height);
-    print ("a");
-    print ("New: createlabels: ", gui.CreateLabels);
+    self.window = GUI:NewBasicWindow(width, height);
+    WBT.G_window = self.window;
 
     local btn = GUI.AceGUI:Create("Button");
     btn:SetWidth(width);
     btn:SetText("Request kill data");
     btn:SetCallback("OnClick", WBT.RequestKillData);
 
-    print ("New: createlabels: ", gui.CreateLabels);
-    local gui_container = GUI.AceGUI:Create("SimpleGroup");
-    print ("New: createlabels: ", gui.CreateLabels);
-    gui_container.frame:SetFrameStrata("LOW");
-    print ("New: createlabels: ", gui.CreateLabels);
-    gui_container:AddChild(gui);
-    print ("New: createlabels: ", gui.CreateLabels);
-    gui_container:AddChild(btn);
+    self.gui_container = GUI.AceGUI:Create("SimpleGroup");
+    self.gui_container.frame:SetFrameStrata("LOW");
+    self.gui_container:AddChild(self.window);
+    self.gui_container:AddChild(btn);
 
-    print ("New: createlabels: ", gui.CreateLabels);
-    hooksecurefunc(gui, "Show", function()
-        if not gui.visible then
-            gui.visible = true;
-            btn.frame:Show();
-        end
-    end);
-    hooksecurefunc(gui, "Hide", function() 
-        gui.visible = false;
-        btn.frame:Hide();
+    -- I didn't notice any "OnClose" for the gui_container
+    -- ("SimpleGroup") so it's handled through the
+    -- Window class instead.
+    self.window:SetCallback("OnClose", function()
+        self:CleanUpWidgetsAndRelease();
+        WBT.db.global.hide_gui = true;
     end);
 
-    print ("New: createlabels: ", gui.CreateLabels);
-    gui:CreateLabels();
-    gui:InitPosition();
-    gui:Show();
-    gui:RecordPositioning();
+    self:CreateLabels();
+    self:InitPosition();
+    self:RecordPositioning();
 
-    gui:Update();
+    self:Show();
 
-    gui.gui_container = gui_container; -- Need a pointer to the container so it can be released.
-    return gui;
+    return self;
 end
 
-local function ShowGUI()
-    if not gui.visible then
-        gui:Restart();
-    end
-end
