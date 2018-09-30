@@ -370,7 +370,11 @@ local function SlashHandler(input)
         gui:Hide();
     elseif arg1 == "show" then
         WBT.db.global.hide_gui = false;
-        gui:Show();
+        if gui:ShouldShow() then
+            gui:Show();
+        else
+            WBT:Print("Timer window will show when next you enter a boss zone.");
+        end
     elseif arg1 == "say"
         or arg1 == "a"
         or arg1 == "announce"
