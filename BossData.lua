@@ -31,7 +31,8 @@ local tracked_bosses = {
     ["Oondasta"] = {
         name = "Oondasta",
         color = "|cff21ffa3",
-        zone = "Isle of Giants",
+        map_id = 507,
+        id = 69161,
         soundfile = SOUND_DIR .. "oondasta3.mp3",
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
@@ -40,7 +41,8 @@ local tracked_bosses = {
     ["Rukhmar"] = {
         name = "Rukhmar",
         color = "|cfffa6e06",
-        zone = "Spires of Arak",
+        map_id = 542,
+        id = 83746,
         soundfile = SOUND_DIR .. "rukhmar1.mp3",
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
@@ -49,7 +51,8 @@ local tracked_bosses = {
     ["Galleon"] = {
         name = "Galleon",
         color = "|cffc1f973",
-        zone = "Valley of the Four Winds",
+        map_id = 376,
+        id = 62346,
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
@@ -58,7 +61,8 @@ local tracked_bosses = {
     ["Nalak"] = {
         name = "Nalak",
         color = "|cff0081cc",
-        zone = "Isle of Thunder",
+        map_id = 504,
+        id = 69099,
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_NALAK,
         max_respawn = MAX_RESPAWN_NALAK,
@@ -67,7 +71,8 @@ local tracked_bosses = {
     ["Sha of Anger"] = {
         name = "Sha of Anger",
         color = "|cff8a1a9f",
-        zone = "Kun-Lai Summit",
+        map_id = 379,
+        id = 60491,
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
@@ -76,7 +81,8 @@ local tracked_bosses = {
     ["Huolon"] = {
         name = "Huolon",
         color = "|cfff7f713",
-        zone = "Timeless Isle",
+        map_id = 554,
+        id = 73167,
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_HUOLON,
         max_respawn = MAX_RESPAWN_HUOLON,
@@ -88,7 +94,8 @@ local tracked_bosses = {
     ["Vale Moth"] = {
         name = "Vale Moth",
         color = "|cff1f3d4a",
-        zone = "Azuremyst Isle",
+        map_id = 97,
+        id = 16520,
         soundfile = SOUND_DIR .. "vale_moth1.mp3",
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
@@ -99,7 +106,8 @@ local tracked_bosses = {
     ["Grellkin"] = {
         name = "Grellkin",
         color = "|cffffff00",
-        zone = "Shadowglen",
+        map_id = 460,
+        id = 1989,
         soundfile = SOUND_DIR .. "grellkin2.mp3",
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
@@ -112,6 +120,8 @@ local tracked_bosses = {
         name = "Young Nightsaber",
         color = "|cffff3d4a",
         zone =  "_Shadowglen",
+        map_id = 460,
+        id = 2031,
         soundfile = SOUND_DIR .. "vale_moth1.mp3",
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MIN_RESPAWN_SHA,
@@ -123,6 +133,22 @@ local tracked_bosses = {
 
 function BossData.Get(name)
     return tracked_bosses[name];
+end
+
+local function GetNpcId(guid)
+    local type, zero, server_id, instance_id, zone_uid, npc_id, spawn_uid = strsplit("-", guid);
+    return npc_id;
+end
+
+function BossData.GetFromGuid(guid)
+    local npc_id = GetNpcId(guid);
+    for _, data in pairs(tracked_bosses) do
+        if npc_id == tostring(data.id) then
+            return data;
+        end
+    end
+
+    return nil;
 end
 
 function BossData.GetAll()

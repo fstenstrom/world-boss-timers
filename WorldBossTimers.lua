@@ -90,13 +90,16 @@ function WBT.IsDead(name)
 end
 local IsDead = WBT.IsDead;
 
-function WBT.IsBoss(name)
-    return Util.SetContainsKey(BossData.GetAll(), name);
+local function IsBoss(nameOrGuid)
+    return Util.SetContainsKey(BossData.GetAll(), name) or BossData.GetFromGuid(nameOrGuid) ~= nil;
 end
-local IsBoss = WBT.IsBoss;
+
+local function GetCurrentMapId()
+    return C_Map.GetBestMapForUnit("player");
+end
 
 function WBT.IsInZoneOfBoss(name)
-    return GetZoneText() == BossData.Get(name).zone;
+    return GetCurrentMapId() == BossData.Get(name).map_id;
 end
 
 local function BossInCurrentZone()
@@ -114,9 +117,9 @@ local function IsInBossZone()
 end
 
 local function GetKillInfoFromZone()
-    local current_zone = GetZoneText();
+    local current_map_id = GetCurrentMapId();
     for name, boss_info in pairs(BossData.GetAll()) do
-        if boss_info.zone == current_zone then
+        if boss_info.map_id == current_map_id then
             return g_kill_infos[boss_info.name];
         end
     end
@@ -135,11 +138,11 @@ end
 local GetSpawnTimeOutput = WBT.GetSpawnTimeOutput;
 
 function WBT.IsBossZone()
-    local current_zone = GetZoneText();
+    local current_map_id = GetCurrentMapId();
 
     local is_boss_zone = false;
     for name, boss in pairs(BossData.GetAll()) do
-        if boss.zone == current_zone then
+        if boss.map_id == current_map_id then
             is_boss_zone = true;
         end
     end
@@ -247,12 +250,12 @@ local function InitDeathTrackerFrame()
 
     boss_death_frame = CreateFrame("Frame");
     boss_death_frame:SetScript("OnEvent", function(event, ...)
-		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo()
+            local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo();
 
-             if eventType == "UNIT_DIED" and IsBoss(destName) then
+            if eventType == "UNIT_DIED" and IsBoss(destGUID) then
                  SetKillInfo(destName, GetServerTime());
                  gui:Update();
-             end
+            end
         end);
 end
 
@@ -285,7 +288,7 @@ local function InitCombatScannerFrame()
 
         local t = GetServerTime();
 
-        if IsBoss(destName) and t > self.t_next then
+        if IsBoss(destGUID) and t > self.t_next then
             WBT:Print(GetColoredBossName(destName) .. " is now engaged in combat!");
             PlayAlertSound(destName);
             FlashClientIcon();
