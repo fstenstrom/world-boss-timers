@@ -151,6 +151,15 @@ function BossData.GetFromGuid(guid)
     return nil;
 end
 
+function BossData.NameFromGuid(guid)
+    local data = BossData.GetFromGuid(guid);
+    if data then
+        return data.name;
+    end
+
+    return nil;
+end
+
 function BossData.GetAll()
     return tracked_bosses;
 end

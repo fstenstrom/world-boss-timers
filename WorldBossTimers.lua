@@ -90,8 +90,8 @@ function WBT.IsDead(name)
 end
 local IsDead = WBT.IsDead;
 
-local function IsBoss(nameOrGuid)
-    return Util.SetContainsKey(BossData.GetAll(), name) or BossData.GetFromGuid(nameOrGuid) ~= nil;
+local function IsBoss(name)
+    return Util.SetContainsKey(BossData.GetAll(), name);
 end
 
 local function GetCurrentMapId()
@@ -252,8 +252,15 @@ local function InitDeathTrackerFrame()
     boss_death_frame:SetScript("OnEvent", function(event, ...)
             local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo();
 
-            if eventType == "UNIT_DIED" and IsBoss(destGUID) then
-                 SetKillInfo(destName, GetServerTime());
+            -- Convert to English name from GUID, to make it work for
+            -- localization.
+            local name = BossData.NameFromGuid(destGUID);
+            if name == nil then
+                return;
+            end
+
+            if eventType == "UNIT_DIED" then
+                 SetKillInfo(name, GetServerTime());
                  gui:Update();
             end
         end);
@@ -286,11 +293,17 @@ local function InitCombatScannerFrame()
     function boss_combat_frame:DoScanWorldBossCombat(event, ...)
 		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo()
 
-        local t = GetServerTime();
+        -- Convert to English name from GUID, to make it work for
+        -- localization.
+        local name = BossData.NameFromGuid(destGUID);
+        if name == nil then
+            return;
+        end
 
-        if IsBoss(destGUID) and t > self.t_next then
-            WBT:Print(GetColoredBossName(destName) .. " is now engaged in combat!");
-            PlayAlertSound(destName);
+        local t = GetServerTime();
+        if IsBoss(name) and t > self.t_next then
+            WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
+            PlayAlertSound(name);
             FlashClientIcon();
             self.t_next = t + time_out;
         end
@@ -379,6 +392,7 @@ local function SlashHandler(input)
             WBT:Print("Timer window will show when next you enter a boss zone.");
         end
     elseif arg1 == "say"
+        or arg1 == "share"
         or arg1 == "a"
         or arg1 == "announce"
         or arg1 == "yell"
