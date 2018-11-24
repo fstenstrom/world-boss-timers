@@ -7,6 +7,7 @@ local _, WBT = ...;
 
 local Util = WBT.Util;
 local BossData = WBT.BossData;
+local Config = {}; -- Must be initialized later.
 
 -- Provides the GUI API and performs checks if the GUI is shown etc.
 local GUI = {};
@@ -15,6 +16,10 @@ WBT.GUI = GUI;
 WBT.G_window = {};
 
 --------------------------------------------------------------------------------
+
+function GUI.Init()
+    Config = WBT.Config;
+end
 
 function GUI:CreateLabels()
     self.labels = {};
@@ -77,7 +82,7 @@ function GUI:Update()
         local label = self.labels[name];
         if not BossData.BossExists(name) or getmetatable(kill_info) ~= WBT.KillInfo then
             -- Do nothing.
-        elseif WBT.IsDead(name) and (not(kill_info.cyclic) or WBT.CyclicEnabled()) then
+        elseif WBT.IsDead(name) and (not(kill_info.cyclic) or Config.cyclic.get()) then
             label:SetText(WBT.GetColoredBossName(name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info));
         else
             label:SetText("");

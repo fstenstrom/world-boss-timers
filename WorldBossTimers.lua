@@ -4,6 +4,7 @@
 
 -- addonName, addonTable = ...;
 local _, WBT = ...;
+WBT.addon_name = "WorldBossTimers";
 
 --@do-not-package@
 wbt_addon = WBT;
@@ -13,6 +14,7 @@ local KillInfo = WBT.KillInfo;
 local Util = WBT.Util;
 local BossData = WBT.BossData;
 local GUI = WBT.GUI;
+local Config = WBT.Config;
 
 
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
@@ -24,6 +26,7 @@ local gui = {};
 local boss_death_frame;
 local boss_combat_frame;
 local g_kill_infos = {};
+WBT.g_kill_infos = g_kill_infos;
 
 local SOUND_CLASSIC = "CLASSIC";
 local SOUND_FANCY = "FANCY";
@@ -48,84 +51,8 @@ local defaults = {
     },
 };
 
-local myOptionsTable = {
-  type = "group",
-  args = {
-    show = {
-        name = "show",
-        desc = "",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) print("TODO") end,
-        get = function(info) return false end, -- TODO
-    },
-    auto_send_data = {
-        name = "auto_send_data",
-        desc = "enable/disable",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) print("TODO") end,
-        get = function(info) return false end, -- TODO
-    },
-    sound = {
-        name = "sound",
-        desc = "enable/disable",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) print("TODO") end,
-        get = function(info) return false end, -- TODO
-    },
-    auto_announce = {
-        name = "auto_announce",
-        desc = "enable/disable",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) print("TODO") end,
-        get = function(info) return false end, -- TODO
-    },
-    cyclic = {
-        name = "Cyclic",
-        desc = "Enables / disables cyclic timers",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) WBT.SetCyclic(val) end,
-        get = function(info) return WBT.CyclicEnabled() end,
-    },
-  }
-}
-
-function WBT.CyclicEnabled()
-    return WBT.db.global.cyclic;
-end
-local CyclicEnabled = WBT.CyclicEnabled;
-
-function WBT.SetCyclic(state)
-    WBT.db.global.cyclic = state;
-end
-local SetCyclic = WBT.SetCyclic;
-
-local function SendDataEnabled()
-    return WBT.db.global.send_data;
-end
-
-local function SetSendData(state)
-    WBT.db.global.send_data = state;
-end
-
-local function AutoAnnounceEnabled()
-    return WBT.db.global.auto_announce;
-end
-
-local function SetAutoAnnounce(state)
-    WBT.db.global.auto_announce = state;
-end
-
-local function SoundEnabled()
-    return WBT.db.global.sound_enabled;
-end
-
-local function SetSound(state)
-    WBT.db.global.sound_enabled = state;
+function WBT.DebugPrint(...)
+    print("DEBUG:", Util.MessageFromVarargs(...));
 end
 
 function WBT.IsDead(name)
@@ -148,7 +75,7 @@ function WBT.IsInZoneOfBoss(name)
     return GetCurrentMapId() == BossData.Get(name).map_id;
 end
 
-local function BossInCurrentZone()
+function WBT.BossInCurrentZone()
     for name, boss in pairs(BossData.GetAll()) do
         if WBT.IsInZoneOfBoss(name) then
             return boss;
@@ -157,6 +84,7 @@ local function BossInCurrentZone()
 
     return nil;
 end
+local BossInCurrentZone = WBT.BossInCurrentZone;
 
 local function IsInBossZone()
     return not not BossInCurrentZone();
@@ -271,9 +199,10 @@ local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
     return msg;
 end
 
-local function AnnounceSpawnTime(kill_info, send_data_for_parsing)
+function WBT.AnnounceSpawnTime(kill_info, send_data_for_parsing)
     SendChatMessage(CreateAnnounceMessage(kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
 end
+local AnnounceSpawnTime = WBT.AnnounceSpawnTime;
 
 local function SetKillInfo(name, t_death)
     t_death = tonumber(t_death);
@@ -361,7 +290,7 @@ end
 function WBT.AceAddon:OnInitialize()
 end
 
-local function PrintKilledBosses()
+function WBT.PrintKilledBosses()
     WBT:Print("Tracked world bosses killed:");
 
     local none_killed_text = "None";
@@ -382,8 +311,9 @@ local function PrintKilledBosses()
         end
     end
 end
+local PrintKilledBosses = WBT.PrintKilledBosses;
 
-local function ResetKillInfo()
+function WBT.ResetKillInfo()
     WBT:Print("Resetting all kill info.");
     for _, kill_info in pairs(g_kill_infos) do
         kill_info:Reset();
@@ -391,122 +321,7 @@ local function ResetKillInfo()
 
     gui:Update();
 end
-
-local function SlashHandler(input)
-    arg1, arg2 = strsplit(" ", input);
-
-    local function PrintHelp()
-        local indent = "   ";
-        WBT:Print("WorldBossTimers slash commands:");
-        WBT:Print("/wbt reset --> Reset all kill info.");
-        WBT:Print("/wbt saved --> Print your saved bosses.");
-        WBT:Print("/wbt say --> Announce timers for boss in zone.");
-        WBT:Print("/wbt show --> Show the timers frame.");
-        WBT:Print("/wbt hide --> Hide the timers frame.");
-        WBT:Print("/wbt send --> Toggle send timer data in auto announce.");
-        WBT:Print("/wbt sound --> Toggle sound alerts.");
-        --WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'.");
-        --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'.");
-        WBT:Print("/wbt ann --> Toggle automatic announcements.");
-        WBT:Print("/wbt cyclic --> Toggle cyclic timers.");
-    end
-
-    local function GetColoredStatus(status_var)
-        local color = Util.COLOR_RED;
-        local status = "disabled";
-        if status_var then
-            color = Util.COLOR_GREEN;
-            status = "enabled";
-        end
-
-        return color .. status .. Util.COLOR_DEFAULT;
-    end
-
-    local function PrintFormattedStatus(output, status_var)
-        WBT:Print(output .. " " .. GetColoredStatus(status_var) .. ".");
-    end
-
-    local new_state = nil;
-    if arg1 == "hide" then
-        WBT.db.global.hide_gui = true;
-        gui:Hide();
-    elseif arg1 == "show" then
-        WBT.db.global.hide_gui = false;
-        if gui:ShouldShow() then
-            gui:Show();
-        else
-            WBT:Print("Timer window will show when next you enter a boss zone.");
-        end
-    elseif arg1 == "say"
-        or arg1 == "share"
-        or arg1 == "a"
-        or arg1 == "announce"
-        or arg1 == "yell"
-        or arg1 == "tell" then
-
-        local boss = BossInCurrentZone();
-        if not boss then
-            WBT:Print("You can't announce outside of boss zone.");
-            return;
-        end
-
-        local kill_info = g_kill_infos[boss.name];
-        if not kill_info or not(kill_info:IsValid()) then
-            WBT:Print("No spawn timer for " .. GetColoredBossName(boss.name) .. ".");
-            return;
-        end
-
-        local error_msgs = {};
-        if not kill_info:IsCompletelySafe(error_msgs) then
-            SendChatMessage("{cross}Warning{cross}: Timer might be incorrect!", "SAY", nil, nil);
-            for i, v in ipairs(error_msgs) do
-                SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
-            end
-        end
-        AnnounceSpawnTime(kill_info, SendDataEnabled());
-    elseif arg1 == "send" then
-        new_state = not SendDataEnabled();
-        SetSendData(new_state);
-        PrintFormattedStatus("Data sending in auto announce is now", new_state);
-    elseif arg1 == "ann" then
-        new_state = not AutoAnnounceEnabled();
-        SetAutoAnnounce(new_state);
-        PrintFormattedStatus("Automatic announcements are now", new_state);
-    elseif arg1 == "r"
-        or arg1 == "reset"
-        or arg1 == "restart" then
-        ResetKillInfo();
-    elseif arg1 == "s"
-        or arg1 == "saved"
-        or arg1 == "save" then
-        PrintKilledBosses();
-    elseif arg1 == "request" then
-        RequestKillData();
-    elseif arg1 == "sound" then
-        sound_type_args = {"classic", "fancy"};
-        if Util.SetContainsValue(sound_type_args, arg2) then
-            WBT.db.global.sound_type = arg2;
-            WBT:Print("SoundType: " .. arg2);
-        else
-            new_state = not SoundEnabled();
-            SetSound(new_state);
-            PrintFormattedStatus("Sound is now", new_state);
-        end
-    elseif arg1 == "cycle"
-        or arg1 == "cyclic" then
-
-        new_state = not CyclicEnabled();
-        SetCyclic(new_state);
-        gui:Update();
-
-        PrintFormattedStatus("Cyclic mode is now", new_state);
-        local red_text = Util.COLOR_RED .. "red text" .. Util.COLOR_DEFAULT;
-        WBT:Print("This mode will repeat the boss timers if you miss the kill. A timer in " .. red_text
-            .. " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.");
-    else
-        PrintHelp();
-    end
-end
+local ResetKillInfo = WBT.ResetKillInfo;
 
 local function StartVisibilityHandler()
     local visibilty_handler_frame = CreateFrame("Frame");
@@ -595,14 +410,14 @@ local function InitKillInfoManager()
                             -- Do nothing.
                         else
                             if kill_info:ShouldAnnounce() then
-                                AnnounceSpawnTime(kill_info, SendDataEnabled());
+                                AnnounceSpawnTime(kill_info, Config.send_data.get());
                             end
 
                             if kill_info:ShouldFlash() then
                                 FlashClientIcon();
                             end
 
-                            if kill_info:Expired() and CyclicEnabled() then
+                            if kill_info:Expired() and Config.cyclic.get() then
                                 local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
                                 kill_info.t_death = t_death_new
                                 self.until_time = t_spawn;
@@ -620,14 +435,17 @@ local function InitKillInfoManager()
 end
 
 function WBT.AceAddon:OnEnable()
+    GUI.Init();
+
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
     GUI.SetupAceGUI();
 
-    local addonName = "WorldBossTimers";
     local AceConfig = LibStub("AceConfig-3.0");
-    AceConfig:RegisterOptionsTable(addonName, myOptionsTable, {"wbtslash"});
-    local AceConfigDialog = LibStub("AceConfigDialog-3.0");
-    AceConfigDialog:AddToBlizOptions(addonName, addonName, nil);
+
+    AceConfig:RegisterOptionsTable(WBT.addon_name, Config.optionsTable, {});
+    WBT.AceConfigDialog = LibStub("AceConfigDialog-3.0");
+    WBT.AceConfigDialog:AddToBlizOptions(WBT.addon_name, WBT.addon_name, nil);
+
 
     InitDeathTrackerFrame();
     InitCombatScannerFrame();
@@ -643,8 +461,8 @@ function WBT.AceAddon:OnEnable()
 
     StartVisibilityHandler();
 
-    self:RegisterChatCommand("wbt", SlashHandler);
-    self:RegisterChatCommand("worldbosstimers", SlashHandler);
+    self:RegisterChatCommand("wbt", Config.SlashHandler);
+    self:RegisterChatCommand("worldbosstimers", Config.SlashHandler);
 
     self:InitChatParsing();
 
