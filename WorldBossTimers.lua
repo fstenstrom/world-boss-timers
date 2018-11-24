@@ -48,15 +48,61 @@ local defaults = {
     },
 };
 
+local myOptionsTable = {
+  type = "group",
+  args = {
+    show = {
+        name = "show",
+        desc = "",
+        type = "toggle",
+        width = "full",
+        set = function(info, val) print("TODO") end,
+        get = function(info) return false end, -- TODO
+    },
+    auto_send_data = {
+        name = "auto_send_data",
+        desc = "enable/disable",
+        type = "toggle",
+        width = "full",
+        set = function(info, val) print("TODO") end,
+        get = function(info) return false end, -- TODO
+    },
+    sound = {
+        name = "sound",
+        desc = "enable/disable",
+        type = "toggle",
+        width = "full",
+        set = function(info, val) print("TODO") end,
+        get = function(info) return false end, -- TODO
+    },
+    auto_announce = {
+        name = "auto_announce",
+        desc = "enable/disable",
+        type = "toggle",
+        width = "full",
+        set = function(info, val) print("TODO") end,
+        get = function(info) return false end, -- TODO
+    },
+    cyclic = {
+        name = "Cyclic",
+        desc = "Enables / disables cyclic timers",
+        type = "toggle",
+        width = "full",
+        set = function(info, val) WBT.SetCyclic(val) end,
+        get = function(info) return WBT.CyclicEnabled() end,
+    },
+  }
+}
+
 function WBT.CyclicEnabled()
     return WBT.db.global.cyclic;
 end
-
 local CyclicEnabled = WBT.CyclicEnabled;
 
-local function SetCyclic(state)
+function WBT.SetCyclic(state)
     WBT.db.global.cyclic = state;
 end
+local SetCyclic = WBT.SetCyclic;
 
 local function SendDataEnabled()
     return WBT.db.global.send_data;
@@ -576,6 +622,12 @@ end
 function WBT.AceAddon:OnEnable()
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
     GUI.SetupAceGUI();
+
+    local addonName = "WorldBossTimers";
+    local AceConfig = LibStub("AceConfig-3.0");
+    AceConfig:RegisterOptionsTable(addonName, myOptionsTable, {"wbtslash"});
+    local AceConfigDialog = LibStub("AceConfigDialog-3.0");
+    AceConfigDialog:AddToBlizOptions(addonName, addonName, nil);
 
     InitDeathTrackerFrame();
     InitCombatScannerFrame();
