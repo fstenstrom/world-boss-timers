@@ -128,7 +128,7 @@ function Config.SlashHandler(input)
             return;
         end
 
-        local kill_info = WBT.g_kill_infos[boss.name];
+        local kill_info = WBT.db.global.kill_infos[boss.name];
         if not kill_info or not(kill_info:IsValid()) then
             WBT:Print("No spawn timer for " .. WBT.GetColoredBossName(boss.name) .. ".");
             return;
@@ -141,7 +141,7 @@ function Config.SlashHandler(input)
                 SendChatMessage("{cross}" .. v .. "{cross}", "SAY", nil, nil);
             end
         end
-        WBT.AnnounceSpawnTime(kill_info, SendDataEnabled());
+        WBT.AnnounceSpawnTime(kill_info, Config.send_data.get());
     elseif arg1 == "send" then
         Config.send_data:Toggle();
     elseif arg1 == "ann" then

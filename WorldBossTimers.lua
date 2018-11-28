@@ -26,7 +26,6 @@ local gui = {};
 local boss_death_frame;
 local boss_combat_frame;
 local g_kill_infos = {};
-WBT.g_kill_infos = g_kill_infos;
 
 local CHANNEL_ANNOUNCE = "SAY";
 local ICON_SKULL = "{skull}";
