@@ -6,6 +6,9 @@ WBT.Config = Config;
 local GUI = WBT.GUI;
 local Util = WBT.Util;
 
+Config.SOUND_CLASSIC = "classic";
+Config.SOUND_FANCY = "fancy";
+
 local CYCLIC_HELP_TEXT = "This mode will repeat the boss timers if you miss the kill. A timer in " ..
         Util.ColoredString(Util.COLOR_RED, "red text") ..
         " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.";
@@ -154,7 +157,7 @@ function Config.SlashHandler(input)
     elseif arg1 == "request" then
         WBT.RequestKillData();
     elseif arg1 == "sound" then
-        sound_type_args = {"classic", "fancy"};
+        sound_type_args = {Config.SOUND_CLASSIC, Config.SOUND_FANCY};
         if Util.SetContainsValue(sound_type_args, arg2) then
             WBT.db.global.sound_type = arg2;
             WBT:Print("SoundType: " .. arg2);

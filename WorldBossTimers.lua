@@ -28,9 +28,6 @@ local boss_combat_frame;
 local g_kill_infos = {};
 WBT.g_kill_infos = g_kill_infos;
 
-local SOUND_CLASSIC = "CLASSIC";
-local SOUND_FANCY = "FANCY";
-
 local CHANNEL_ANNOUNCE = "SAY";
 local ICON_SKULL = "{skull}";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
@@ -40,7 +37,7 @@ local defaults = {
     global = {
         kill_infos = {},
         sound_enabled = true,
-        sound_type = SOUND_CLASSIC,
+        sound_type = Config.SOUND_CLASSIC,
         auto_announce = true,
         send_data = true,
         cyclic = false,
@@ -246,7 +243,7 @@ local function PlayAlertSound(name)
     local sound_enabled = WBT.db.global.sound_enabled;
 
     local soundfile = BossData.Get(name).soundfile;
-    if sound_type == SOUND_CLASSIC then
+    if sound_type:lower() == Config.SOUND_CLASSIC:lower() then
         soundfile = BossData.SOUND_FILE_DEFAULT;
     end
 
