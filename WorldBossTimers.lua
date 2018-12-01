@@ -159,7 +159,7 @@ function WBT.ResetBoss(name)
     local kill_info = g_kill_infos[name];
 
     if not kill_info.cyclic then
-        local cyclic_mode = Util.COLOR_RED .. "Cyclid Mode" .. Util.COLOR_DEFAULT;
+        local cyclic_mode = Util.COLOR_RED .. "Cyclic Mode" .. Util.COLOR_DEFAULT;
         WBT:Print("Clicking a world boss that is in " .. cyclic_mode .. " will reset it."
             .. " Try '/wbt cyclic' for more info.");
     else
