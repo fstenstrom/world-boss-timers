@@ -1,5 +1,9 @@
-# README #
+# WorldBossTimers #
 
-This is the git repo for the WoW addon WorldBossTimers.
+This is the repo for the World of Warcraft addon "WorldBossTimers" which is used to track and share timers for world bosses.
 
-The addon is currently in dev.
+Curse addon site: https://www.curseforge.com/wow/addons/worldbosstimers
+
+Curse project site: https://wow.curseforge.com/projects/worldbosstimers
+
+If something is broken or you have a feature request, feel free to add an issue or comment on the Curse addon site.
