@@ -531,7 +531,7 @@ local function SimWarmodeKill(name)
 end
 
 local function SimServerKill(name)
-    SetKillInfo_GUID(name, SecToRespawn(name, 4), "MyCustomServer", Util.Warmode.DISABLED);
+    SetKillInfo_GUID(name, SecToRespawn(name, 4), "Majsbreaker", Util.Warmode.DISABLED);
 end
 
 local function SimKill(sec_to_respawn)

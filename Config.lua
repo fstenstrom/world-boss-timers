@@ -93,6 +93,7 @@ local function PrintHelp()
     --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'.");
     WBT:Print("/wbt ann --> Toggle automatic announcements.");
     WBT:Print("/wbt cyclic --> Toggle cyclic timers.");
+    WBT:Print("/wbt multi --> Toggle multi-realm/warmode timers.");
 end
 
 local function ShowGUI(show)
@@ -168,6 +169,9 @@ function Config.SlashHandler(input)
         end
     elseif arg1 == "cyclic" then
         Config.cyclic:Toggle();
+        WBT.GUI:Update();
+    elseif arg1 == "multi" then
+        Config.multi_realm:Toggle();
         WBT.GUI:Update();
     else
         PrintHelp();
