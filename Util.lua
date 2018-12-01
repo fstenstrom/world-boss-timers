@@ -11,6 +11,20 @@ WBT.Util = Util;
 Util.COLOR_DEFAULT = "|cffffffff";
 Util.COLOR_RED = "|cffff0000";
 Util.COLOR_GREEN = "|cff00ff00";
+Util.COLOR_YELLOW = "|cfff2e532";
+
+Util.Warmode = {
+    DISABLED = "Normal",
+    ENABLED = "Warmode",
+}
+
+function Util.WarmodeColor(realm_type)
+    local color = Util.COLOR_RED;
+    if realm_type == Util.Warmode.DISABLED then
+        color = Util.COLOR_YELLOW;
+    end
+    return color;
+end
 
 -- Lua 5.2 "import" from table.pack:
 function TablePack(...)
@@ -68,11 +82,11 @@ function Util.FormatTimeSeconds(seconds)
     end
 end
 
-function Util.GetRealmType()
+function Util.WarmodeStatus()
     local pvpStyle = GetZonePVPInfo();
     if pvpStyle == nil then
-        return REALM_TYPE_PVE;
+        return Util.Warmode.DISABLED;
     end
 
-    return REALM_TYPE_PVP;
+    return Util.Warmode.ENABLED;
 end
