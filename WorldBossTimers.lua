@@ -120,7 +120,7 @@ local IsBossZone = WBT.IsBossZone;
 
 function WBT.AnyDead()
     for name, boss in pairs(BossData.GetAll()) do
-        if IsDead(name) then
+        if IsDead(KillInfo.CreateGUID(name)) then
             return true;
         end
     end
@@ -366,7 +366,7 @@ function WBT.AceAddon:InitChatParsing()
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
                     local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
-                    if IsBoss(name) and not IsDead(name) then
+                    if IsBoss(name) and not IsDead(KillInfo.CreateGUID(name)) then
                         SetKillInfo(name, t_death);
                         WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
                     end
