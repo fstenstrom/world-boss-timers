@@ -41,6 +41,7 @@ local defaults = {
         send_data = true,
         cyclic = false,
         hide_gui = false,
+        multi_realm = false,
     },
     char = {
         boss = {},
