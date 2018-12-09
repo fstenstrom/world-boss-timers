@@ -27,6 +27,7 @@ end
 function ConfigItem.CreateDefaultSetter(var_name)
     local function setter(state)
         WBT.db.global[var_name] = state;
+        WBT.GUI:Update();
     end
     return setter;
 end
@@ -68,6 +69,7 @@ end
 Config.send_data = ConfigItem:New("send_data", "Data sending in auto announce is now");
 Config.auto_announce = ConfigItem:New("auto_announce", "Automatic announcements are now");
 Config.sound = ConfigItem:New("sound_enabled", "Sound is now");
+Config.multi_realm = ConfigItem:New("multi_realm", "Multi-Realm/Warmode option is now");
 Config.cyclic = ConfigItem:New("cyclic", "Cyclic mode is now");
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Config.cyclic.set;
@@ -91,6 +93,7 @@ local function PrintHelp()
     --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'.");
     WBT:Print("/wbt ann --> Toggle automatic announcements.");
     WBT:Print("/wbt cyclic --> Toggle cyclic timers.");
+    WBT:Print("/wbt multi --> Toggle multi-realm/warmode timers.");
 end
 
 local function ShowGUI(show)
@@ -128,7 +131,7 @@ function Config.SlashHandler(input)
             return;
         end
 
-        local kill_info = WBT.db.global.kill_infos[boss.name];
+        local kill_info = WBT.KillInfoInCurrentZoneAndShard();
         if not kill_info or not(kill_info:IsValid()) then
             WBT:Print("No spawn timer for " .. WBT.GetColoredBossName(boss.name) .. ".");
             return;
@@ -166,6 +169,9 @@ function Config.SlashHandler(input)
         end
     elseif arg1 == "cyclic" then
         Config.cyclic:Toggle();
+        WBT.GUI:Update();
+    elseif arg1 == "multi" then
+        Config.multi_realm:Toggle();
         WBT.GUI:Update();
     else
         PrintHelp();
@@ -222,6 +228,15 @@ Config.optionsTable = {
         width = "full",
         set = function(info, val) Config.auto_announce:Toggle(); end,
         get = function(info) return Config.auto_announce.get() end,
+    },
+    multi_realm = {
+        name = "Allow tracking across multiple Realms (and multiple Warmode settings on the same Realm)",
+        order = 6,
+        desc = desc_toggle,
+        type = "toggle",
+        width = "full",
+        set = function(info, val) Config.multi_realm:Toggle(); end,
+        get = function(info) return Config.multi_realm.get() end,
     },
   }
 }

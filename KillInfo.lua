@@ -13,13 +13,45 @@ local _, WBT = ...;
 local Util = WBT.Util;
 local Config = WBT.Config;
 
-local KillInfo = {}
+local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-local CURRENT_VERSION = "v1";
+local CURRENT_VERSION = "v1.1.1";
 
-local RANDOM_DELIM = "-"
+local RANDOM_DELIM = "-";
 
+local GUID_DELIM = ";";
+
+function KillInfo.ValidGUID(guid)
+    for _, v in pairs(KillInfo.ParseGUID(guid)) do
+        if v then
+            return true;
+        end
+    end
+    return false;
+end
+
+function KillInfo.ParseGUID(guid)
+    local valid_word = "([^;]+)";
+    local pattern = "^" .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. "$";
+    local boss_name, realmName, realm_type = guid:match(pattern);
+
+    return {
+        boss_name = boss_name,
+        realmName = realmName,
+        realm_type = realm_type,
+    }
+end
+
+function KillInfo.CreateGUID(name, realmName, realm_type)
+    realmName = realmName or GetRealmName();
+    realm_type = realm_type or Util.WarmodeStatus();
+    return name .. GUID_DELIM .. realmName .. GUID_DELIM .. realm_type;
+end
+
+function KillInfo:GUID()
+    return self.CreateGUID(self.name, self.realmName, self.realm_type);
+end
 
 -- A KillInfo is no longer valid if its data was recorded before
 -- the KillInfo class was introduced.
@@ -38,7 +70,7 @@ function KillInfo:SetInitialValues(name)
     self.reset = false;
     self.safe = not IsInGroup();
     self.realmName = GetRealmName();
-    self.realm_type = Util.GetRealmType();
+    self.realm_type = Util.WarmodeStatus();
     self.db = WBT.BossData.Get(self.name);
     self.announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
 end
@@ -88,7 +120,7 @@ function KillInfo:IsCompletelySafe(error_msgs)
 
     -- It's possible to have one char with war mode, and one
     -- without on the same server.
-    local realm_type = Util.GetRealmType();
+    local realm_type = Util.WarmodeStatus();
     local realmName = GetRealmName();
 
     if not self.safe then
@@ -192,6 +224,10 @@ function KillInfo.StartWorldBossDeathTimer()
     end
 end
 
+function KillInfo:IsOnValidShard()
+    return self.realmName == GetRealmName() and self.realm_type == Util.WarmodeStatus();
+end
+
 function KillInfo:ShouldAnnounce()
     return WBT.db.global.auto_announce
             and Util.SetContainsValue(self.announce_times, self.remaining_time)
@@ -201,7 +237,7 @@ end
 
 function KillInfo:ShouldFlash()
     local t_now = GetServerTime();
-    return self.until_time <= t_now and t_now <= (self.until_time + 1) and WBT.IsInZoneOfBoss(self.name);
+    return self.until_time <= t_now and t_now <= (self.until_time + 1) and WBT.IsInZoneOfBoss(self.name) and self:IsCompletelySafe({});
 end
 
 function KillInfo:Update()

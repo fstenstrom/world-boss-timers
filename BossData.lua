@@ -22,10 +22,10 @@ local MAX_RESPAWN_NALAK = MAX_RESPAWN_SHA;
 local MIN_RESPAWN_HUOLON = 30*60;
 local MAX_RESPAWN_HUOLON = 60*60;
 
-local SOUND_DIR = "Interface\\AddOns\\WorldBossTimers\\resources\\sound\\";
+local SOUND_DIR = "Interface/AddOns/WorldBossTimers/resources/sound/";
 
-BossData.SOUND_FILE_DEFAULT = "Sound\\Event Sounds\\Event_wardrum_ogre.ogg";
-BossData.SOUND_FILE_PREPARE = "Sound\\creature\\EadricThePure\\AC_Eadric_Aggro01.ogg";
+BossData.SOUND_FILE_DEFAULT = "Sound/Event Sounds/Event_wardrum_ogre.ogg";
+BossData.SOUND_FILE_PREPARE = "Sound/creature/EadricThePure/AC_Eadric_Aggro01.ogg";
 
 local tracked_bosses = {
     ["Oondasta"] = {

@@ -28,7 +28,7 @@ local boss_combat_frame;
 local g_kill_infos = {};
 
 local CHANNEL_ANNOUNCE = "SAY";
-local ICON_SKULL = "{skull}";
+local ICON_SKULL = "{rt8}";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
 local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 
@@ -41,6 +41,7 @@ local defaults = {
         send_data = true,
         cyclic = false,
         hide_gui = false,
+        multi_realm = false,
     },
     char = {
         boss = {},
@@ -51,8 +52,8 @@ function WBT.DebugPrint(...)
     print("DEBUG:", Util.MessageFromVarargs(...));
 end
 
-function WBT.IsDead(name)
-    local ki = g_kill_infos[name];
+function WBT.IsDead(guid)
+    local ki = g_kill_infos[guid];
     if ki and ki:IsValid() then
         return ki:IsDead();
     end
@@ -80,18 +81,16 @@ function WBT.BossInCurrentZone()
 
     return nil;
 end
-local BossInCurrentZone = WBT.BossInCurrentZone;
 
-local function IsInBossZone()
-    return not not BossInCurrentZone();
+function WBT.ThisServerAndWarmode(kill_info)
+    return kill_info.realm_type == Util.WarmodeStatus()
+            and kill_info.realmName == GetRealmName();
 end
 
-local function GetKillInfoFromZone()
-    local current_map_id = GetCurrentMapId();
-    for name, boss_info in pairs(BossData.GetAll()) do
-        if boss_info.map_id == current_map_id then
-            return g_kill_infos[boss_info.name];
-        end
+function WBT.KillInfoInCurrentZoneAndShard()
+    local boss = WBT.BossInCurrentZone();
+    if boss then
+        return g_kill_infos[KillInfo.CreateGUID(boss.name)];
     end
 
     return nil;
@@ -110,20 +109,19 @@ local GetSpawnTimeOutput = WBT.GetSpawnTimeOutput;
 function WBT.IsBossZone()
     local current_map_id = GetCurrentMapId();
 
-    local is_boss_zone = false;
     for name, boss in pairs(BossData.GetAll()) do
         if boss.map_id == current_map_id then
-            is_boss_zone = true;
+            return true;
         end
     end
 
-    return is_boss_zone;
+    return false;
 end
 local IsBossZone = WBT.IsBossZone;
 
 function WBT.AnyDead()
     for name, boss in pairs(BossData.GetAll()) do
-        if IsDead(name) then
+        if IsDead(KillInfo.CreateGUID(name)) then
             return true;
         end
     end
@@ -155,11 +153,12 @@ local function UnregisterEvents()
     boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
 end
 
-function WBT.ResetBoss(name)
-    local kill_info = g_kill_infos[name];
+function WBT.ResetBoss(guid)
+    local kill_info = g_kill_infos[guid];
+    local name = KillInfo.ParseGUID(guid).boss_name;
 
     if not kill_info.cyclic then
-        local cyclic_mode = Util.COLOR_RED .. "Cyclid Mode" .. Util.COLOR_DEFAULT;
+        local cyclic_mode = Util.COLOR_RED .. "Cyclic Mode" .. Util.COLOR_DEFAULT;
         WBT:Print("Clicking a world boss that is in " .. cyclic_mode .. " will reset it."
             .. " Try '/wbt cyclic' for more info.");
     else
@@ -202,14 +201,15 @@ local AnnounceSpawnTime = WBT.AnnounceSpawnTime;
 
 local function SetKillInfo(name, t_death)
     t_death = tonumber(t_death);
-    local ki = g_kill_infos[name];
+    local guid = KillInfo.CreateGUID(name);
+    local ki = g_kill_infos[guid];
     if ki then
         ki:SetNewDeath(name, t_death);
     else
         ki = KillInfo:New(t_death, name);
     end
 
-    g_kill_infos[name] = ki;
+    g_kill_infos[guid] = ki;
 
     gui:Update();
 end
@@ -347,9 +347,9 @@ function WBT.AceAddon:InitChatParsing()
                         and not Util.SetContainsKey(answered_requesters, sender)
                         and not PlayerSentRequest(sender) then
 
-                    local boss = BossInCurrentZone();
+                    local boss = WBT.BossInCurrentZone();
                     if boss then
-                        local kill_info = g_kill_infos[boss.name]
+                        local kill_info = WBT.KillInfoInCurrentZoneAndShard();
                         if kill_info and kill_info:IsCompletelySafe({}) then
                             AnnounceSpawnTime(kill_info, true);
                             answered_requesters[sender] = sender;
@@ -367,7 +367,7 @@ function WBT.AceAddon:InitChatParsing()
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
                     local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
-                    if IsBoss(name) and not IsDead(name) then
+                    if IsBoss(name) and not IsDead(KillInfo.CreateGUID(name)) then
                         SetKillInfo(name, t_death);
                         WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
                     end
@@ -388,7 +388,7 @@ local function LoadSerializedKillInfos()
 end
 
 local function InitKillInfoManager()
-    g_kill_infos = WBT.db.global.kill_infos;
+    g_kill_infos = WBT.db.global.kill_infos; -- Everything in g_kill_infos is written to db.
     LoadSerializedKillInfos();
 
     kill_info_manager = CreateFrame("Frame");
@@ -430,10 +430,31 @@ local function InitKillInfoManager()
         end);
 end
 
+local function FilterValidKillInfos()
+    -- Perform filtering in two steps to avoid what I guess would
+    -- be some kind of "ConcurrentModificationException".
+
+    -- Find invalid.
+    local kill_infos_invalid = {};
+    for guid, ki in pairs(WBT.db.global.kill_infos) do
+        if not KillInfo.ValidGUID(guid) then
+            kill_infos_invalid[guid] = ki;
+        end
+    end
+
+    -- Remove invalid.
+    for guid, ki in pairs(kill_infos_invalid) do
+        WBT.db.global.kill_infos[guid] = nil;
+    end
+end
+
 function WBT.AceAddon:OnEnable()
     GUI.Init();
 
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
+
+    FilterValidKillInfos();
+
     GUI.SetupAceGUI();
 
     local AceConfig = LibStub("AceConfig-3.0");
@@ -485,26 +506,50 @@ local function start_sim(name, t)
     SetKillInfo(name, t);
 end
 
-function dsim()
-    local function death_in_sec(name, t)
-        return GetServerTime() - BossData.Get(name).max_respawn + t;
+local function SetKillInfo_GUID(name, t_death, realmName, realm_type)
+    t_death = tonumber(t_death);
+    local guid = KillInfo.CreateGUID(name, realmName, realm_type);
+    local ki = g_kill_infos[guid];
+    if ki then
+        ki:SetNewDeath(name, t_death);
+    else
+        ki = KillInfo:New(t_death, name);
     end
+    ki.realmName = realmName;
+    ki.realm_type = realm_type;
 
+    g_kill_infos[guid] = ki;
+
+    gui:Update();
+end
+
+local function SecToRespawn(name, t)
+    return GetServerTime() - BossData.Get(name).max_respawn + t;
+end
+
+local function SimWarmodeKill(name)
+    SetKillInfo_GUID(name, SecToRespawn(name, 4), "Doomhammer", Util.Warmode.ENABLED);
+end
+
+local function SimServerKill(name)
+    SetKillInfo_GUID(name, SecToRespawn(name, 4), "Majsbreaker", Util.Warmode.DISABLED);
+end
+
+local function SimKill(sec_to_respawn)
     for name, data in pairs(BossData.GetAll()) do
-        start_sim(name, death_in_sec(name, 4));
+        start_sim(name, SecToRespawn(name, sec_to_respawn));
     end
+    SimServerKill("Grellkin");
+    SimWarmodeKill("Grellkin");
+end
 
+function dsim()
+    SimKill(4);
 end
 
 -- Relog, and make sure it works after.
 function dsim2()
-    local function death_in_sec(name, t)
-        return GetServerTime() - BossData.Get(name).max_respawn + t;
-    end
-
-    for name, data in pairs(BossData.GetAll()) do
-        start_sim(name, death_in_sec(name, 25));
-    end
+    SimKill(25);
 end
 
 function sim()
