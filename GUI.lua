@@ -92,7 +92,10 @@ function GUI:CreateNewLabel(guid)
     local label = self.AceGUI:Create("InteractiveLabel");
     label:SetWidth(GUI.LabelWidth(WIDTH_DEFAULT));
     label:SetCallback("OnClick", function(self)
-            WBT.ResetBoss(guid);
+            local text = self.label:GetText();
+            if text and text ~= "" then
+                WBT.ResetBoss(guid);
+            end
         end);
     self.labels[guid] = label;
     self.window:AddChild(label);
