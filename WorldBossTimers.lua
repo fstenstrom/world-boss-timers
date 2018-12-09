@@ -28,7 +28,7 @@ local boss_combat_frame;
 local g_kill_infos = {};
 
 local CHANNEL_ANNOUNCE = "SAY";
-local ICON_SKULL = "{skull}";
+local ICON_SKULL = "{rt8}";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
 local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 
