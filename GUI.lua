@@ -253,7 +253,6 @@ function GUI:New()
     -- Window class instead.
     self.window:SetCallback("OnClose", function()
         self:CleanUpWidgetsAndRelease();
-        WBT.db.global.hide_gui = true;
     end);
 
     self:CreateLabels();
