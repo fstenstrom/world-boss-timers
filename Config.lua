@@ -109,6 +109,7 @@ local function ShowGUI(show)
         WBT.db.global.hide_gui = true;
         gui:Hide();
     end
+    gui:Update();
 end
 
 function Config.SlashHandler(input)

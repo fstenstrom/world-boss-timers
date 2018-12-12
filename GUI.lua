@@ -59,7 +59,6 @@ function GUI:Show()
         self:Restart();
     end
 
-    self:Update();
     self.gui_container.frame:Show();
     self.visible = true;
 end
@@ -138,11 +137,7 @@ function GUI:GetLabelText(kill_info, all_info)
     return prefix .. WBT.GetColoredBossName(kill_info.name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info)
 end
 
-function GUI:Update()
-    if not(self.visible) then
-        return;
-    end
-
+function GUI:UpdateContent()
     local n_shown_labels = 0;
     for guid, kill_info in pairs(WBT.db.global.kill_infos) do
         local label = self.labels[guid] or self:CreateNewLabel(guid);
@@ -160,8 +155,16 @@ function GUI:Update()
 
     self:UpdateHeight(n_shown_labels);
     self:UpdateWidth();
+end
 
+function GUI:Update()
     self:UpdateGUIVisibility();
+
+    if not(self.visible) then
+        return;
+    end
+
+    self:UpdateContent();
 end
 
 function GUI:InitPosition()
