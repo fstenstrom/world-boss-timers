@@ -46,15 +46,21 @@ function GUI:Restart()
     self:New();
 end
 
+local function ShowBossZoneOnlyAndOutsideZone()
+    return Config.show_boss_zone_only.get() and not WBT.IsBossZone();
+end
+
 function GUI:ShouldShow()
     -- cnd -> condition
-    local cnd_show_everywhere = not Config.show_boss_zone_only.get();
-    local should_show = (cnd_show_everywhere or WBT.IsBossZone() or WBT.AnyDead())
-            and not self.visible
+    if (ShowBossZoneOnlyAndOutsideZone()) then
+        return false;
+    end
+    local should_show =
+            not self.visible
             and not WBT.db.global.hide_gui;
 
     --@do-not-package@
-    -- print(cnd_show_everywhere, WBT.IsBossZone(), WBT.AnyDead(), self.visible, WBT.db.global.hide_gui);
+    -- print(WBT.IsBossZone(), WBT.AnyDead(), self.visible, WBT.db.global.hide_gui);
     -- print("Should show:", should_show);
     --@end-do-not-package@
     
@@ -63,16 +69,14 @@ end
 
 function GUI:ShouldHide()
     -- Should GUI only be shown in boss zone, but is not in one?
-    local cnd_boss_zone_only_invalid = Config.show_boss_zone_only.get() and not WBT.IsBossZone();
     -- Are no bosses considered dead (waiting for respawn)?
     local cnd_none_tracked = not WBT.AnyDead();
 
-    local should_hide = (cnd_none_tracked or WBT.db.global.hide_gui)
-            and cnd_boss_zone_only_invalid
+    local should_hide = (WBT.db.global.hide_gui or ShowBossZoneOnlyAndOutsideZone())
             and self.visible;
 
     --@end-do-not-package@
-    -- print(cnd_boss_zone_only_invalid, cnd_none_tracked);
+    -- print(ShowBossZoneOnlyAndOutsideZone(), cnd_none_tracked);
     -- print("Should hide:", should_hide);
     --@end-do-not-package@
     return should_hide;
