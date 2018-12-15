@@ -70,6 +70,7 @@ Config.send_data = ConfigItem:New("send_data", "Data sending in auto announce is
 Config.auto_announce = ConfigItem:New("auto_announce", "Automatic announcements are now");
 Config.sound = ConfigItem:New("sound_enabled", "Sound is now");
 Config.multi_realm = ConfigItem:New("multi_realm", "Multi-Realm/Warmode option is now");
+Config.show_boss_zone_only = ConfigItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
 Config.cyclic = ConfigItem:New("cyclic", "Cyclic mode is now");
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Config.cyclic.set;
@@ -194,9 +195,18 @@ Config.optionsTable = {
         set = function(info, val) ShowGUI(val) end,
         get = function(info) return not WBT.db.global.hide_gui; end
     },
+    show_boss_zone_only = {
+        name = "Only show the GUI when in a boss zone",
+        order = 2,
+        desc = desc_toggle,
+        type = "toggle",
+        width = "full",
+        set = function(info, val) Config.show_boss_zone_only:Toggle(); end,
+        get = function(info) return Config.show_boss_zone_only.get() end,
+    },
     sound = {
         name = "Sound",
-        order = 2,
+        order = 3,
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -205,7 +215,7 @@ Config.optionsTable = {
     },
     cyclic = {
         name = "Cyclic timers (show expired timers)",
-        order = 3,
+        order = 4,
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -214,7 +224,7 @@ Config.optionsTable = {
     },
     auto_send_data = {
         name = "Send timer info in auto announcements",
-        order = 4,
+        order = 5,
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -223,7 +233,7 @@ Config.optionsTable = {
     },
     auto_announce = {
         name = "Auto announce at certain time intervals",
-        order = 5,
+        order = 6,
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -232,7 +242,7 @@ Config.optionsTable = {
     },
     multi_realm = {
         name = "Allow tracking across multiple Realms (and multiple Warmode settings on the same Realm)",
-        order = 6,
+        order = 7,
         desc = desc_toggle,
         type = "toggle",
         width = "full",

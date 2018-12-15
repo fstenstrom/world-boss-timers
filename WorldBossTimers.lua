@@ -42,6 +42,7 @@ local defaults = {
         cyclic = false,
         hide_gui = false,
         multi_realm = false,
+        show_boss_zone_only = false,
     },
     char = {
         boss = {},
