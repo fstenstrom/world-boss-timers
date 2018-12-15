@@ -95,6 +95,7 @@ local function PrintHelp()
     WBT:Print("/wbt ann --> Toggle automatic announcements.");
     WBT:Print("/wbt cyclic --> Toggle cyclic timers.");
     WBT:Print("/wbt multi --> Toggle multi-realm/warmode timers.");
+    WBT:Print("/wbt zone --> Toggle show GUI in boss zones only.");
 end
 
 local function ShowGUI(show)
@@ -174,6 +175,9 @@ function Config.SlashHandler(input)
         WBT.GUI:Update();
     elseif arg1 == "multi" then
         Config.multi_realm:Toggle();
+        WBT.GUI:Update();
+    elseif arg1 == "zone" then
+        Config.show_boss_zone_only:Toggle();
         WBT.GUI:Update();
     else
         PrintHelp();
