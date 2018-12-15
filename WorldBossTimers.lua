@@ -7,7 +7,7 @@ local _, WBT = ...;
 WBT.addon_name = "WorldBossTimers";
 
 --@do-not-package@
-wbt_addon = WBT;
+wbt = WBT;
 --@end-do-not-package@
 
 local KillInfo = WBT.KillInfo;
