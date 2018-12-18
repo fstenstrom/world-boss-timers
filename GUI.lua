@@ -260,6 +260,13 @@ function GUI:NewBasicWindow()
     return window;
 end
 
+-- "Decorator" of default closeOnClick, see AceGUIContainer-Window.lua.
+local function closeOnClick(this)
+    PlaySound(799);
+    this.obj:Hide();
+    WBT.db.global.hide_gui = true;
+end
+
 function GUI:New()
     if self.gui_container then
         self.gui_container:Release();
@@ -270,6 +277,7 @@ function GUI:New()
     self.width = WIDTH_DEFAULT;
     self.height = HEIGHT_DEFAULT;
     self.window = GUI:NewBasicWindow();
+    self.window.closebutton:SetScript("OnClick", closeOnClick);
     WBT.G_window = self.window;
 
     self.btn = GUI.AceGUI:Create("Button");
