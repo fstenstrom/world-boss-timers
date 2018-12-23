@@ -194,7 +194,7 @@ function KillInfo:GetSpawnTimeAsText()
 end
 
 function KillInfo:IsDead()
-    if self.reset then
+    if self.reset or not self:IsValid() then
         return false;
     end
     if self.cyclic then
