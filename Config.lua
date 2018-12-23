@@ -144,13 +144,14 @@ function Config.SlashHandler(input)
         end
 
         local error_msgs = {};
-        if not kill_info:IsCompletelySafe(error_msgs) then
-            SendChatMessage(ICON_CROSS .. "Warning" .. ICON_CROSS .. ": Timer might be incorrect!", "SAY", nil, nil);
+        if kill_info:IsCompletelySafe(error_msgs) then
+            WBT.AnnounceSpawnTime(kill_info, Config.send_data.get());
+        else
+            WBT:Print(ICON_CROSS .. "WARNING" .. ICON_CROSS .. ": Timer might be incorrect. Not announcing.", "SAY", nil, nil);
             for i, v in ipairs(error_msgs) do
-                SendChatMessage(ICON_CROSS .. v .. ICON_CROSS, "SAY", nil, nil);
+                WBT:Print(ICON_CROSS .. i .. ": " .. ICON_CROSS .. v, "SAY", nil, nil);
             end
         end
-        WBT.AnnounceSpawnTime(kill_info, Config.send_data.get());
     elseif arg1 == "send" then
         Config.send_data:Toggle();
     elseif arg1 == "ann" then
