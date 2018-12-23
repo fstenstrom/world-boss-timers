@@ -88,10 +88,22 @@ function WBT.ThisServerAndWarmode(kill_info)
             and kill_info.realmName == GetRealmName();
 end
 
+function WBT.InBossZone()
+    local current_map_id = GetCurrentMapId();
+
+    for name, boss in pairs(BossData.GetAll()) do
+        if boss.map_id == current_map_id then
+            return true;
+        end
+    end
+
+    return false;
+end
+
 function WBT.KillInfoInCurrentZoneAndShard()
-    local boss = WBT.BossInCurrentZone();
-    if boss then
-        return g_kill_infos[KillInfo.CreateGUID(boss.name)];
+    if WBT.InBossZone() then
+        -- Returns nil if no matching entry found.
+        return g_kill_infos[KillInfo.CreateGUID(WBT.BossInCurrentZone().name)];
     end
 
     return nil;
@@ -106,19 +118,6 @@ function WBT.GetSpawnTimeOutput(kill_info)
     return text;
 end
 local GetSpawnTimeOutput = WBT.GetSpawnTimeOutput;
-
-function WBT.IsBossZone()
-    local current_map_id = GetCurrentMapId();
-
-    for name, boss in pairs(BossData.GetAll()) do
-        if boss.map_id == current_map_id then
-            return true;
-        end
-    end
-
-    return false;
-end
-local IsBossZone = WBT.IsBossZone;
 
 function WBT.AnyDead()
     for name, boss in pairs(BossData.GetAll()) do
@@ -348,8 +347,7 @@ function WBT.AceAddon:InitChatParsing()
                         and not Util.SetContainsKey(answered_requesters, sender)
                         and not PlayerSentRequest(sender) then
 
-                    local boss = WBT.BossInCurrentZone();
-                    if boss then
+                    if WBT.InBossZone() then
                         local kill_info = WBT.KillInfoInCurrentZoneAndShard();
                         if kill_info and kill_info:IsCompletelySafe({}) then
                             AnnounceSpawnTime(kill_info, true);
@@ -467,7 +465,7 @@ function WBT.AceAddon:OnEnable()
 
     InitDeathTrackerFrame();
     InitCombatScannerFrame();
-    if AnyDead() or IsBossZone() then
+    if AnyDead() or WBT.InBossZone() then
         RegisterEvents();
     end
 

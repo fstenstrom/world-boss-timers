@@ -47,7 +47,7 @@ function GUI:Restart()
 end
 
 local function ShowBossZoneOnlyAndOutsideZone()
-    return Config.show_boss_zone_only.get() and not WBT.IsBossZone();
+    return Config.show_boss_zone_only.get() and not WBT.InBossZone();
 end
 
 function GUI:ShouldShow()
@@ -60,7 +60,7 @@ function GUI:ShouldShow()
             and not WBT.db.global.hide_gui;
 
     --@do-not-package@
-    -- print(WBT.IsBossZone(), WBT.AnyDead(), self.visible, WBT.db.global.hide_gui);
+    -- print(WBT.InBossZone(), WBT.AnyDead(), self.visible, WBT.db.global.hide_gui);
     -- print("Should show:", should_show);
     --@end-do-not-package@
     
