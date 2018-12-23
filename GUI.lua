@@ -195,22 +195,31 @@ function GUI:Update()
     self:UpdateContent();
 end
 
+function GUI:UpdatePosition(gp)
+    local relativeTo = nil;
+    self.window:ClearAllPoints();
+    self.window:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
+end
+
+local function GetDefaultPosition()
+    return {
+        point = "Center",
+        relativeToName = "UIParrent",
+        realtivePoint = nil,
+        xOfs = 0,
+        yOfs = 0,
+    };
+end
+
 function GUI:InitPosition()
     local gui_position = WBT.db.char.gui_position;
     local gp;
     if gui_position ~= nil then
         gp = gui_position;
     else
-        gp = {
-            point = "Center",
-            relativeToName = "UIParrent",
-            realtivePoint = nil,
-            xOfs = 0,
-            yOfs = 0,
-        }
+        gp = GetDefaultPosition();
     end
-    self.window:ClearAllPoints();
-    self.window:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
+    self:UpdatePosition(gp);
 end
 
 function GUI:SaveGuiPoint()
@@ -226,6 +235,11 @@ end
 
 function GUI:RecordPositioning()
     hooksecurefunc(self.window.frame, "StopMovingOrSizing", self.SaveGuiPoint);
+end
+
+function GUI:ResetPosition()
+    local gp = GetDefaultPosition();
+    self:UpdatePosition(gp);
 end
 
 function GUI.SetupAceGUI()

@@ -86,6 +86,7 @@ local function PrintHelp()
     local indent = "   ";
     WBT:Print("WorldBossTimers slash commands:");
     WBT:Print("/wbt reset --> Reset all kill info.");
+    WBT:Print("/wbt gui-reset --> Reset the position of the GUI.");
     WBT:Print("/wbt saved --> Print your saved bosses.");
     WBT:Print("/wbt say --> Announce timers for boss in zone.");
     WBT:Print("/wbt show --> Show the timers frame.");
@@ -181,6 +182,8 @@ function Config.SlashHandler(input)
     elseif arg1 == "zone" then
         Config.show_boss_zone_only:Toggle();
         WBT.GUI:Update();
+    elseif arg1 == "gui-reset" then
+        WBT.GUI:ResetPosition();
     else
         PrintHelp();
     end
