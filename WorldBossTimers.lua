@@ -53,11 +53,13 @@ function WBT.DebugPrint(...)
     print("DEBUG:", Util.MessageFromVarargs(...));
 end
 
-function WBT.IsDead(guid)
+function WBT.IsDead(guid, ignore_cyclic)
     local ki = g_kill_infos[guid];
     if ki and ki:IsValid() then
-        return ki:IsDead();
+        return ki:IsDead(ignore_cyclic);
     end
+
+    return false;
 end
 local IsDead = WBT.IsDead;
 
@@ -366,7 +368,9 @@ function WBT.AceAddon:InitChatParsing()
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
                     local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
-                    if IsBoss(name) and not IsDead(KillInfo.CreateGUID(name)) then
+                    local guid = KillInfo.CreateGUID(name);
+                    local ignore_cyclic = true;
+                    if IsBoss(name) and not IsDead(guid, true) then
                         SetKillInfo(name, t_death);
                         WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
                     end

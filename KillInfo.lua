@@ -193,16 +193,16 @@ function KillInfo:GetSpawnTimeAsText()
     end
 end
 
-function KillInfo:IsDead()
+function KillInfo:IsDead(ignore_cyclic)
+    local ignore_cyclic = ignore_cyclic == true; -- Sending in nil shall result in false
     if self.reset or not self:IsValid() then
         return false;
     end
     if self.cyclic then
-        if Config.cyclic.get() then
-            return true;
-        else
+        if ignore_cyclic or not Config.cyclic.get() then
             return false;
         end
+        return true;
     end
     if self:HasRandomSpawnTime() then
         local _, t_upper = self:GetSpawnTimesSecRandom();
