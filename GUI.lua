@@ -16,12 +16,61 @@ WBT.GUI = GUI;
 WBT.G_window = {};
 
 local WIDTH_DEFAULT = 200;
-local HEIGHT_DEFAULT = 112;
+local HEIGHT_BASE = 30;
+local HEIGHT_DEFAULT = 106;
 local MAX_ENTRIES_DEFAULT = 7;
 
-local WIDTH_EXTENDED = 230;
+local WIDTH_EXTENDED = 235;
 
 --------------------------------------------------------------------------------
+
+
+local WBTLabel = {};
+-- Create a wrapper around the label (so when the Label is released I can guarantee that it's not polluting the widget-pool).
+function WBTLabel:New()
+    -- Make the AceGUI's Label class the super class.
+    local wrapped_label = GUI.AceGUI:Create("InteractiveLabel");
+
+    local o = {
+        added = false,
+        label = wrapped_label,
+    };
+    setmetatable(o, self);
+    self.__index = self;
+
+    return o;
+end
+
+-- Wrapper functions --
+function WBTLabel:Release()
+    self.label:Release();
+end
+
+function WBTLabel:Hide()
+    self.label.frame:Hide();
+end
+
+function WBTLabel:Show()
+    self.label.frame:Show();
+end
+
+function WBTLabel:SetWidth(width)
+    self.label:SetWidth(width);
+end
+
+function WBTLabel:SetText(text)
+    self.label:SetText(text);
+end
+
+function WBTLabel:SetCallback(name, func)
+    self.label:SetCallback(name, func);
+end
+
+function WBTLabel:GetText()
+    return self.label.label:GetText();
+end
+
+------------------------
 
 function GUI.Init()
     Config = WBT.Config;
@@ -29,17 +78,6 @@ end
 
 function GUI:CreateLabels()
     self.labels = {};
-    --[[
-    for name, data in pairs(BossData.GetAll()) do
-        local label = self.AceGUI:Create("InteractiveLabel");
-        label:SetWidth(180);
-        label:SetCallback("OnClick", function(self)
-                WBT.ResetBoss(name);
-            end);
-        self.labels[name] = label;
-        self.window:AddChild(label);
-    end
-    ]]--
 end
 
 function GUI:Restart()
@@ -116,28 +154,28 @@ function GUI.LabelWidth(width)
 end
 
 function GUI:CreateNewLabel(guid)
-    local label = self.AceGUI:Create("InteractiveLabel");
+    local gui = self;
+    local label = WBTLabel:New();
     label:SetWidth(GUI.LabelWidth(WIDTH_DEFAULT));
     label:SetCallback("OnClick", function(self)
             local text = self.label:GetText();
             if text and text ~= "" then
                 WBT.ResetBoss(guid);
             end
+            gui:Update();
         end);
     self.labels[guid] = label;
-    self.window:AddChild(label);
     return label;
 end
 
 function GUI:UpdateHeight(n_entries)
-    local new_height = n_entries <= MAX_ENTRIES_DEFAULT and HEIGHT_DEFAULT
-            or (n_entries * (HEIGHT_DEFAULT / MAX_ENTRIES_DEFAULT));
+    local new_height = n_entries <= MAX_ENTRIES_DEFAULT and HEIGHT_DEFAULT + n_entries
+            or (self.window.content:GetNumChildren() * 11 + HEIGHT_BASE);
     if self.height == new_height then
         return;
     end
 
     self.window:SetHeight(new_height);
-
     self.height = new_height;
 end
 
@@ -176,8 +214,18 @@ function GUI:UpdateContent()
                 and (WBT.ThisServerAndWarmode(kill_info) or Config.multi_realm.get()) then
             n_shown_labels = n_shown_labels + 1;
             label:SetText(self:GetLabelText(kill_info, Config.multi_realm.get()));
+            label:Show();
+
+            if not label.added then
+                self.window:AddChild(label.label);
+                label.added = true;
+            end
         else
-            label:SetText("");
+            if label.added then
+                label:Hide();
+                label:Release();
+                self.labels[guid] = nil;
+            end
         end
     end
 
