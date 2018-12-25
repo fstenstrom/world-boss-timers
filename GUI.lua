@@ -20,7 +20,7 @@ local HEIGHT_BASE = 30;
 local HEIGHT_DEFAULT = 106;
 local MAX_ENTRIES_DEFAULT = 7;
 
-local WIDTH_EXTENDED = 235;
+local WIDTH_EXTENDED = 245;
 
 --------------------------------------------------------------------------------
 
