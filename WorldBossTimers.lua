@@ -494,6 +494,14 @@ function WBT.AceAddon:OnDisable()
 end
 
 --@do-not-package@
+function RandomServerName()
+	local res = ""
+	for i = 1, 10 do
+		res = res .. string.char(math.random(97, 122))
+	end
+	return res
+end
+
 function d(min, sec)
     if not min then
         min = 17;
@@ -534,8 +542,8 @@ local function SimWarmodeKill(name)
     SetKillInfo_GUID(name, SecToRespawn(name, 4), "Doomhammer", Util.Warmode.ENABLED);
 end
 
-local function SimServerKill(name)
-    SetKillInfo_GUID(name, SecToRespawn(name, 4), "Majsbreaker", Util.Warmode.DISABLED);
+local function SimServerKill(name, server)
+    SetKillInfo_GUID(name, SecToRespawn(name, 4), server or "Majsbreaker", Util.Warmode.DISABLED);
 end
 
 local function SimKill(sec_to_respawn)
@@ -546,8 +554,14 @@ local function SimKill(sec_to_respawn)
     SimWarmodeKill("Grellkin");
 end
 
-function dsim()
-    SimKill(4);
+function dsim(n)
+    if n == nil then
+        SimKill(4);
+    else
+        for i = 1, n do
+            SimServerKill("Grellkin", RandomServerName())
+        end
+    end
 end
 
 -- Relog, and make sure it works after.

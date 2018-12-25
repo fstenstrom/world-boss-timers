@@ -25,6 +25,29 @@ local WIDTH_EXTENDED = 235;
 --------------------------------------------------------------------------------
 
 
+--@do-not-package@
+local function PrintAllFunctionsRec(o)
+    print("Starting recursion for:", o);
+    if o == nil then
+        return;
+    end
+
+    for k, v in pairs(o) do
+        --if type(v) == "function" then
+            print(k);
+        --end
+    end
+
+    local mt = getmetatable(o);
+    if mt == nil then
+        return;
+    end
+
+    PrintAllFunctionsRec(mt.__index);
+end
+--@end-do-not-package@
+
+
 local WBTLabel = {};
 -- Create a wrapper around the label (so when the Label is released I can guarantee that it's not polluting the widget-pool).
 function WBTLabel:New()
@@ -367,4 +390,10 @@ function GUI:New()
 
     return self;
 end
+
+--@do-not-package@
+function GUI:PrintWindowFunctions()
+    PrintAllFunctionsRec(self.window);
+end
+--@end-do-not-package@
 
