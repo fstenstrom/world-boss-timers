@@ -1,4 +1,4 @@
-## Interface: 80000
+## Interface: 80100
 ## Title: WorldBossTimers
 ## Notes: Creates a timer for world boss kills
 ## Author: Soulstorm
