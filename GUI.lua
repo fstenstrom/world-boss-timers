@@ -20,7 +20,7 @@ local HEIGHT_BASE = 30;
 local HEIGHT_DEFAULT = 106;
 local MAX_ENTRIES_DEFAULT = 7;
 
-local WIDTH_EXTENDED = 245;
+local WIDTH_EXTENDED = 225;
 
 --------------------------------------------------------------------------------
 
@@ -173,13 +173,13 @@ end
 -- does not trigger the interactive label, or hide
 -- other GUI components.
 function GUI.LabelWidth(width)
-    return width - 20;
+    return width - 15;
 end
 
 function GUI:CreateNewLabel(guid)
     local gui = self;
     local label = WBTLabel:New();
-    label:SetWidth(GUI.LabelWidth(WIDTH_DEFAULT));
+    label:SetWidth(GUI.LabelWidth(self.width));
     label:SetCallback("OnClick", function(self)
             local text = self.label:GetText();
             if text and text ~= "" then
