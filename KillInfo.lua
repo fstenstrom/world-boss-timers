@@ -118,11 +118,14 @@ end
 -- to other players.
 function KillInfo:IsCompletelySafe(error_msgs)
 
-    -- It's possible to have one char with war mode, and one
+    -- It's possible to have one char with Warmode, and one
     -- without on the same server.
     local realm_type = Util.WarmodeStatus();
     local realmName = GetRealmName();
 
+    if not self:IsValid() then
+        table.insert(error_msgs, "The kill was recorded with an old version of the Addon and is now outdated.");
+    end
     if not self.safe then
         table.insert(error_msgs, "Player was in a group during previous kill.");
     end
@@ -139,7 +142,6 @@ function KillInfo:IsCompletelySafe(error_msgs)
     if Util.TableIsEmpty(error_msgs) then
         return true;
     end
-
     return false;
 end
 
