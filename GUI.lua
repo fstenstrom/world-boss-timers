@@ -198,6 +198,10 @@ function GUI:UpdateContent()
             end
         else
             if label.userdata.added then
+                -- The label is apparently not automatically removed the
+                -- self.window.children table, so it has to be done manually...
+                -- This table is always a set, and can therefore be treated as such.
+                Util.RemoveFromSet(self.window.children, label);
                 label:Release();
                 self.labels[guid] = nil;
             end

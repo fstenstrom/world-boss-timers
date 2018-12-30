@@ -63,13 +63,27 @@ function Util.SetContainsKey(set, key)
     return set[key] ~= nil;
 end
 
-function Util.SetContainsValue(set, value)
+-- The sets contain very few values, so for now I won't implement
+-- any better algorithms here.
+function Util.SetElementKey(set, value)
     for k, v in pairs(set) do
         if v == value then
-            return true;
+            return k;
         end
     end
+    return nil;
+end
 
+function Util.SetContainsValue(set, value)
+    return Util.SetElementKey(set, value) and true;
+end
+
+function Util.RemoveFromSet(set, value)
+    local k = Util.SetElementKey(set, value);
+    if k then
+        table.remove(set, k, value);
+        return true;
+    end
     return false;
 end
 
