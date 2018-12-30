@@ -333,12 +333,12 @@ end
 
 function WBT.AceAddon:InitChatParsing()
 
-    local function InitRequestParsing()
-        local function PlayerSentRequest(sender)
-            -- Since \b and alike doesnt exist: use "frontier pattern": %f[%A]
-            return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
-        end
+    local function PlayerSentMessage(sender)
+        -- Since \b and alike doesnt exist: use "frontier pattern": %f[%A]
+        return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
+    end
 
+    local function InitRequestParsing()
         local request_parser = CreateFrame("Frame");
         local answered_requesters = {};
         request_parser:RegisterEvent("CHAT_MSG_SAY");
@@ -347,7 +347,7 @@ function WBT.AceAddon:InitChatParsing()
                 if event == "CHAT_MSG_SAY" 
                         and msg == CHAT_MESSAGE_TIMER_REQUEST
                         and not Util.SetContainsKey(answered_requesters, sender)
-                        and not PlayerSentRequest(sender) then
+                        and not PlayerSentMessage(sender) then
 
                     if WBT.InBossZone() then
                         local kill_info = WBT.KillInfoInCurrentZoneAndShard();
@@ -366,13 +366,17 @@ function WBT.AceAddon:InitChatParsing()
         timer_parser:RegisterEvent("CHAT_MSG_SAY");
         timer_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
-                if event == "CHAT_MSG_SAY" and string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
-                    local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
-                    local guid = KillInfo.CreateGUID(name);
-                    local ignore_cyclic = true;
-                    if IsBoss(name) and not IsDead(guid, true) then
-                        SetKillInfo(name, t_death);
-                        WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
+                if event == "CHAT_MSG_SAY" then
+                    if PlayerSentMessage(sender) then
+                        return;
+                    elseif string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
+                        local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
+                        local guid = KillInfo.CreateGUID(name);
+                        local ignore_cyclic = true;
+                        if IsBoss(name) and not IsDead(guid, true) then
+                            SetKillInfo(name, t_death);
+                            WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
+                        end
                     end
                 end
             end
