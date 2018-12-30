@@ -48,53 +48,6 @@ end
 --@end-do-not-package@
 
 
-local WBTLabel = {};
--- Create a wrapper around the label (so when the Label is released I can guarantee that it's not polluting the widget-pool).
-function WBTLabel:New()
-    -- Make the AceGUI's Label class the super class.
-    local wrapped_label = GUI.AceGUI:Create("InteractiveLabel");
-
-    local o = {
-        added = false,
-        label = wrapped_label,
-    };
-    setmetatable(o, self);
-    self.__index = self;
-
-    return o;
-end
-
--- Wrapper functions --
-function WBTLabel:Release()
-    self.label:Release();
-end
-
-function WBTLabel:Hide()
-    self.label.frame:Hide();
-end
-
-function WBTLabel:Show()
-    self.label.frame:Show();
-end
-
-function WBTLabel:SetWidth(width)
-    self.label:SetWidth(width);
-end
-
-function WBTLabel:SetText(text)
-    self.label:SetText(text);
-end
-
-function WBTLabel:SetCallback(name, func)
-    self.label:SetCallback(name, func);
-end
-
-function WBTLabel:GetText()
-    return self.label.label:GetText();
-end
-
-------------------------
-
 function GUI.Init()
     Config = WBT.Config;
 end
@@ -178,7 +131,7 @@ end
 
 function GUI:CreateNewLabel(guid)
     local gui = self;
-    local label = WBTLabel:New();
+    local label = GUI.AceGUI:Create("InteractiveLabel");
     label:SetWidth(GUI.LabelWidth(self.width));
     label:SetCallback("OnClick", function(self)
             local text = self.label:GetText();
@@ -187,6 +140,7 @@ function GUI:CreateNewLabel(guid)
             end
             gui:Update();
         end);
+    label.userdata.added = false;
     self.labels[guid] = label;
     return label;
 end
@@ -237,15 +191,13 @@ function GUI:UpdateContent()
                 and (WBT.ThisServerAndWarmode(kill_info) or Config.multi_realm.get()) then
             n_shown_labels = n_shown_labels + 1;
             label:SetText(self:GetLabelText(kill_info, Config.multi_realm.get()));
-            label:Show();
 
-            if not label.added then
-                self.window:AddChild(label.label);
-                label.added = true;
+            if not label.userdata.added then
+                self.window:AddChild(label);
+                label.userdata.added = true;
             end
         else
-            if label.added then
-                label:Hide();
+            if label.userdata.added then
                 label:Release();
                 self.labels[guid] = nil;
             end
