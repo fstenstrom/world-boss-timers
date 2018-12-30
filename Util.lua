@@ -84,10 +84,5 @@ function Util.FormatTimeSeconds(seconds)
 end
 
 function Util.WarmodeStatus()
-    local pvpStyle = GetZonePVPInfo();
-    if pvpStyle == nil then
-        return Util.Warmode.DISABLED;
-    end
-
-    return Util.Warmode.ENABLED;
+    return C_PvP.IsWarModeDesired() and Util.Warmode.ENABLED or Util.Warmode.DISABLED;
 end
