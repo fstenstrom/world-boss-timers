@@ -38,7 +38,7 @@ local tracked_bosses = {
         name = "Oondasta",
         color = "|cff21ffa3",
         map_id = 507,
-        id = 69161,
+        ids = {69161},
         soundfile = SOUND_DIR .. "oondasta3.mp3",
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
@@ -49,7 +49,7 @@ local tracked_bosses = {
         name = "Rukhmar",
         color = "|cfffa6e06",
         map_id = 542,
-        id = 83746,
+        ids = {83746},
         soundfile = SOUND_DIR .. "rukhmar1.mp3",
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
@@ -60,7 +60,7 @@ local tracked_bosses = {
         name = "Galleon",
         color = "|cffc1f973",
         map_id = 376,
-        id = 62346,
+        ids = {62346},
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
@@ -71,7 +71,7 @@ local tracked_bosses = {
         name = "Nalak",
         color = "|cff0081cc",
         map_id = 504,
-        id = 69099,
+        ids = {69099},
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_NALAK,
         max_respawn = MAX_RESPAWN_NALAK,
@@ -82,7 +82,7 @@ local tracked_bosses = {
         name = "Sha of Anger",
         color = "|cff8a1a9f",
         map_id = 379,
-        id = 60491,
+        ids = {60491},
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
@@ -93,7 +93,7 @@ local tracked_bosses = {
         name = "Huolon",
         color = "|cfff7f713",
         map_id = 554,
-        id = 73167,
+        ids = {73167},
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_HUOLON,
         max_respawn = MAX_RESPAWN_HUOLON,
@@ -107,7 +107,7 @@ local tracked_bosses = {
         name = "Vale Moth",
         color = "|cff1f3d4a",
         map_id = 97,
-        id = 16520,
+        ids = {16520},
         soundfile = SOUND_DIR .. "vale_moth1.mp3",
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
@@ -120,7 +120,7 @@ local tracked_bosses = {
         name = "Grellkin",
         color = "|cffffff00",
         map_id = 460,
-        id = 1989,
+        ids = {1989},
         soundfile = SOUND_DIR .. "grellkin2.mp3",
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
@@ -135,7 +135,7 @@ local tracked_bosses = {
         color = "|cffff3d4a",
         zone =  "_Shadowglen",
         map_id = 460,
-        id = 2031,
+        ids = {2031},
         soundfile = SOUND_DIR .. "vale_moth1.mp3",
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MIN_RESPAWN_SHA,
@@ -163,7 +163,7 @@ local function ZandalariWarbringerFromTemplate(zone, map_id, color)
         name = ZWBName(zone),
         color = color,
         map_id = map_id,
-        id = 69769,
+        ids = {69769, 69842, 69841},
         soundfile = SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_ZANDALARI_WARBRINGER,
         max_respawn = MAX_RESPAWN_ZANDALARI_WARBRINGER,
@@ -196,8 +196,10 @@ end
 function BossData.GetFromNpcGuid(guid, map_id)
     local npc_id = GetNpcId(guid);
     for _, data in pairs(tracked_bosses) do
-        if npc_id == tostring(data.id) and map_id == data.map_id then
-            return data;
+        for _, id in pairs(data.ids) do
+            if npc_id == tostring(id) and map_id == data.map_id then
+                return data;
+            end
         end
     end
 
