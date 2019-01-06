@@ -44,15 +44,15 @@ function KillInfo.ParseGUID(guid)
     };
 end
 
-function KillInfo.CreateGUID(name, realmName, realm_type)
+function KillInfo.CreateGUID(name, realmName, realm_type, map_id)
     local realmName = realmName or GetRealmName();
     local realm_type = realm_type or Util.WarmodeStatus();
-    local map_id = WBT.GetCurrentMapId();
+    local map_id = map_id or WBT.GetCurrentMapId();
     return name .. GUID_DELIM .. realmName .. GUID_DELIM .. realm_type .. GUID_DELIM .. map_id;
 end
 
 function KillInfo:GUID()
-    return self.CreateGUID(self.name, self.realmName, self.realm_type);
+    return self.CreateGUID(self.name, self.realmName, self.realm_type, self.map_id);
 end
 
 -- A KillInfo is no longer valid if its data was recorded before
@@ -70,6 +70,7 @@ function KillInfo:SetInitialValues(name)
     self.safe = not IsInGroup();
     self.realmName = GetRealmName();
     self.realm_type = Util.WarmodeStatus();
+    self.map_id = WBT.GetCurrentMapId();
     self.db = WBT.BossData.Get(self.name);
     self.announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
 end

@@ -235,7 +235,7 @@ local function InitDeathTrackerFrame()
 
             -- Convert to English name from GUID, to make it work for
             -- localization.
-            local name = BossData.NameFromGuid(destGUID);
+            local name = BossData.NameFromNpcGuid(destGUID, WBT.GetCurrentMapId());
             if name == nil then
                 return;
             end
@@ -276,7 +276,7 @@ local function InitCombatScannerFrame()
 
         -- Convert to English name from GUID, to make it work for
         -- localization.
-        local name = BossData.NameFromGuid(destGUID);
+        local name = BossData.NameFromNpcGuid(destGUID, WBT.GetCurrentMapId());
         if name == nil then
             return;
         end
