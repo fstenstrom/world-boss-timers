@@ -44,8 +44,8 @@ function KillInfo.ParseGUID(guid)
 end
 
 function KillInfo.CreateGUID(name, realmName, realm_type)
-    realmName = realmName or GetRealmName();
-    realm_type = realm_type or Util.WarmodeStatus();
+    local realmName = realmName or GetRealmName();
+    local realm_type = realm_type or Util.WarmodeStatus();
     return name .. GUID_DELIM .. realmName .. GUID_DELIM .. realm_type;
 end
 
