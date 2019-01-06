@@ -13,14 +13,20 @@ WBT.BossData = BossData;
 local SOUND_CLASSIC = "CLASSIC"
 local SOUND_FANCY = "FANCY";
 
-local MAX_RESPAWN = 15*60 - 1; -- Minus 1, since they tend to spawn after 14:59.
+local function MinToSec(min)
+    return min * 60;
+end
+
+local MAX_RESPAWN = MinToSec(15) - 1; -- Minus 1, since they tend to spawn after 14:59.
 -- Conservative guesses. Actual values are not known.
-local MIN_RESPAWN_SHA = 10*60;
-local MAX_RESPAWN_SHA = 20*60;
+local MIN_RESPAWN_SHA = MinToSec(10);
+local MAX_RESPAWN_SHA = MinToSec(20);
 local MIN_RESPAWN_NALAK = MIN_RESPAWN_SHA;
 local MAX_RESPAWN_NALAK = MAX_RESPAWN_SHA;
-local MIN_RESPAWN_HUOLON = 30*60;
-local MAX_RESPAWN_HUOLON = 60*60;
+local MIN_RESPAWN_HUOLON = MinToSec(30);
+local MAX_RESPAWN_HUOLON = MinToSec(60);
+local MIN_RESPAWN_ZANDALARI_WARBRINGER = MinToSec(35);
+local MAX_RESPAWN_ZANDALARI_WARBRINGER = MinToSec(55);
 
 local SOUND_DIR = "Interface/AddOns/WorldBossTimers/resources/sound/";
 
@@ -130,6 +136,42 @@ local tracked_bosses = {
     ]]--
     --@end-do-not-package@
 }
+
+local ZWB_STATIC_DATA = {
+    {zone = "JF", map_id = 371},
+    {zone = "KW", map_id = 418},
+    {zone = "DW", map_id = 422},
+    {zone = "KS", map_id = 379},
+    {zone = "TS", map_id = 388},
+};
+
+local function ZWBName(zone)
+    return "ZWB (" .. zone .. ")";
+end
+
+local function ZandalariWarbringerFromTemplate(zone, map_id)
+    return {
+        name = ZWBName(zone),
+        color = "|cff21ffa3",
+        map_id = map_id,
+        id = 69769,
+        soundfile = SOUND_FILE_DEFAULT,
+        min_respawn = MIN_RESPAWN_ZANDALARI_WARBRINGER,
+        max_respawn = MAX_RESPAWN_ZANDALARI_WARBRINGER,
+        random_spawn_time = true,
+    };
+end
+
+local function AddZandalariWarbringers()
+    for _, data in pairs(ZWB_STATIC_DATA) do
+        tracked_bosses[ZWBName(data.zone)] = ZandalariWarbringerFromTemplate(data.zone, data.map_id);
+    end
+end
+
+AddZandalariWarbringers();
+
+-- END OF STATIC DATA --
+
 
 function BossData.Get(name)
     return tracked_bosses[name];
