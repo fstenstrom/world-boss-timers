@@ -43,6 +43,7 @@ local tracked_bosses = {
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
         random_spawn_time = false,
+        auto_announce = true,
     },
     ["Rukhmar"] = {
         name = "Rukhmar",
@@ -53,6 +54,7 @@ local tracked_bosses = {
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
         random_spawn_time = false,
+        auto_announce = true,
     },
     ["Galleon"] = {
         name = "Galleon",
@@ -63,6 +65,7 @@ local tracked_bosses = {
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
         random_spawn_time = false,
+        auto_announce = true,
     },
     ["Nalak"] = {
         name = "Nalak",
@@ -73,6 +76,7 @@ local tracked_bosses = {
         min_respawn = MIN_RESPAWN_NALAK,
         max_respawn = MAX_RESPAWN_NALAK,
         random_spawn_time = true,
+        auto_announce = true,
     },
     ["Sha of Anger"] = {
         name = "Sha of Anger",
@@ -83,6 +87,7 @@ local tracked_bosses = {
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
         random_spawn_time = true,
+        auto_announce = true,
     },
     ["Huolon"] = {
         name = "Huolon",
@@ -93,6 +98,7 @@ local tracked_bosses = {
         min_respawn = MIN_RESPAWN_HUOLON,
         max_respawn = MAX_RESPAWN_HUOLON,
         random_spawn_time = true,
+        auto_announce = true,
     },
     --@do-not-package@
     --[[
@@ -106,6 +112,7 @@ local tracked_bosses = {
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
         random_spawn_time = false,
+        auto_announce = true,
     },
     -- Dummy.
     ]]--
@@ -118,6 +125,7 @@ local tracked_bosses = {
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
         random_spawn_time = true,
+        auto_announce = true,
     },
     --[[
     -- Dummy.
@@ -132,6 +140,7 @@ local tracked_bosses = {
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MIN_RESPAWN_SHA,
         random_spawn_time = false,
+        auto_announce = true,
     },
     ]]--
     --@end-do-not-package@
@@ -159,6 +168,7 @@ local function ZandalariWarbringerFromTemplate(zone, map_id, color)
         min_respawn = MIN_RESPAWN_ZANDALARI_WARBRINGER,
         max_respawn = MAX_RESPAWN_ZANDALARI_WARBRINGER,
         random_spawn_time = true,
+        auto_announce = false,
     };
 end
 

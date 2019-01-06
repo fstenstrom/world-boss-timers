@@ -33,20 +33,22 @@ end
 
 function KillInfo.ParseGUID(guid)
     local valid_word = "([^;]+)";
-    local pattern = "^" .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. "$";
-    local boss_name, realmName, realm_type = guid:match(pattern);
+    local pattern = "^" .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. "$";
+    local boss_name, realmName, realm_type, map_id = guid:match(pattern);
 
     return {
         boss_name = boss_name,
         realmName = realmName,
         realm_type = realm_type,
+        map_id = map_id,
     }
 end
 
 function KillInfo.CreateGUID(name, realmName, realm_type)
     local realmName = realmName or GetRealmName();
     local realm_type = realm_type or Util.WarmodeStatus();
-    return name .. GUID_DELIM .. realmName .. GUID_DELIM .. realm_type;
+    local map_id = WBT.GetCurrentMapId();
+    return name .. GUID_DELIM .. realmName .. GUID_DELIM .. realm_type .. GUID_DELIM .. map_id;
 end
 
 function KillInfo:GUID()
@@ -234,6 +236,7 @@ function KillInfo:ShouldAnnounce()
     return WBT.db.global.auto_announce
             and Util.SetContainsValue(self.announce_times, self.remaining_time)
             and WBT.IsInZoneOfBoss(self.name)
+            and WBT.BossData.Get(self.name).auto_announce
             and self:IsCompletelySafe({});
 end
 

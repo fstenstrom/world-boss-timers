@@ -67,19 +67,24 @@ local function IsBoss(name)
     return Util.SetContainsKey(BossData.GetAll(), name);
 end
 
-local function GetCurrentMapId()
+function WBT.GetCurrentMapId()
     return C_Map.GetBestMapForUnit("player");
 end
 
 function WBT.IsInZoneOfBoss(name)
-    return GetCurrentMapId() == BossData.Get(name).map_id;
+    return WBT.GetCurrentMapId() == BossData.Get(name).map_id;
 end
 
-function WBT.BossInCurrentZone()
+function WBT.BossesInCurrentZone()
+    local t = {};
     for name, boss in pairs(BossData.GetAll()) do
         if WBT.IsInZoneOfBoss(name) then
-            return boss;
+            table.insert(t, boss);
         end
+    end
+
+    if not Util.TableIsEmpty(t) then
+        return t;
     end
 
     return nil;
@@ -91,7 +96,7 @@ function WBT.ThisServerAndWarmode(kill_info)
 end
 
 function WBT.InBossZone()
-    local current_map_id = GetCurrentMapId();
+    local current_map_id = WBT.GetCurrentMapId();
 
     for name, boss in pairs(BossData.GetAll()) do
         if boss.map_id == current_map_id then
@@ -102,10 +107,23 @@ function WBT.InBossZone()
     return false;
 end
 
+-- Returns the KillInfo in the current zone and shard that should be
+-- used for announcements.
+-- Returns nil if no matching entry found.
 function WBT.KillInfoInCurrentZoneAndShard()
     if WBT.InBossZone() then
-        -- Returns nil if no matching entry found.
-        return g_kill_infos[KillInfo.CreateGUID(WBT.BossInCurrentZone().name)];
+        -- Double hosting zones: Kun-Lai Summit hosts both ZWB and Sha
+        -- Announce options:
+        -- 1. Both
+        -- 2. Base on X, Y coords
+        -- 3. Only announce Sha <current implementation>
+
+        -- Note: Only one boss per zone may have the 'announce' field set to true.
+        for _, boss in pairs(WBT.BossData.BossesInCurrentZone()) do
+            if boss.auto_announce then
+                return g_kill_infos[KillInfo.CreateGUID(boss.name)];
+            end
+        end
     end
 
     return nil;
@@ -363,7 +381,7 @@ function WBT.AceAddon:InitChatParsing()
                         local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
                         local guid = KillInfo.CreateGUID(name);
                         local ignore_cyclic = true;
-                        if IsBoss(name) and not IsDead(guid, true) then
+                        if IsBoss(name) and not IsDead(guid, ignore_cyclic) then
                             SetKillInfo(name, t_death);
                             WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
                         end
