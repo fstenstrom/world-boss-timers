@@ -528,18 +528,7 @@ function RandomServerName()
 	return res
 end
 
-function d(min, sec)
-    if not min then
-        min = 17;
-        sec = 55;
-    end
-    local decr = (60 * min + sec)
-    local kill_info = g_kill_infos["Grellkin"];
-    kill_info.t_death = kill_info.t_death - decr;
-    kill_info.timer.until_time = kill_info.timer.until_time - decr;
-end
-
-local function start_sim(name, t)
+local function StartSim(name, t)
     SetKillInfo(name, t);
 end
 
@@ -574,7 +563,7 @@ end
 
 local function SimKill(sec_to_respawn)
     for name, data in pairs(BossData.GetAll()) do
-        start_sim(name, SecToRespawn(name, sec_to_respawn));
+        StartSim(name, SecToRespawn(name, sec_to_respawn));
     end
     SimServerKill("Grellkin");
     SimWarmodeKill("Grellkin");
@@ -593,25 +582,6 @@ end
 -- Relog, and make sure it works after.
 function dsim2()
     SimKill(25);
-end
-
-function sim()
-    start_sim(sha);
-    start_sim(galleon);
-end
-
-function killsim()
-    KillTag(g_kill_infos[galleon].timer, true);
-    KillTag(g_kill_infos[sha].timer, true);
-end
-
-function reset()
-    ResetKillInfo();
-end
-
-function test_KillInfo()
-    local ki = WBT.KillInfo:New({name = "Testy",})
-    ki:Print()
 end
 --@end-do-not-package@
 
