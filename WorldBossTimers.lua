@@ -121,16 +121,6 @@ function WBT.GetSpawnTimeOutput(kill_info)
 end
 local GetSpawnTimeOutput = WBT.GetSpawnTimeOutput;
 
-function WBT.AnyDead()
-    for name, boss in pairs(BossData.GetAll()) do
-        if IsDead(KillInfo.CreateGUID(name)) then
-            return true;
-        end
-    end
-    return false;
-end
-local AnyDead = WBT.AnyDead;
-
 local last_request_time = 0;
 function WBT.RequestKillData()
     if GetServerTime() - last_request_time > 5 then
@@ -473,9 +463,6 @@ function WBT.AceAddon:OnEnable()
 
     InitDeathTrackerFrame();
     InitCombatScannerFrame();
-    if AnyDead() or WBT.InBossZone() then
-        RegisterEvents();
-    end
 
     UpdateCyclicStates();
 

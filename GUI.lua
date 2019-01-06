@@ -84,15 +84,10 @@ end
 function GUI:ShouldHide()
     -- Should GUI only be shown in boss zone, but is not in one?
     -- Are no bosses considered dead (waiting for respawn)?
-    local cnd_none_tracked = not WBT.AnyDead();
 
     local should_hide = (WBT.db.global.hide_gui or ShowBossZoneOnlyAndOutsideZone())
             and self.visible;
 
-    --@end-do-not-package@
-    -- print(ShowBossZoneOnlyAndOutsideZone(), cnd_none_tracked);
-    -- print("Should hide:", should_hide);
-    --@end-do-not-package@
     return should_hide;
 end
 
