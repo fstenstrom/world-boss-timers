@@ -138,21 +138,21 @@ local tracked_bosses = {
 }
 
 local ZWB_STATIC_DATA = {
-    {zone = "JF", map_id = 371},
-    {zone = "KW", map_id = 418},
-    {zone = "DW", map_id = 422},
-    {zone = "KS", map_id = 379},
-    {zone = "TS", map_id = 388},
+    {zone = "JF", map_id = 371, color = "|cff2bce7a"},
+    {zone = "KW", map_id = 418, color = "|cff27b4d1"},
+    {zone = "DW", map_id = 422, color = "|cff8a1a9f"},
+    {zone = "KS", map_id = 379, color = "|cffeab01e"},
+    {zone = "TS", map_id = 388, color = "|cff0cd370"},
 };
 
 local function ZWBName(zone)
     return "ZWB (" .. zone .. ")";
 end
 
-local function ZandalariWarbringerFromTemplate(zone, map_id)
+local function ZandalariWarbringerFromTemplate(zone, map_id, color)
     return {
         name = ZWBName(zone),
-        color = "|cff21ffa3",
+        color = color,
         map_id = map_id,
         id = 69769,
         soundfile = SOUND_FILE_DEFAULT,
@@ -164,7 +164,7 @@ end
 
 local function AddZandalariWarbringers()
     for _, data in pairs(ZWB_STATIC_DATA) do
-        tracked_bosses[ZWBName(data.zone)] = ZandalariWarbringerFromTemplate(data.zone, data.map_id);
+        tracked_bosses[ZWBName(data.zone)] = ZandalariWarbringerFromTemplate(data.zone, data.map_id, data.color);
     end
 end
 
