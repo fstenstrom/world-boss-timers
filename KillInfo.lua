@@ -23,25 +23,25 @@ local RANDOM_DELIM = "-";
 local GUID_DELIM = ";";
 
 function KillInfo.ValidGUID(guid)
-    for _, v in pairs(KillInfo.ParseGUID(guid)) do
-        if v then
-            return true;
-        end
-    end
-    return false;
+    return KillInfo.ParseGUID(guid) and true;
 end
 
+-- Returns nil if the parsing fails.
 function KillInfo.ParseGUID(guid)
     local valid_word = "([^;]+)";
     local pattern = "^" .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. "$";
     local boss_name, realmName, realm_type, map_id = guid:match(pattern);
+
+    if not boss_name then
+        return nil;
+    end
 
     return {
         boss_name = boss_name,
         realmName = realmName,
         realm_type = realm_type,
         map_id = map_id,
-    }
+    };
 end
 
 function KillInfo.CreateGUID(name, realmName, realm_type)
@@ -59,10 +59,7 @@ end
 -- the KillInfo class was introduced.
 -- The field self.until_time did not exist then.
 function KillInfo:IsValid()
-    if self.version and self.version == CURRENT_VERSION then
-        return true;
-    end
-    return false;
+    return self.version and self.version == CURRENT_VERSION;
 end
 
 function KillInfo:SetInitialValues(name)

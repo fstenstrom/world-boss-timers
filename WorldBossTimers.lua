@@ -399,12 +399,47 @@ local function LoadSerializedKillInfos()
     for name, serialized in pairs(WBT.db.global.kill_infos) do
         g_kill_infos[name] = KillInfo:Deserialize(serialized);
     end
-    
+end
+
+-- Step1 is performed before deserialization and looks just at the GUID.
+local function FilterValidKillInfosStep1()
+    -- Perform filtering in two steps to avoid what I guess would
+    -- be some kind of "ConcurrentModificationException".
+
+    -- Find invalid.
+    local invalid = {};
+    for guid, ki in pairs(WBT.db.global.kill_infos) do
+        if not KillInfo.ValidGUID(guid) then
+            invalid[guid] = ki;
+        end
+    end
+
+    -- Remove invalid.
+    for guid, ki in pairs(invalid) do
+        WBT.db.global.kill_infos[guid] = nil;
+    end
+end
+
+-- Step2 is performed after deserialization and checks the internal data.
+local function FilterValidKillInfosStep2()
+    -- Find invalid.
+    local invalid = {};
+    for _, ki in pairs(g_kill_infos) do
+        if not ki:IsValid() then
+            table.insert(invalid, ki:GUID());
+        end
+    end
+
+    -- Remove invalid.
+    for _, guid in pairs(invalid) do
+        WBT.db.global.kill_infos[guid] = nil;
+    end
 end
 
 local function InitKillInfoManager()
     g_kill_infos = WBT.db.global.kill_infos; -- Everything in g_kill_infos is written to db.
     LoadSerializedKillInfos();
+    FilterValidKillInfosStep2();
 
     kill_info_manager = CreateFrame("Frame");
     kill_info_manager.since_update = 0;
@@ -445,30 +480,12 @@ local function InitKillInfoManager()
         end);
 end
 
-local function FilterValidKillInfos()
-    -- Perform filtering in two steps to avoid what I guess would
-    -- be some kind of "ConcurrentModificationException".
-
-    -- Find invalid.
-    local kill_infos_invalid = {};
-    for guid, ki in pairs(WBT.db.global.kill_infos) do
-        if not KillInfo.ValidGUID(guid) then
-            kill_infos_invalid[guid] = ki;
-        end
-    end
-
-    -- Remove invalid.
-    for guid, ki in pairs(kill_infos_invalid) do
-        WBT.db.global.kill_infos[guid] = nil;
-    end
-end
-
 function WBT.AceAddon:OnEnable()
     GUI.Init();
 
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
 
-    FilterValidKillInfos();
+    FilterValidKillInfosStep1();
 
     GUI.SetupAceGUI();
 
