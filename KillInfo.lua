@@ -16,7 +16,7 @@ local Config = WBT.Config;
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-local CURRENT_VERSION = "v1.1.1";
+local CURRENT_VERSION = "v1.2.8";
 
 local RANDOM_DELIM = "-";
 
