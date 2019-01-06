@@ -425,7 +425,7 @@ local function FilterValidKillInfosStep2()
     -- Find invalid.
     local invalid = {};
     for _, ki in pairs(g_kill_infos) do
-        if not ki:IsValid() then
+        if not ki:IsValid() or ki.reset then
             table.insert(invalid, ki:GUID());
         end
     end
