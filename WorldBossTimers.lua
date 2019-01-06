@@ -241,8 +241,8 @@ local function InitDeathTrackerFrame()
             end
 
             if eventType == "UNIT_DIED" then
-                 SetKillInfo(name, GetServerTime());
-                 gui:Update();
+                SetKillInfo(name, GetServerTime());
+                gui:Update();
             end
         end);
 end
