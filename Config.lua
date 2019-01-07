@@ -9,8 +9,6 @@ local Util = WBT.Util;
 Config.SOUND_CLASSIC = "classic";
 Config.SOUND_FANCY = "fancy";
 
-local ICON_CROSS = "{rt7}";
-
 local CYCLIC_HELP_TEXT = "This mode will repeat the boss timers if you miss the kill. A timer in " ..
         Util.ColoredString(Util.COLOR_RED, "red text") ..
         " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.";
@@ -143,12 +141,12 @@ function Config.SlashHandler(input)
         end
 
         local error_msgs = {};
-        if kill_info:IsCompletelySafe(error_msgs) then
-            WBT.AnnounceSpawnTime(kill_info, Config.send_data.get());
+        if ki:IsCompletelySafe(error_msgs) then
+            WBT.AnnounceSpawnTime(ki, Config.send_data.get());
         else
-            WBT:Print(ICON_CROSS .. "WARNING" .. ICON_CROSS .. ": Timer might be incorrect. Not announcing.", "SAY", nil, nil);
+            WBT:Print(Util.ColoredString(Util.COLOR_RED, "WARNING") .. ": Timer might be incorrect. Not announcing.", "SAY", nil, nil);
             for i, v in ipairs(error_msgs) do
-                WBT:Print(ICON_CROSS .. i .. ": " .. ICON_CROSS .. v, "SAY", nil, nil);
+                WBT:Print(Util.ColoredString(Util.COLOR_RED, i) .. ": " .. v, "SAY", nil, nil);
             end
         end
     elseif arg1 == "send" then

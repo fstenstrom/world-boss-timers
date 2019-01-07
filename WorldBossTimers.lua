@@ -119,7 +119,7 @@ function WBT.KillInfoInCurrentZoneAndShard()
         -- 3. Only announce Sha <current implementation>
 
         -- Note: Only one boss per zone may have the 'announce' field set to true.
-        for _, boss in pairs(WBT.BossData.BossesInCurrentZone()) do
+        for _, boss in pairs(WBT.BossesInCurrentZone()) do
             if boss.auto_announce then
                 return g_kill_infos[KillInfo.CreateGUID(boss.name)];
             end
