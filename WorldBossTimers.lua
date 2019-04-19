@@ -459,7 +459,7 @@ local function InitKillInfoManager()
                                 AnnounceSpawnTime(kill_info, Config.send_data.get());
                             end
 
-                            if kill_info:ShouldFlash() then
+                            if kill_info:RespawnTriggered() then
                                 FlashClientIcon();
                             end
 

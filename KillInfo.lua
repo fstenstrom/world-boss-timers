@@ -16,7 +16,7 @@ local Config = WBT.Config;
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-local CURRENT_VERSION = "v1.2.8";
+local CURRENT_VERSION = "v1.2.11";
 
 local RANDOM_DELIM = "-";
 
@@ -73,6 +73,7 @@ function KillInfo:SetInitialValues(name)
     self.map_id = WBT.GetCurrentMapId();
     self.db = WBT.BossData.Get(self.name);
     self.announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
+    self.has_triggered_respawn = false;
 end
 
 function KillInfo:SetNewDeath(name, t_death)
@@ -238,9 +239,22 @@ function KillInfo:ShouldAnnounce()
             and self:IsCompletelySafe({});
 end
 
-function KillInfo:ShouldFlash()
+function KillInfo:InTimeWindow(from, to)
     local t_now = GetServerTime();
-    return self.until_time <= t_now and t_now <= (self.until_time + 1) and WBT.IsInZoneOfBoss(self.name) and self:IsCompletelySafe({});
+    return from <= t_now and t_now <= to;
+end
+
+function KillInfo:RespawnTriggered()
+    local t_now = GetServerTime();
+    local trigger = self:InTimeWindow(self.until_time, self.until_time + 1)
+            and WBT.IsInZoneOfBoss(self.name)
+            and self:IsCompletelySafe({})
+            and not self.has_triggered_respawn;
+    if trigger then
+        self.has_triggered_respawn = true;
+    end
+
+    return trigger;
 end
 
 function KillInfo:Update()
