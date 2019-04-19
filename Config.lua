@@ -46,7 +46,18 @@ function ConfigItem:New(var_name, status_msg)
     return ci;
 end
 
-function ConfigItem.GetColoredStatus(status_var)
+local ToggleItem = {};
+
+function ToggleItem:New(var_name, status_msg)
+    local ti = ConfigItem:New(var_name, status_msg);
+
+    setmetatable(ti, self);
+    self.__index = self;
+
+    return ti;
+end
+
+function ToggleItem.GetColoredStatus(status_var)
     local color = Util.COLOR_RED;
     local status = "disabled";
     if status_var then
@@ -57,23 +68,23 @@ function ConfigItem.GetColoredStatus(status_var)
     return color .. status .. Util.COLOR_DEFAULT;
 end
 
-function ConfigItem:PrintFormattedStatus(status_var)
+function ToggleItem:PrintFormattedStatus(status_var)
     WBT:Print(self.msg .. " " .. self.GetColoredStatus(status_var) .. ".");
 end
 
-function ConfigItem:Toggle()
+function ToggleItem:Toggle()
     local new_state = not self.get();
     self.set(new_state);
     self:PrintFormattedStatus(new_state);
 end
 
-Config.send_data = ConfigItem:New("send_data", "Data sending in auto announce is now");
-Config.auto_announce = ConfigItem:New("auto_announce", "Automatic announcements are now");
-Config.sound = ConfigItem:New("sound_enabled", "Sound is now");
-Config.multi_realm = ConfigItem:New("multi_realm", "Multi-Realm/Warmode option is now");
-Config.show_boss_zone_only = ConfigItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
-Config.cyclic = ConfigItem:New("cyclic", "Cyclic mode is now");
-Config.spawn_alert_sound = ConfigItem:New("spawn_alert_sound", "Spawn alert sound is now");
+Config.send_data = ToggleItem:New("send_data", "Data sending in auto announce is now");
+Config.auto_announce = ToggleItem:New("auto_announce", "Automatic announcements are now");
+Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
+Config.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
+Config.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
+Config.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
+Config.spawn_alert_sound = ToggleItem:New("spawn_alert_sound", "Spawn alert sound is now");
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Config.cyclic.set;
 Config.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
