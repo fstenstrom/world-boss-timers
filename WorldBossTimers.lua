@@ -247,16 +247,8 @@ local function InitDeathTrackerFrame()
         end);
 end
 
-local function PlaySoundAlert(soundfile)
-    if soundfile == nil or not WBT.db.global.sound_enabled then
-        return;
-    end
-
-    PlaySoundFile(soundfile, "Master");
-end
-
 local function PlaySoundAlertSpawn()
-    PlaySoundAlert(Config.spawn_alert_sound.get_file());
+    Util.PlaySoundAlert(Config.spawn_alert_sound:Value());
 end
 
 local function PlaySoundAlertBossCombat(name)
@@ -267,7 +259,7 @@ local function PlaySoundAlertBossCombat(name)
         soundfile = BossData.SOUND_FILE_DEFAULT;
     end
 
-    PlaySoundAlert(soundfile);
+    Util.PlaySoundAlert(soundfile);
 end
 
 local function InitCombatScannerFrame()

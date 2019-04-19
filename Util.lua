@@ -100,3 +100,11 @@ end
 function Util.WarmodeStatus()
     return C_PvP.IsWarModeDesired() and Util.Warmode.ENABLED or Util.Warmode.DISABLED;
 end
+
+function Util.PlaySoundAlert(soundfile)
+    if soundfile == nil or not WBT.db.global.sound_enabled then
+        return;
+    end
+
+    PlaySoundFile(soundfile, "Master");
+end

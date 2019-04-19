@@ -10,6 +10,8 @@ local BossData = WBT.BossData;
 Config.SOUND_CLASSIC = "classic";
 Config.SOUND_FANCY = "fancy";
 
+local SOUND_KEY_BATTLE_BEGINS = "battle-begins";
+
 local CYCLIC_HELP_TEXT = "This mode will repeat the boss timers if you miss the kill. A timer in " ..
         Util.ColoredString(Util.COLOR_RED, "red text") ..
         " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.";
@@ -78,30 +80,79 @@ function ToggleItem:Toggle()
     self:PrintFormattedStatus(new_state);
 end
 
+local SelectItem = {};
+
+-- This function creates tables needed for looking up values for the selection.
+-- kv_table: is a table on the form: kv_table = { { k = "selection string to display", v = "<some value" }, ... }
+-- The problem is that "select" stores the value of the "key" as a key for the value which should be shown from
+-- field "values". So when I want to get the real value, I need a separate table that uses the same key (but with
+-- a different value). I could just use the index for this, but that's hard to debug. So I'm creating two tables.
+-- kk: key2key, which is used during look up for string to show in select box
+-- kv: key2value, which contains the value which is actually used by the backend
+function SelectItem:CreateTablesForSelectionLookup(kv_table)
+    self.kk = {};
+    self.kv = {};
+    for i, e in ipairs(kv_table) do
+        self.kk[e.k] = e.k;
+        self.kv[e.k] = e.v;
+    end
+end
+
+function SelectItem:OverrideGetter(default_key)
+    local default_getter = self.get;
+    self.get = function()
+        local key = default_getter();
+        if key == nil then
+            return default_key;
+        end
+        return key;
+    end
+end
+
+function SelectItem:New(var_name, status_msg, kv_table, default_key)
+    local si = ConfigItem:New(var_name, status_msg);
+
+    setmetatable(si, self);
+    self.__index = self;
+
+    si:CreateTablesForSelectionLookup(kv_table);
+    si:OverrideGetter(default_key);
+
+    return si;
+end
+
+function SelectItem:Key()
+    return self:get();
+end
+
+function SelectItem:Value()
+    return self.kv[self:Key()];
+end
+
+local spawn_alert_sound_kv_table = {
+    { k = "DISABLED",                     v = nil                                                  },
+    { k = "you-are-not-prepared",         v = "sound/creature/illidan/black_illidan_04.ogg"        },
+    { k = "prepare-yourselves",           v = "sound/creature/EadricThePure/AC_Eadric_Aggro01.ogg" },
+    { k = "alliance-bell",                v = "sound/doodad/belltollalliance.ogg"                  },
+    { k = "alarm-clock",                  v = "sound/interface/alarmclockwarning2.ogg"             },
+    { k = SOUND_KEY_BATTLE_BEGINS,        v = "sound/interface/ui_warfronts_battlebegin_horde.ogg" },
+    { k = "pvp-warning",                  v = "sound/interface/pvpwarningalliancemono.ogg"         },
+    { k = "drum-hit",                     v = "sound/doodad/fx_alarm_drum_hit_04.ogg"              },
+};
+
 Config.send_data = ToggleItem:New("send_data", "Data sending in auto announce is now");
 Config.auto_announce = ToggleItem:New("auto_announce", "Automatic announcements are now");
 Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
 Config.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
 Config.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
 Config.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
-Config.spawn_alert_sound = ToggleItem:New("spawn_alert_sound", "Spawn alert sound is now");
+Config.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", spawn_alert_sound_kv_table, SOUND_KEY_BATTLE_BEGINS);
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Config.cyclic.set;
 Config.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
-
-local spawn_sound_opts_base = {
-    { name = "DISABLED", file = nil },
-    { name = "you-are-not-prepared", file = nil },
-    { name = "prepare-yourself", file = BossData.SOUND_FILE_PREPARE },
-    { name = "ping", file = nil },
-};
-local spawn_sound_keys_keys = {};
-local spawn_sound_keys_values = {};
-for i, e in ipairs(spawn_sound_opts_base) do
-    spawn_sound_keys_keys[e.name] = e.name;
-    spawn_sound_keys_values[e.name] = e.file;
-end
-Config.spawn_alert_sound.get_file = function() return spawn_sound_keys_values[Config.spawn_alert_sound.get()] end
+-- Wrapping in playing of sound file when selected
+local spawn_alert_sound_set_temp = Config.spawn_alert_sound.set;
+Config.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Config.spawn_alert_sound:Value()); end
 
 ----- Slash commands -----
 
@@ -294,9 +345,9 @@ Config.optionsTable = {
         desc = "Sound alert that plays when boss spawns",
         type = "select",
         style = "dropdown",
-        values = spawn_sound_keys_keys,
-        set = function(info, val) Config.spawn_alert_sound.set(val) end,
-        get = function(info) return Config.spawn_alert_sound.get() end,
+        values = Config.spawn_alert_sound.kk,
+        set = function(info, val) Config.spawn_alert_sound.set(val); end,
+        get = function(info) return Config.spawn_alert_sound.get(); end,
     },
   }
 }
