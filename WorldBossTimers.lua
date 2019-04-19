@@ -255,18 +255,19 @@ local function PlaySoundAlert(soundfile)
     PlaySoundFile(soundfile, "Master");
 end
 
-local function PlayAlertSound(name)
+local function PlaySoundAlertSpawn()
+    PlaySoundAlert(Config.spawn_alert_sound.get_file());
+end
+
+local function PlaySoundAlertBossCombat(name)
     local sound_type = WBT.db.global.sound_type;
-    local sound_enabled = WBT.db.global.sound_enabled;
 
     local soundfile = BossData.Get(name).soundfile;
     if sound_type:lower() == Config.SOUND_CLASSIC:lower() then
         soundfile = BossData.SOUND_FILE_DEFAULT;
     end
 
-    if sound_enabled then
-        PlaySoundFile(soundfile, "Master");
-    end
+    PlaySoundAlert(soundfile);
 end
 
 local function InitCombatScannerFrame()
@@ -292,7 +293,7 @@ local function InitCombatScannerFrame()
         local t = GetServerTime();
         if IsBoss(name) and t > self.t_next then
             WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
-            PlayAlertSound(name);
+            PlaySoundAlertBossCombat(name);
             FlashClientIcon();
             self.t_next = t + time_out;
         end
@@ -469,7 +470,7 @@ local function InitKillInfoManager()
 
                             if kill_info:RespawnTriggered() then
                                 FlashClientIcon();
-                                PlaySoundAlert(BossData.SOUND_FILE_PREPARE);
+                                PlaySoundAlertSpawn();
                             end
 
                             if kill_info:Expired() and Config.cyclic.get() then

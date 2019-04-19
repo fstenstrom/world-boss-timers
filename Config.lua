@@ -5,6 +5,7 @@ WBT.Config = Config;
 
 local GUI = WBT.GUI;
 local Util = WBT.Util;
+local BossData = WBT.BossData;
 
 Config.SOUND_CLASSIC = "classic";
 Config.SOUND_FANCY = "fancy";
@@ -72,10 +73,24 @@ Config.sound = ConfigItem:New("sound_enabled", "Sound is now");
 Config.multi_realm = ConfigItem:New("multi_realm", "Multi-Realm/Warmode option is now");
 Config.show_boss_zone_only = ConfigItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
 Config.cyclic = ConfigItem:New("cyclic", "Cyclic mode is now");
+Config.spawn_alert_sound = ConfigItem:New("spawn_alert_sound", "Spawn alert sound is now");
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Config.cyclic.set;
 Config.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
 
+local spawn_sound_opts_base = {
+    { name = "DISABLED", file = nil },
+    { name = "you-are-not-prepared", file = nil },
+    { name = "prepare-yourself", file = BossData.SOUND_FILE_PREPARE },
+    { name = "ping", file = nil },
+};
+local spawn_sound_keys_keys = {};
+local spawn_sound_keys_values = {};
+for i, e in ipairs(spawn_sound_opts_base) do
+    spawn_sound_keys_keys[e.name] = e.name;
+    spawn_sound_keys_values[e.name] = e.file;
+end
+Config.spawn_alert_sound.get_file = function() return spawn_sound_keys_values[Config.spawn_alert_sound.get()] end
 
 ----- Slash commands -----
 
@@ -198,6 +213,7 @@ end
 desc_toggle = "Enable/Disable";
 Config.optionsTable = {
   type = "group",
+  childGroups = "select",
   args = {
     show = {
         name = "Show GUI",
@@ -261,6 +277,15 @@ Config.optionsTable = {
         width = "full",
         set = function(info, val) Config.multi_realm:Toggle(); end,
         get = function(info) return Config.multi_realm.get() end,
+    },
+    spawn_alert_sound = {
+        name = "Spawn alert sound",
+        desc = "Sound alert that plays when boss spawns",
+        type = "select",
+        style = "dropdown",
+        values = spawn_sound_keys_keys,
+        set = function(info, val) Config.spawn_alert_sound.set(val) end,
+        get = function(info) return Config.spawn_alert_sound.get() end,
     },
   }
 }
