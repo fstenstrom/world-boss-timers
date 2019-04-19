@@ -247,6 +247,14 @@ local function InitDeathTrackerFrame()
         end);
 end
 
+local function PlaySoundAlert(soundfile)
+    if soundfile == nil or not WBT.db.global.sound_enabled then
+        return;
+    end
+
+    PlaySoundFile(soundfile, "Master");
+end
+
 local function PlayAlertSound(name)
     local sound_type = WBT.db.global.sound_type;
     local sound_enabled = WBT.db.global.sound_enabled;
@@ -461,6 +469,7 @@ local function InitKillInfoManager()
 
                             if kill_info:RespawnTriggered() then
                                 FlashClientIcon();
+                                PlaySoundAlert(BossData.SOUND_FILE_PREPARE);
                             end
 
                             if kill_info:Expired() and Config.cyclic.get() then
