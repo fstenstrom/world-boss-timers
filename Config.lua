@@ -130,13 +130,19 @@ function Config.SlashHandler(input)
         or arg1 == "tell" then
 
         if not WBT.InBossZone() then
-            WBT:Print("You can't announce outside of boss zone.");
+            WBT:Print("You can't announce outside of a boss zone.");
             return;
         end
 
         local ki = WBT.KillInfoInCurrentZoneAndShard();
         if not ki or not(ki:IsValid()) then
-            WBT:Print("No spawn timer for " .. WBT.GetColoredBossName(ki.name) .. ".");
+            local msg = "No spawn timer for ";
+            for _, boss in pairs(WBT.BossesInCurrentZone()) do
+                msg = msg .. WBT.GetColoredBossName(boss.name) .. ", "
+            end
+            msg = msg:sub(0, -3); -- Remove the trailing ', '.
+
+            WBT:Print(msg);
             return;
         end
 
