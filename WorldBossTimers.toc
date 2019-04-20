@@ -2,7 +2,7 @@
 ## Title: WorldBossTimers
 ## Notes: Creates a timer for world boss kills
 ## Author: Soulstorm
-## Version: 0.1
+## Version: v1.3
 ## SavedVariables: WorldBossTimersDB
 
 embeds.xml
