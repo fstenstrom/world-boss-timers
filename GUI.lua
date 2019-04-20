@@ -7,6 +7,7 @@ local _, WBT = ...;
 
 local Util = WBT.Util;
 local BossData = WBT.BossData;
+local Com = WBT.Com;
 local Config = {}; -- Must be initialized later.
 
 -- Provides the GUI API and performs checks if the GUI is shown etc.
@@ -370,7 +371,7 @@ function GUI:New()
     self.btn = GUI.AceGUI:Create("Button");
     self.btn:SetWidth(self.width);
     self.btn:SetText("Request kill data");
-    self.btn:SetCallback("OnClick", WBT.RequestKillData);
+    self.btn:SetCallback("OnClick", Com.TriggerFriendlyNameplates);
 
     self.gui_container = GUI.AceGUI:Create("SimpleGroup");
     self.gui_container.frame:SetFrameStrata("LOW");

@@ -9,6 +9,7 @@ embeds.xml
 
 Util.lua
 BossData.lua
+Com.lua
 GUI.lua
 Config.lua
 KillInfo.lua

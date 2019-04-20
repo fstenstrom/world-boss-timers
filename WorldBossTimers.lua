@@ -609,5 +609,9 @@ end
 function dsim2()
     SimKill(25);
 end
+
+function stopgui()
+    kill_info_manager:SetScript("OnUpdate", nil);
+end
 --@end-do-not-package@
 
