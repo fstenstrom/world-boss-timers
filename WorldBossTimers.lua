@@ -131,22 +131,28 @@ end
 
 function WBT.GetSpawnTimeOutput(kill_info)
     local text = kill_info:GetSpawnTimeAsText();
+    local color = Util.COLOR_DEFAULT;
     local highlight = Config.highlight.get()
             and WBT.IsInZoneOfBoss(kill_info.name)
             and GetRealmName() == kill_info.realmName
             and Util.WarmodeStatus() == kill_info.realm_type;
     if kill_info.cyclic then
         if highlight then
-            text = Util.ColoredString(Util.COLOR_YELLOW, text);
+            color = Util.COLOR_YELLOW;
         else
-            text = Util.ColoredString(Util.COLOR_RED, text);
+            color = Util.COLOR_RED;
         end
     else
         if highlight then
-            text = Util.ColoredString(Util.COLOR_LIGHTGREEN, text);
+            color = Util.COLOR_LIGHTGREEN;
         else
             -- Do nothing, default case.
         end
+    end
+    text = Util.ColoredString(color, text);
+
+    if Config.show_saved.get() and WBT.IsSaved(kill_info.name) then
+        text = text .. " " .. Util.ColoredString(Util.ReverseColor(color), "X");
     end
 
     return text;
@@ -308,6 +314,16 @@ local function InitCombatScannerFrame()
 end
 
 function WBT.AceAddon:OnInitialize()
+end
+
+function WBT.IsSaved(name)
+    local n_saved = GetNumSavedWorldBosses();
+    for i=1, n_saved do
+        if name == GetSavedWorldBossInfo(i) then
+            return true;
+        end
+    end
+    return false;
 end
 
 function WBT.PrintKilledBosses()

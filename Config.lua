@@ -170,7 +170,8 @@ Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
 Config.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
 Config.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
 Config.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
-Config.highlight = ToggleItem:New("highlight", "Highlighting of current zone and killed bosses is now");
+Config.highlight = ToggleItem:New("highlight", "Highlighting of current zone is now");
+Config.show_saved = ToggleItem:New("show_saved", "Showing if saved on boss (on timer) is now");
 Config.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", spawn_alert_sound_kv_table, SOUND_KEY_BATTLE_BEGINS);
 Config.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", 0);
  -- Wrapping in some help printing for cyclic mode.
@@ -381,6 +382,15 @@ Config.optionsTable = {
         width = "full",
         set = function(info, val) Config.highlight:Toggle(); end,
         get = function(info) return Config.highlight.get() end,
+    },
+    show_saved = {
+        name = "Show if boss is saved (appends a colored X after timer)",
+        order = t_cnt:plusplus(),
+        desc = desc_toggle,
+        type = "toggle",
+        width = "full",
+        set = function(info, val) Config.show_saved:Toggle(); end,
+        get = function(info) return Config.show_saved.get() end,
     },
     spawn_alert_sound = {
         name = "Spawn alert sound",

@@ -52,6 +52,17 @@ function Util.MessageFromVarargs(...)
     return msg;
 end
 
+function Util.ReverseColor(color)
+    local t_color_rev = { };
+    t_color_rev[Util.COLOR_DEFAULT] = Util.COLOR_RED;
+    t_color_rev[Util.COLOR_GREEN] = Util.COLOR_RED;
+    t_color_rev[Util.COLOR_LIGHTGREEN] = Util.COLOR_RED;
+    t_color_rev[Util.COLOR_DARKGREEN] = Util.COLOR_RED;
+    t_color_rev[Util.COLOR_YELLOW] = Util.COLOR_LIGHTGREEN;
+    t_color_rev[Util.COLOR_RED] = Util.COLOR_LIGHTGREEN;
+    return t_color_rev[color] or Util.COLOR_DEFAULT;
+end
+
 function Util.ColoredString(color, ...)
     return color .. Util.MessageFromVarargs(...) .. Util.COLOR_DEFAULT;
 end
