@@ -460,7 +460,7 @@ local function InitKillInfoManager()
                                 AnnounceSpawnTime(kill_info, Config.send_data.get());
                             end
 
-                            if kill_info:RespawnTriggered() then
+                            if kill_info:RespawnTriggered(Config.spawn_alert_sec_before.get()) then
                                 FlashClientIcon();
                                 PlaySoundAlertSpawn();
                             end

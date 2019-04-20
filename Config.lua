@@ -129,6 +129,30 @@ function SelectItem:Value()
     return self.kv[self:Key()];
 end
 
+local RangeItem = {};
+
+function RangeItem:OverrideGetter(default_val)
+    local default_getter = self.get;
+    self.get = function()
+        local val = default_getter();
+        if val == nil then
+            return default_val;
+        end
+        return val;
+    end
+end
+
+function RangeItem:New(var_name, status_msg, default_val)
+    local si = ConfigItem:New(var_name, status_msg);
+
+    setmetatable(si, self);
+    self.__index = self;
+
+    si:OverrideGetter(default_val);
+
+    return si;
+end
+
 local spawn_alert_sound_kv_table = {
     { k = "DISABLED",                     v = nil                                                  },
     { k = "you-are-not-prepared",         v = "sound/creature/illidan/black_illidan_04.ogg"        },
@@ -147,6 +171,7 @@ Config.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option i
 Config.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
 Config.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
 Config.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", spawn_alert_sound_kv_table, SOUND_KEY_BATTLE_BEGINS);
+Config.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", 0);
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Config.cyclic.set;
 Config.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
@@ -342,12 +367,29 @@ Config.optionsTable = {
     },
     spawn_alert_sound = {
         name = "Spawn alert sound",
+        order = 8,
         desc = "Sound alert that plays when boss spawns",
         type = "select",
         style = "dropdown",
+        width = "normal",
         values = Config.spawn_alert_sound.kk,
         set = function(info, val) Config.spawn_alert_sound.set(val); end,
         get = function(info) return Config.spawn_alert_sound.get(); end,
+    },
+    spawn_alert_sec_before = {
+        name = "Alert sec before spawn",
+        order = 9,
+        desc = "How many seconds before boss spawns that alerts should happen",
+        type = "range",
+        min = 0,
+        max = 60*5,
+        softMin = 0,
+        softMax = 30,
+        bigStep = 1,
+        isPercent = false,
+        width = "normal",
+        set = function(info, val) Config.spawn_alert_sec_before.set(val); end,
+        get = function(info) return Config.spawn_alert_sec_before.get(); end,
     },
   }
 }
