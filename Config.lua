@@ -170,6 +170,7 @@ Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
 Config.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
 Config.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
 Config.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
+Config.highlight = ToggleItem:New("highlight", "Highlighting of current zone and killed bosses is now");
 Config.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", spawn_alert_sound_kv_table, SOUND_KEY_BATTLE_BEGINS);
 Config.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", 0);
  -- Wrapping in some help printing for cyclic mode.
@@ -295,6 +296,13 @@ function Config.SlashHandler(input)
     end
 end
 
+-- Counter so I don't have to increment order all the time.
+-- Option items are ordered as they are inserted.
+local t_cnt = { 0 };
+function t_cnt:plusplus()
+    self[1] = self[1] + 1;
+    return self[1];
+end
 
 ----- Options table -----
 desc_toggle = "Enable/Disable";
@@ -304,7 +312,7 @@ Config.optionsTable = {
   args = {
     show = {
         name = "Show GUI",
-        order = 1,
+        order = t_cnt:plusplus(),
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -313,7 +321,7 @@ Config.optionsTable = {
     },
     show_boss_zone_only = {
         name = "Only show the GUI when in a boss zone",
-        order = 2,
+        order = t_cnt:plusplus(),
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -322,7 +330,7 @@ Config.optionsTable = {
     },
     sound = {
         name = "Sound",
-        order = 3,
+        order = t_cnt:plusplus(),
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -331,7 +339,7 @@ Config.optionsTable = {
     },
     cyclic = {
         name = "Cyclic timers (show expired timers)",
-        order = 4,
+        order = t_cnt:plusplus(),
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -340,7 +348,7 @@ Config.optionsTable = {
     },
     auto_send_data = {
         name = "Send timer info in auto announcements",
-        order = 5,
+        order = t_cnt:plusplus(),
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -349,7 +357,7 @@ Config.optionsTable = {
     },
     auto_announce = {
         name = "Auto announce at certain time intervals",
-        order = 6,
+        order = t_cnt:plusplus(),
         desc = desc_toggle,
         type = "toggle",
         width = "full",
@@ -358,16 +366,25 @@ Config.optionsTable = {
     },
     multi_realm = {
         name = "Allow tracking across multiple Realms (and multiple Warmode settings on the same Realm)",
-        order = 7,
+        order = t_cnt:plusplus(),
         desc = desc_toggle,
         type = "toggle",
         width = "full",
         set = function(info, val) Config.multi_realm:Toggle(); end,
         get = function(info) return Config.multi_realm.get() end,
     },
+    highlight = {
+        name = "Highlight the countdown text for bosses in current zone",
+        order = t_cnt:plusplus(),
+        desc = desc_toggle,
+        type = "toggle",
+        width = "full",
+        set = function(info, val) Config.highlight:Toggle(); end,
+        get = function(info) return Config.highlight.get() end,
+    },
     spawn_alert_sound = {
         name = "Spawn alert sound",
-        order = 8,
+        order = t_cnt:plusplus(),
         desc = "Sound alert that plays when boss spawns",
         type = "select",
         style = "dropdown",
@@ -378,7 +395,7 @@ Config.optionsTable = {
     },
     spawn_alert_sec_before = {
         name = "Alert sec before spawn",
-        order = 9,
+        order = t_cnt:plusplus(),
         desc = "How many seconds before boss spawns that alerts should happen",
         type = "range",
         min = 0,

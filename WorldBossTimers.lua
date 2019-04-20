@@ -131,13 +131,26 @@ end
 
 function WBT.GetSpawnTimeOutput(kill_info)
     local text = kill_info:GetSpawnTimeAsText();
+    local highlight = Config.highlight.get()
+            and WBT.IsInZoneOfBoss(kill_info.name)
+            and GetRealmName() == kill_info.realmName
+            and Util.WarmodeStatus() == kill_info.realm_type;
     if kill_info.cyclic then
-        text = Util.COLOR_RED .. text .. Util.COLOR_DEFAULT;
+        if highlight then
+            text = Util.ColoredString(Util.COLOR_YELLOW, text);
+        else
+            text = Util.ColoredString(Util.COLOR_RED, text);
+        end
+    else
+        if highlight then
+            text = Util.ColoredString(Util.COLOR_LIGHTGREEN, text);
+        else
+            -- Do nothing, default case.
+        end
     end
 
     return text;
 end
-local GetSpawnTimeOutput = WBT.GetSpawnTimeOutput;
 
 local last_request_time = 0;
 function WBT.RequestKillData()
