@@ -172,12 +172,12 @@ function GUI:GetLabelText(kill_info, all_info)
         prefix = Util.ColoredString(Util.COLOR_DARKGREEN, strsub(kill_info.realmName, 0, 3)) .. ":"
                 .. Util.ColoredString(Util.WarmodeColor(kill_info.realm_type), strsub(kill_info.realm_type, 0, 3)) .. ":";
     end
-    return prefix .. WBT.GetColoredBossName(kill_info.name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info)
+    return prefix .. WBT.GetColoredBossName(kill_info.name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
 end
 
 function GUI:UpdateContent()
     local n_shown_labels = 0;
-    for guid, kill_info in pairs(WBT.db.global.kill_infos) do
+    for guid, kill_info in Util.spairs(WBT.db.global.kill_infos, WBT.KillInfo.CompareTo) do
         local label = self.labels[guid] or self:CreateNewLabel(guid);
         if getmetatable(kill_info) ~= WBT.KillInfo then
             -- Do nothing.
@@ -193,7 +193,7 @@ function GUI:UpdateContent()
             end
         else
             if label.userdata.added then
-                -- The label is apparently not automatically removed the
+                -- The label is apparently not automatically removed from the
                 -- self.window.children table, so it has to be done manually...
                 -- This table is always a set, and can therefore be treated as such.
                 Util.RemoveFromSet(self.window.children, label);

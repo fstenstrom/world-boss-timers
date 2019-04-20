@@ -22,6 +22,29 @@ local RANDOM_DELIM = "-";
 
 local GUID_DELIM = ";";
 
+function KillInfo.CompareTo(t, a, b)
+    -- "if I'm comparing 'a' and 'b', return true when 'a' should come first"
+    local k1 = t[a];
+    local k2 = t[b];
+
+    k1:Update();
+    k2:Update();
+
+    if k1.reset then
+        return false;
+    elseif k2.reset then
+        return true;
+    end
+
+    if k1:Expired() and not k2:Expired() then
+        return false;
+    elseif not k1:Expired() and k2:Expired() then
+        return true;
+    end
+
+    return k1:GetSpawnTimeSec() < k2:GetSpawnTimeSec();
+end
+
 function KillInfo.ValidGUID(guid)
     return KillInfo.ParseGUID(guid) and true;
 end
@@ -79,6 +102,8 @@ end
 function KillInfo:SetNewDeath(name, t_death)
     self:SetInitialValues(name);
 
+    -- NOTE: self.t_death is later updated when the kill_info has expired.
+    -- self.until_time is (currently) never updated though.
     self.t_death = t_death;
     self.until_time = self.t_death + self.db.max_respawn;
     self.reset = false;
@@ -265,7 +290,6 @@ function KillInfo:Update()
     self.remaining_time = self.until_time - GetServerTime();
 end
 
--- For bosses with non-random spawn. Modify the result for other bosses.
 function KillInfo:EstimationNextSpawn()
     local t_spawn = self.t_death;
     local t_now = GetServerTime();
