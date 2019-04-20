@@ -175,6 +175,54 @@ function GUI:GetLabelText(kill_info, all_info)
     return prefix .. WBT.GetColoredBossName(kill_info.name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
 end
 
+function GUI:RemoveLabel(guid, label)
+    -- This table is always a set, and can therefore be treated as such.
+    Util.RemoveFromSet(self.window.children, label);
+    label:Release();
+    self.labels[guid] = nil;
+end
+
+function GUI:Rebuild()
+    for guid, kill_info in pairs(WBT.db.global.kill_infos) do
+        local label = self.labels[guid];
+        if label == nil or getmetatable(kill_info) ~= WBT.KillInfo then
+            -- Do nothing.
+        else
+            GUI:RemoveLabel(guid, label);
+        end
+    end
+    self:UpdateContent();
+end
+
+function GUI:FreshKillTrigger(kill_info, label)
+    -- Not setting t_death_window from outside, to be certain that it doesn't
+    -- change between calls (saying this since the same variable name is used
+    -- in some other function).
+    local t_death_window = 3;  -- Arbitrarily chosen value.
+    local tf = not kill_info:Expired()
+            and kill_info:GetTimeSinceDeath() < t_death_window
+            and label.userdata.fresh_kill_flag ~= true;
+    if tf then
+        label.userdata.fresh_kill_flag = true;
+    end
+    return tf;
+end
+
+function GUI:CyclicLabelResetTrigger(kill_info, label)
+    -- Not setting t_death_window from outside, to be certain that it doesn't
+    -- change between calls (saying this since the same variable name is used
+    -- in some other function).
+    local t_death_window = 3;  -- Arbitrarily chosen value.
+    local tf = kill_info:Expired()
+            and kill_info.db.max_respawn - kill_info:GetSpawnTimeSec() < t_death_window
+            and (label.userdata.time_last_reset == nil
+                or label.userdata.time_last_reset + t_death_window < GetServerTime());
+    if tf then
+        label.userdata.time_last_reset = GetServerTime();
+    end
+    return tf;
+end
+
 function GUI:UpdateContent()
     local n_shown_labels = 0;
     for guid, kill_info in Util.spairs(WBT.db.global.kill_infos, WBT.KillInfo.CompareTo) do
@@ -190,15 +238,18 @@ function GUI:UpdateContent()
             if not label.userdata.added then
                 self.window:AddChild(label);
                 label.userdata.added = true;
+            else
+                local t_death_window = 3; -- Arbitrarily chosen value.
+                if self:FreshKillTrigger(kill_info, label) or self:CyclicLabelResetTrigger(kill_info, label) then
+                    self:Rebuild(); -- Warning: recursive call!
+                    return; -- Returning here, since above call is recursive.
+                end
             end
         else
             if label.userdata.added then
                 -- The label is apparently not automatically removed from the
                 -- self.window.children table, so it has to be done manually...
-                -- This table is always a set, and can therefore be treated as such.
-                Util.RemoveFromSet(self.window.children, label);
-                label:Release();
-                self.labels[guid] = nil;
+                self:RemoveLabel(guid, label);
             end
         end
     end

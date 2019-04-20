@@ -30,7 +30,7 @@ end
 function ConfigItem.CreateDefaultSetter(var_name)
     local function setter(state)
         WBT.db.global[var_name] = state;
-        WBT.GUI:Update();
+        WBT.GUI:Rebuild();
     end
     return setter;
 end
