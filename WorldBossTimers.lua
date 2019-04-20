@@ -319,7 +319,8 @@ end
 function WBT.IsSaved(name)
     local n_saved = GetNumSavedWorldBosses();
     for i=1, n_saved do
-        if name == GetSavedWorldBossInfo(i) then
+        local _, id_wb = GetSavedWorldBossInfo(i);
+        if id_wb == BossData.Get(name).id_wb then
             return true;
         end
     end
@@ -329,25 +330,20 @@ end
 function WBT.PrintKilledBosses()
     WBT:Print("Tracked world bosses killed:");
 
-    local none_killed_text = "None";
-    local num_saved_world_bosses = GetNumSavedWorldBosses();
-    if num_saved_world_bosses == 0 then
-        WBT:Print(none_killed_text);
-    else
-        local none_killed = true;
-        for i=1, num_saved_world_bosses do
-            local name = GetSavedWorldBossInfo(i);
-            if IsBoss(name) then
-                none_killed = false;
-                WBT:Print(GetColoredBossName(name))
-            end
-        end
-        if none_killed then
-            WBT:Print(none_killed_text);
+    local none_killed = true;
+    for _, boss in pairs(BossData.GetAll()) do
+        if WBT.IsSaved(boss.name) then
+            none_killed = false;
+            WBT:Print(GetColoredBossName(boss.name));
         end
     end
+    if none_killed then
+        -- There might be other bosses that WBT doesn't track that
+        -- have been killed.
+        local none_killed_text = "None";
+        WBT:Print(none_killed_text);
+    end
 end
-local PrintKilledBosses = WBT.PrintKilledBosses;
 
 function WBT.ResetKillInfo()
     WBT:Print("Resetting all kill info.");
@@ -357,7 +353,6 @@ function WBT.ResetKillInfo()
 
     gui:Update();
 end
-local ResetKillInfo = WBT.ResetKillInfo;
 
 local function StartVisibilityHandler()
     local visibilty_handler_frame = CreateFrame("Frame");
