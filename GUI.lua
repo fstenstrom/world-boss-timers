@@ -49,7 +49,7 @@ end
 --@end-do-not-package@
 
 
-function GUI.Init()
+function GUI:Init()
     Config = WBT.Config;
 end
 

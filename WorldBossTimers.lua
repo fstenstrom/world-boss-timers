@@ -15,6 +15,7 @@ local Util = WBT.Util;
 local BossData = WBT.BossData;
 local GUI = WBT.GUI;
 local Config = WBT.Config;
+local Com = WBT.Com;
 
 
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
@@ -63,7 +64,7 @@ function WBT.IsDead(guid, ignore_cyclic)
 end
 local IsDead = WBT.IsDead;
 
-local function IsBoss(name)
+function WBT.IsBoss(name)
     return Util.SetContainsKey(BossData.GetAll(), name);
 end
 
@@ -228,7 +229,7 @@ function WBT.AnnounceSpawnTime(kill_info, send_data_for_parsing)
 end
 local AnnounceSpawnTime = WBT.AnnounceSpawnTime;
 
-local function SetKillInfo(name, t_death)
+function WBT.SetKillInfo(name, t_death)
     t_death = tonumber(t_death);
     local guid = KillInfo.CreateGUID(name);
     local ki = g_kill_infos[guid];
@@ -260,7 +261,7 @@ local function InitDeathTrackerFrame()
             end
 
             if eventType == "UNIT_DIED" then
-                SetKillInfo(name, GetServerTime());
+                WBT.SetKillInfo(name, GetServerTime());
                 gui:Update();
             end
         end);
@@ -302,7 +303,7 @@ local function InitCombatScannerFrame()
         end
 
         local t = GetServerTime();
-        if IsBoss(name) and t > self.t_next then
+        if WBT.IsBoss(name) and t > self.t_next then
             WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
             PlaySoundAlertBossCombat(name);
             FlashClientIcon();
@@ -406,8 +407,8 @@ function WBT.AceAddon:InitChatParsing()
                         local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
                         local guid = KillInfo.CreateGUID(name);
                         local ignore_cyclic = true;
-                        if IsBoss(name) and not IsDead(guid, ignore_cyclic) then
-                            SetKillInfo(name, t_death);
+                        if WBT.IsBoss(name) and not IsDead(guid, ignore_cyclic) then
+                            WBT.SetKillInfo(name, t_death);
                             WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
                         end
                     end
@@ -508,8 +509,13 @@ end
 
 function WBT.AceAddon:OnEnable()
     GUI.Init();
+    Com:Init();
 
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
+    LibStub("AceComm-3.0"):Embed(Com);
+
+    Com:RegisterComm(Com.PREF_SR, Com.OnCommReceivedSR);
+    Com:RegisterComm(Com.PREF_RR, Com.OnCommReceivedRR);
 
     FilterValidKillInfosStep1();
 
@@ -555,7 +561,7 @@ function RandomServerName()
 end
 
 local function StartSim(name, t)
-    SetKillInfo(name, t);
+    WBT.SetKillInfo(name, t);
 end
 
 local function SetKillInfo_GUID(name, t_death, realmName, realm_type)
