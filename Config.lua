@@ -164,6 +164,7 @@ local spawn_alert_sound_kv_table = {
     { k = "drum-hit",                     v = "sound/doodad/fx_alarm_drum_hit_04.ogg"              },
 };
 
+local DEFAULT_SPAWN_ALERT_OFFSET = 5;
 Config.send_data = ToggleItem:New("send_data", "Data sending in auto announce is now");
 Config.auto_announce = ToggleItem:New("auto_announce", "Automatic announcements are now");
 Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
@@ -173,11 +174,11 @@ Config.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
 Config.highlight = ToggleItem:New("highlight", "Highlighting of current zone is now");
 Config.show_saved = ToggleItem:New("show_saved", "Showing if saved on boss (on timer) is now");
 Config.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", spawn_alert_sound_kv_table, SOUND_KEY_BATTLE_BEGINS);
-Config.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", 0);
+Config.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Config.cyclic.set;
 Config.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
--- Wrapping in playing of sound file when selected
+-- Wrapping in 'play sound file when selected'.
 local spawn_alert_sound_set_temp = Config.spawn_alert_sound.set;
 Config.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Config.spawn_alert_sound:Value()); end
 
