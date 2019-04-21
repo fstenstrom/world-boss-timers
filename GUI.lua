@@ -184,6 +184,10 @@ function GUI:RemoveLabel(guid, label)
 end
 
 function GUI:Rebuild()
+    if not self.labels then
+        return; -- GUI hasn't been built, so nothing to rebuild.
+    end
+
     for guid, kill_info in pairs(WBT.db.global.kill_infos) do
         local label = self.labels[guid];
         if label == nil or getmetatable(kill_info) ~= WBT.KillInfo then
@@ -192,7 +196,7 @@ function GUI:Rebuild()
             GUI:RemoveLabel(guid, label);
         end
     end
-    self:UpdateContent();
+    self:Update();
 end
 
 function GUI:FreshKillTrigger(kill_info, label)
@@ -240,7 +244,6 @@ function GUI:UpdateContent()
                 self.window:AddChild(label);
                 label.userdata.added = true;
             else
-                local t_death_window = 3; -- Arbitrarily chosen value.
                 if self:FreshKillTrigger(kill_info, label) or self:CyclicLabelResetTrigger(kill_info, label) then
                     self:Rebuild(); -- Warning: recursive call!
                     return; -- Returning here, since above call is recursive.
