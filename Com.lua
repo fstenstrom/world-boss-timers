@@ -36,7 +36,8 @@ function com_event_tracker:ComEventTrackerCallback(event, unit, ...)
 
     if not UnitExists(unit)
             or not UnitIsVisible(unit)
-            or not UnitIsPlayer(unit) then
+            or not UnitIsPlayer(unit)
+            or not UnitIsFriend("player", unit) then
         return;
     end
 
