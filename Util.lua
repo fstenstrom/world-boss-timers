@@ -11,6 +11,7 @@ WBT.Util = Util;
 Util.COLOR_DEFAULT = "|cffffffff";
 Util.COLOR_RED = "|cffff0000";
 Util.COLOR_GREEN = "|cff00ff00";
+Util.COLOR_ORANGE = "|cffffdd1e";
 Util.COLOR_LIGHTGREEN = "|cff35e059";
 Util.COLOR_DARKGREEN = "|cff50c41f";
 Util.COLOR_YELLOW = "|cfff2e532";

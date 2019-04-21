@@ -309,6 +309,29 @@ Config.optionsTable = {
   type = "group",
   childGroups = "select",
   args = {
+    sharing_explanation_header = {
+        name = Util.ColoredString(Util.COLOR_ORANGE, "How timer sharing works:"),
+        order = t_cnt:plusplus(),
+        type = "description",
+        fontSize = "large",
+        width = "full",
+    },
+    sharing_explanation_body = {
+        name = "Pressing the '" .. Util.ColoredString(Util.COLOR_ORANGE, "Enter request mode") .. "' button will enable you to request " ..
+                "timers from other players. While in this mode, friendly name plates " ..
+                "will always be turned on, since the sharing happens when a friendly " ..
+                "target's name plate becomes visible. You can also mouseover a friendly " ..
+                "player while in " .. Util.ColoredString(Util.COLOR_ORANGE, "request mode") ..
+                " to request a timer. This is usually redundant though, but can be practical " ..
+                "if the player was 'Unknown' when the name plate was first shown.\n" ..
+                "Pressing the button again (now called '" .. Util.ColoredString(Util.COLOR_ORANGE, "Leave request mode") ..
+                "') will make you leave " .. Util.ColoredString(Util.COLOR_ORANGE, "request mode") ..
+                ", and your name plate settings will be restored.";
+        order = t_cnt:plusplus(),
+        type = "description",
+        fontSize = "medium",
+        width = "full",
+    },
     show = {
         name = "Show GUI",
         order = t_cnt:plusplus(),
