@@ -25,23 +25,34 @@ Com.DELIM1 = ";";
 Com.DELIM2 = "_";
 
 local CVAR_NAMEPLATE_SHOW_FRIENDS = "nameplateShowFriends";
+local EVENT_NAME_PLATE_UNIT_ADDED = "NAME_PLATE_UNIT_ADDED";
+local EVENT_UPDATE_MOUSEOVER_UNIT = "UPDATE_MOUSEOVER_UNIT";
 
 function Com:Init()
     KillInfo = WBT.KillInfo;
 end
 
-local nameplate_tracker = CreateFrame("Frame");
-local function NameplateTrackerCallback(some_table, event, unit, ...)
-    if UnitIsPlayer(unit) then
-        local name, realm = UnitName(unit);
-        if realm then
-            name = name .. "-" .. realm;
-        end
-        Com:SendCommMessage(Com.PREF_SR, Com.JUST_SOME_MESSAGE, "WHISPER", name);
+local com_event_tracker = CreateFrame("Frame");
+function com_event_tracker:ComEventTrackerCallback(event, unit, ...)
+    if event == EVENT_UPDATE_MOUSEOVER_UNIT then
+        unit = 'mouseover';
     end
+
+    if not UnitExists(unit)
+            or not UnitIsVisible(unit)
+            or not UnitIsPlayer(unit) then
+        return;
+    end
+
+    local name, realm = UnitName(unit);
+    if realm then
+        name = name .. "-" .. realm;
+    end
+    Com:SendCommMessage(Com.PREF_SR, Com.JUST_SOME_MESSAGE, "WHISPER", name);
 end
-nameplate_tracker:SetScript("OnEvent", NameplateTrackerCallback);
-nameplate_tracker:RegisterEvent("NAME_PLATE_UNIT_ADDED");
+com_event_tracker:SetScript("OnEvent", com_event_tracker.ComEventTrackerCallback);
+com_event_tracker:RegisterEvent(EVENT_NAME_PLATE_UNIT_ADDED);
+com_event_tracker:RegisterEvent(EVENT_UPDATE_MOUSEOVER_UNIT);
 
 function Com.EnterRequestMode()
     WBT.db.char.restore_nameplates_show_always = InterfaceOptionsNamesPanelUnitNameplatesShowAll.value
@@ -86,6 +97,8 @@ function Com.ParseKillMessage(message)
 end
 
 function Com.OnCommReceivedSR(prefix, message, distribution, sender)
+    -- No error checking for sender here, since using the player's name is not valid for
+    -- UnitXXX calls, unless the sender is in the same party or raid as player.
     if WBT.InBossZone() then
         local kill_info = WBT.KillInfoInCurrentZoneAndShard();
         if kill_info and kill_info:IsCompletelySafe({}) then
