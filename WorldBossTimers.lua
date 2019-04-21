@@ -442,11 +442,11 @@ end
 
 function WBT.AceAddon:OnEnable()
     GUI.Init();
-    Com:Init();
 
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
     LibStub("AceComm-3.0"):Embed(Com);
 
+    Com:Init(); -- Must init after db.
     Com:RegisterComm(Com.PREF_SR, Com.OnCommReceivedSR);
     Com:RegisterComm(Com.PREF_RR, Com.OnCommReceivedRR);
 

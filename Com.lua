@@ -16,7 +16,7 @@ local PREF_BASE = "WBT_";
 Com.PREF_SR = PREF_BASE .. "SR"; -- SendRequest
 Com.PREF_RR = PREF_BASE .. "RR"; -- ReplyRequest
 
-Com.JUST_SOME_MESSAGE = "texty";
+Com.REQUEST_MESSAGE = "request_timer"; -- Content of message currently is not used.
 
 Com.ENTER_REQUEST_MODE = "Enter request mode";
 Com.LEAVE_REQUEST_MODE = "Leave request mode";
@@ -27,10 +27,6 @@ Com.DELIM2 = "_";
 local CVAR_NAMEPLATE_SHOW_FRIENDS = "nameplateShowFriends";
 local EVENT_NAME_PLATE_UNIT_ADDED = "NAME_PLATE_UNIT_ADDED";
 local EVENT_UPDATE_MOUSEOVER_UNIT = "UPDATE_MOUSEOVER_UNIT";
-
-function Com:Init()
-    KillInfo = WBT.KillInfo;
-end
 
 local com_event_tracker = CreateFrame("Frame");
 function com_event_tracker:ComEventTrackerCallback(event, unit, ...)
@@ -48,11 +44,27 @@ function com_event_tracker:ComEventTrackerCallback(event, unit, ...)
     if realm then
         name = name .. "-" .. realm;
     end
-    Com:SendCommMessage(Com.PREF_SR, Com.JUST_SOME_MESSAGE, "WHISPER", name);
+    Com:SendCommMessage(Com.PREF_SR, Com.REQUEST_MESSAGE, "WHISPER", name);
 end
 com_event_tracker:SetScript("OnEvent", com_event_tracker.ComEventTrackerCallback);
-com_event_tracker:RegisterEvent(EVENT_NAME_PLATE_UNIT_ADDED);
-com_event_tracker:RegisterEvent(EVENT_UPDATE_MOUSEOVER_UNIT);
+
+function com_event_tracker:RegisterEvents()
+    self:RegisterEvent(EVENT_NAME_PLATE_UNIT_ADDED);
+    self:RegisterEvent(EVENT_UPDATE_MOUSEOVER_UNIT);
+end
+
+function com_event_tracker:UnregisterEvents()
+    self:UnregisterEvent(EVENT_NAME_PLATE_UNIT_ADDED);
+    self:UnregisterEvent(EVENT_UPDATE_MOUSEOVER_UNIT);
+end
+
+function Com:Init()
+    KillInfo = WBT.KillInfo;
+    if WBT.db.char.start_request_tracking_at_startup then
+        com_event_tracker:RegisterEvents();
+    end
+
+end
 
 function Com.EnterRequestMode()
     WBT.db.char.restore_nameplates_show_always = InterfaceOptionsNamesPanelUnitNameplatesShowAll.value
@@ -65,7 +77,11 @@ function Com.EnterRequestMode()
         SetCVar(CVAR_NAMEPLATE_SHOW_FRIENDS, "1");
     end
 
-    return Com.LeaveRequestMode, Com.LEAVE_REQUEST_MODE;
+    com_event_tracker:RegisterEvents();
+
+    WBT.db.char.start_request_tracking_at_startup = true;
+
+    return Com.LeaveRequestMode, Com.LEAVE_REQUEST_MODE; -- Return value is used by the button which calls it.
 end
 
 function Com.LeaveRequestMode()
@@ -76,8 +92,11 @@ function Com.LeaveRequestMode()
 
     WBT.db.char.restore_nameplates_show_always = nil;
     WBT.db.char.restore_nameplates_friendly = nil;
+    WBT.db.char.start_request_tracking_at_startup = false;
 
-    return Com.EnterRequestMode, Com.ENTER_REQUEST_MODE;
+    com_event_tracker:UnregisterEvents();
+
+    return Com.EnterRequestMode, Com.ENTER_REQUEST_MODE; -- Return value is used by the button which calls it.
 end
 
 function Com.ActiveRequestMethod()
