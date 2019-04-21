@@ -24,7 +24,7 @@ local MAX_ENTRIES_DEFAULT = 7;
 local WIDTH_EXTENDED = 240;
 
 local BTN_OPTS_SCALE = 1 / 3;
-local BTN_REQ_SCALE = 2 / 3;
+local BTN_REQ_SCALE = 1 - BTN_OPTS_SCALE;
 
 
 --------------------------------------------------------------------------------

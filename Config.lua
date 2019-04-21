@@ -187,20 +187,20 @@ local function PrintHelp()
     WBT.AceConfigDialog:Open(WBT.addon_name);
     local indent = "   ";
     WBT:Print("WorldBossTimers slash commands:");
-    WBT:Print("/wbt reset --> Reset all kill info.");
-    WBT:Print("/wbt gui-reset --> Reset the position of the GUI.");
-    WBT:Print("/wbt saved --> Print your saved bosses.");
-    WBT:Print("/wbt say --> Announce timers for boss in zone.");
-    WBT:Print("/wbt show --> Show the timers frame.");
-    WBT:Print("/wbt hide --> Hide the timers frame.");
-    WBT:Print("/wbt send --> Toggle send timer data in auto announce.");
-    WBT:Print("/wbt sound --> Toggle sound alerts.");
-    --WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'.");
-    --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'.");
-    WBT:Print("/wbt ann --> Toggle automatic announcements.");
-    WBT:Print("/wbt cyclic --> Toggle cyclic timers.");
-    WBT:Print("/wbt multi --> Toggle multi-realm/warmode timers.");
-    WBT:Print("/wbt zone --> Toggle show GUI in boss zones only.");
+    WBT:Print("/wbt reset --> Reset all kill info");
+    WBT:Print("/wbt gui-reset --> Reset the position of the GUI");
+    WBT:Print("/wbt saved --> Print your saved bosses");
+    WBT:Print("/wbt say --> Announce timers for boss in zone");
+    WBT:Print("/wbt show --> Show the timers frame");
+    WBT:Print("/wbt hide --> Hide the timers frame");
+    WBT:Print("/wbt send --> Toggle send timer data in auto announce");
+    WBT:Print("/wbt sound --> Toggle sound alerts");
+    --WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'");
+    --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'");
+    WBT:Print("/wbt ann --> Toggle automatic announcements");
+    WBT:Print("/wbt cyclic --> Toggle cyclic timers");
+    WBT:Print("/wbt multi --> Toggle multi-realm/warmode timers");
+    WBT:Print("/wbt zone --> Toggle show GUI in boss zones only");
 end
 
 local function ShowGUI(show)
@@ -227,11 +227,11 @@ function Config.SlashHandler(input)
     elseif arg1 == "show" then
         ShowGUI(true);
     elseif arg1 == "say"
-        or arg1 == "share"
-        or arg1 == "a"
-        or arg1 == "announce"
-        or arg1 == "yell"
-        or arg1 == "tell" then
+            or arg1 == "share"
+            or arg1 == "a"
+            or arg1 == "announce"
+            or arg1 == "yell"
+            or arg1 == "tell" then
 
         if not WBT.InBossZone() then
             WBT:Print("You can't announce outside of a boss zone.");
@@ -262,15 +262,13 @@ function Config.SlashHandler(input)
     elseif arg1 == "ann" then
         Config.auto_announce:Toggle();
     elseif arg1 == "r"
-        or arg1 == "reset"
-        or arg1 == "restart" then
+            or arg1 == "reset"
+            or arg1 == "restart" then
         WBT.ResetKillInfo();
     elseif arg1 == "s"
-        or arg1 == "saved"
-        or arg1 == "save" then
+            or arg1 == "saved"
+            or arg1 == "save" then
         WBT.PrintKilledBosses();
-    elseif arg1 == "request" then
-        WBT.RequestKillData();
     elseif arg1 == "sound" then
         sound_type_args = {Config.SOUND_CLASSIC, Config.SOUND_FANCY};
         if Util.SetContainsValue(sound_type_args, arg2) then
