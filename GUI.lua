@@ -23,6 +23,10 @@ local MAX_ENTRIES_DEFAULT = 7;
 
 local WIDTH_EXTENDED = 240;
 
+local BTN_OPTS_SCALE = 1 / 3;
+local BTN_REQ_SCALE = 2 / 3;
+
+
 --------------------------------------------------------------------------------
 
 
@@ -159,7 +163,8 @@ function GUI:UpdateWidth()
     end
 
     self.window:SetWidth(new_width);
-    self.btn:SetWidth(new_width);
+    self.btn:SetWidth(new_width * BTN_REQ_SCALE);
+    self.btn_opts:SetWidth(new_width * BTN_OPTS_SCALE);
     for _, label in pairs(self.labels) do
         label:SetWidth(GUI.LabelWidth(new_width));
     end
@@ -378,16 +383,25 @@ function GUI:New()
     WBT.G_window = self.window;
 
     self.btn = GUI.AceGUI:Create("Button");
-    self.btn:SetWidth(self.width);
+    self.btn:SetWidth(self.width * BTN_REQ_SCALE);
     local btn_text = nil;
     self.btn_callback, btn_text = Com.ActiveRequestMethod();
     self.btn:SetCallback("OnClick", GUI.ButtonCallback);
     self.btn:SetText(btn_text);
 
+    self.btn_opts = GUI.AceGUI:Create("Button");
+    self.btn_opts:SetText("/wbt");
+    self.btn_opts:SetWidth(self.width * BTN_OPTS_SCALE);
+    self.btn_opts:SetCallback("OnClick", function() WBT.AceConfigDialog:Open(WBT.addon_name); end);
+
     self.gui_container = GUI.AceGUI:Create("SimpleGroup");
     self.gui_container.frame:SetFrameStrata("LOW");
     self.gui_container:AddChild(self.window);
-    self.gui_container:AddChild(self.btn);
+    self.btn_container = GUI.AceGUI:Create("SimpleGroup");
+    self.btn_container:SetLayout("flow");
+    self.btn_container:AddChild(self.btn_opts);
+    self.btn_container:AddChild(self.btn);
+    self.gui_container:AddChild(self.btn_container);
 
     -- I didn't notice any "OnClose" for the gui_container
     -- ("SimpleGroup") so it's handled through the
