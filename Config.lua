@@ -304,7 +304,7 @@ function t_cnt:plusplus()
 end
 
 ----- Options table -----
-desc_toggle = "Enable/Disable";
+local desc_toggle = "Enable/Disable";
 Config.optionsTable = {
   type = "group",
   childGroups = "select",
@@ -319,7 +319,7 @@ Config.optionsTable = {
         get = function(info) return not WBT.db.global.hide_gui; end
     },
     show_boss_zone_only = {
-        name = "Only show the GUI when in a boss zone",
+        name = "Only show GUI in boss zones",
         order = t_cnt:plusplus(),
         desc = desc_toggle,
         type = "toggle",
@@ -337,45 +337,49 @@ Config.optionsTable = {
         get = function(info) return Config.sound.get() end,
     },
     cyclic = {
-        name = "Cyclic timers (show expired timers)",
+        name = "Cyclic (show expired)",
         order = t_cnt:plusplus(),
-        desc = desc_toggle,
+        desc = "If you missed a kill, the timer will wrap around and will now have a red color",
         type = "toggle",
         width = "full",
         set = function(info, val) Config.cyclic:Toggle(); end,
         get = function(info) return Config.cyclic.get(); end,
     },
     auto_announce = {
-        name = "Auto announce at certain time intervals",
+        name = "Announce",
         order = t_cnt:plusplus(),
-        desc = desc_toggle,
+        desc = "Automatically announce spawn timers on certain time intervals",
         type = "toggle",
         width = "full",
         set = function(info, val) Config.auto_announce:Toggle(); end,
         get = function(info) return Config.auto_announce.get() end,
     },
     multi_realm = {
-        name = "Allow tracking across multiple Realms (and multiple Warmode settings on the same Realm)",
+        name = "Multi-realm + Warmode",
         order = t_cnt:plusplus(),
-        desc = desc_toggle,
+        desc = "Show timers that are not for your current Realm or Warmode",
         type = "toggle",
         width = "full",
         set = function(info, val) Config.multi_realm:Toggle(); end,
         get = function(info) return Config.multi_realm.get() end,
     },
     highlight = {
-        name = "Highlight the countdown text for bosses in current zone",
+        name = "Highlight boss in current zone",
         order = t_cnt:plusplus(),
-        desc = desc_toggle,
+        desc = "The boss in your current zone will have a different color if your Realm + Warmode matches the timer:\n" ..
+                Util.ColoredString(Util.COLOR_LIGHTGREEN, "Green") .. " if timer not expired\n" ..
+                Util.ColoredString(Util.COLOR_YELLOW, "Yellow") .." if timer expired (with Cyclic mode)",
         type = "toggle",
         width = "full",
         set = function(info, val) Config.highlight:Toggle(); end,
         get = function(info) return Config.highlight.get() end,
     },
     show_saved = {
-        name = "Show if boss is saved (appends a colored X after timer)",
+        name = "Show if saved",
         order = t_cnt:plusplus(),
-        desc = desc_toggle,
+        desc = "Appends a colored 'X' (" .. Util.ColoredString(Util.COLOR_RED, "X") .. "/" .. Util.ColoredString(Util.COLOR_GREEN, "X") .. ")" ..
+                " after the timer if you are saved for the boss.\n" ..
+                "NOTE: The color of the 'X' has no special meaning, it's just for improved visibility.",
         type = "toggle",
         width = "full",
         set = function(info, val) Config.show_saved:Toggle(); end,
