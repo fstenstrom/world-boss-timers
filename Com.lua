@@ -16,68 +16,65 @@ local PREF_BASE = "WBT_";
 Com.PREF_SR = PREF_BASE .. "SR"; -- SendRequest
 Com.PREF_RR = PREF_BASE .. "RR"; -- ReplyRequest
 
+Com.JUST_SOME_MESSAGE = "texty";
+
+Com.ENTER_REQUEST_MODE = "Enter request mode";
+Com.LEAVE_REQUEST_MODE = "Leave request mode";
+
 Com.DELIM1 = ";";
 Com.DELIM2 = "_";
+
+local CVAR_NAMEPLATE_SHOW_FRIENDS = "nameplateShowFriends";
 
 function Com:Init()
     KillInfo = WBT.KillInfo;
 end
 
 local nameplate_tracker = CreateFrame("Frame");
-local function nameplate_tracker_callback(some_table, event, unit, ...)
+local function NameplateTrackerCallback(some_table, event, unit, ...)
     if UnitIsPlayer(unit) then
         local name, realm = UnitName(unit);
         if realm then
             name = name .. "-" .. realm;
         end
-        Com:SendCommMessage(Com.PREF_SR, "texty", "WHISPER", name);
+        Com:SendCommMessage(Com.PREF_SR, Com.JUST_SOME_MESSAGE, "WHISPER", name);
     end
 end
-nameplate_tracker:SetScript("OnEvent", nameplate_tracker_callback);
+nameplate_tracker:SetScript("OnEvent", NameplateTrackerCallback);
 nameplate_tracker:RegisterEvent("NAME_PLATE_UNIT_ADDED");
 
-local friendly_frame_resetter = CreateFrame("frame");
-friendly_frame_resetter.since_update = 0;
-
-function Com.TriggerFriendlyNameplates()
-    if Com.locked then
-        return;
-    end
-    Com.locked = true;
-
-    local setShowAlways = InterfaceOptionsNamesPanelUnitNameplatesShowAll.value == "0";
-    if setShowAlways then
+function Com.EnterRequestMode()
+    WBT.db.char.restore_nameplates_show_always = InterfaceOptionsNamesPanelUnitNameplatesShowAll.value
+    if WBT.db.char.restore_nameplates_show_always == "0" then
         InterfaceOptionsNamesPanelUnitNameplatesShowAll:Click();
     end
 
-    local restoreShowFriends = GetCVar("nameplateShowFriends");
-    local reverse = nil;
-    if restoreShowFriends == "0" then
-        reverse = "1";
+    WBT.db.char.restore_nameplates_friendly = GetCVar(CVAR_NAMEPLATE_SHOW_FRIENDS);
+    if WBT.db.char.restore_nameplates_friendly == "0" then
+        SetCVar(CVAR_NAMEPLATE_SHOW_FRIENDS, "1");
+    end
+
+    return Com.LeaveRequestMode, Com.LEAVE_REQUEST_MODE;
+end
+
+function Com.LeaveRequestMode()
+    if WBT.db.char.restore_nameplates_show_always ~= InterfaceOptionsNamesPanelUnitNameplatesShowAll.value then -- User might have changed back manually.
+        InterfaceOptionsNamesPanelUnitNameplatesShowAll:Click();
+    end
+    SetCVar("nameplateShowFriends", WBT.db.char.restore_nameplates_friendly);
+
+    WBT.db.char.restore_nameplates_show_always = nil;
+    WBT.db.char.restore_nameplates_friendly = nil;
+
+    return Com.EnterRequestMode, Com.ENTER_REQUEST_MODE;
+end
+
+function Com.ActiveRequestMethod()
+    if WBT.db.char.restore_nameplates_show_always ~= nil then
+        return Com.LeaveRequestMode, Com.LEAVE_REQUEST_MODE;
     else
-        reverse = "0";
+        return Com.EnterRequestMode, Com.ENTER_REQUEST_MODE;
     end
-    SetCVar("nameplateShowFriends", reverse);
-
-    function friendly_frame_resetter:DoUpdate()
-        SetCVar("nameplateShowFriends", restoreShowFriends);
-        if setShowAlways then
-            -- Needs to be restored.
-            InterfaceOptionsNamesPanelUnitNameplatesShowAll:Click();
-        end
-    end
-
-    friendly_frame_resetter.cnt = 0;
-    friendly_frame_resetter:SetScript("OnUpdate", function(self, elapsed)
-            self.cnt = self.cnt + 1;
-            -- From experimentation, I conclude that the "NAME_PLATE_UNIT_ADDED"
-            -- event doesn't trigger unless the nameplate is shown at least 1 frame.
-            if (self.cnt > 300) then
-                self:DoUpdate();
-                Com.locked = false;
-                self:SetScript("OnUpdate", nil);
-            end
-        end);
 end
 
 function Com.CreateKillMessage(kill_info)
