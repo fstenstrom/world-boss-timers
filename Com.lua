@@ -5,7 +5,9 @@
 -- addonName, addonTable = ...;
 local _, WBT = ...;
 
-local Com = {};
+local Com = {
+    locked = false,
+};
 WBT.Com = Com;
 
 local KillInfo = nil; -- Will be set in 'Init'.
@@ -38,9 +40,19 @@ local friendly_frame_resetter = CreateFrame("frame");
 friendly_frame_resetter.since_update = 0;
 
 function Com.TriggerFriendlyNameplates()
-    local onoff = GetCVar("nameplateShowFriends");
+    if Com.locked then
+        return;
+    end
+    Com.locked = true;
+
+    local setShowAlways = InterfaceOptionsNamesPanelUnitNameplatesShowAll.value == "0";
+    if setShowAlways then
+        InterfaceOptionsNamesPanelUnitNameplatesShowAll:Click();
+    end
+
+    local restoreShowFriends = GetCVar("nameplateShowFriends");
     local reverse = nil;
-    if onoff == "0" then
+    if restoreShowFriends == "0" then
         reverse = "1";
     else
         reverse = "0";
@@ -48,7 +60,11 @@ function Com.TriggerFriendlyNameplates()
     SetCVar("nameplateShowFriends", reverse);
 
     function friendly_frame_resetter:DoUpdate()
-        SetCVar("nameplateShowFriends", onoff);
+        SetCVar("nameplateShowFriends", restoreShowFriends);
+        if setShowAlways then
+            -- Needs to be restored.
+            InterfaceOptionsNamesPanelUnitNameplatesShowAll:Click();
+        end
     end
 
     friendly_frame_resetter.cnt = 0;
@@ -56,8 +72,9 @@ function Com.TriggerFriendlyNameplates()
             self.cnt = self.cnt + 1;
             -- From experimentation, I conclude that the "NAME_PLATE_UNIT_ADDED"
             -- event doesn't trigger unless the nameplate is shown at least 1 frame.
-            if (self.cnt > 1) then
+            if (self.cnt > 300) then
                 self:DoUpdate();
+                Com.locked = false;
                 self:SetScript("OnUpdate", nil);
             end
         end);
