@@ -364,6 +364,12 @@ local function closeOnClick(this)
 end
 
 function GUI.ButtonCallback()
+    if UnitAffectingCombat("player") then
+        -- It's not allowed to change the status of the "show nameplates always"
+        -- option while in combat.
+        WBT:PrintError("You can't change mode while in combat");
+        return;
+    end
     local next_cb, next_text = GUI.btn_callback();
     GUI.btn_callback = next_cb;
     GUI.btn:SetText(next_text);

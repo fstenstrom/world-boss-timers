@@ -151,3 +151,8 @@ function Util.spairs(t, order)
         end
     end
 end
+
+-- Function content is copied from first entry at 'http://lua-users.org/wiki/StringTrim'
+function Util.strtrim(s)
+   return (s:gsub("^%s*(.-)%s*$", "%1"));
+end

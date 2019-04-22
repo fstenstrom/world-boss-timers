@@ -54,6 +54,16 @@ function WBT.DebugPrint(...)
     print("DEBUG:", Util.MessageFromVarargs(...));
 end
 
+function WBT:PrintError(...)
+    local text = "";
+    for n=1, select('#', ...) do
+      text = text .. " " .. select(n, ...);
+    end
+    text = Util.strtrim(text);
+    text = Util.ColoredString(Util.COLOR_RED, text);
+    WBT:Print(text);
+end
+
 function WBT.IsDead(guid, ignore_cyclic)
     local ki = g_kill_infos[guid];
     if ki and ki:IsValid() then
