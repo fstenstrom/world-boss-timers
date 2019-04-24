@@ -169,6 +169,15 @@ function WBT.GetSpawnTimeOutput(kill_info)
     return text;
 end
 
+local last_request_time = 0;
+function WBT.RequestKillData()
+    if GetServerTime() - last_request_time > 5 then
+        SendChatMessage(CHAT_MESSAGE_TIMER_REQUEST, "SAY");
+        last_request_time = GetServerTime();
+    end
+end
+local RequestKillData = WBT.RequestKillData;
+
 function WBT.GetColoredBossName(name)
     return BossData.Get(name).name_colored;
 end
@@ -207,17 +216,28 @@ local function UpdateCyclicStates()
     end
 end
 
-local function CreateAnnounceMessage(kill_info)
-    local spawn_time = kill_info:GetSpawnTimeAsText();
+local function CreateServerDeathTimeParseable(kill_info, send_data_for_parsing)
+    local t_death_parseable = "";
+    if send_data_for_parsing then
+        t_death_parseable = " (" .. SERVER_DEATH_TIME_PREFIX .. kill_info:GetServerDeathTime() .. ")";
+    end
 
-    local msg = ICON_SKULL .. kill_info.name .. ICON_SKULL .. ": " .. spawn_time;
+    return t_death_parseable;
+end
+
+local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
+    local spawn_time = kill_info:GetSpawnTimeAsText();
+    local t_death_parseable = CreateServerDeathTimeParseable(kill_info, send_data_for_parsing);
+
+    local msg = ICON_SKULL .. kill_info.name .. ICON_SKULL .. ": " .. spawn_time .. t_death_parseable;
 
     return msg;
 end
 
-function WBT.AnnounceSpawnTime(kill_info)
-    SendChatMessage(CreateAnnounceMessage(kill_info), CHANNEL_ANNOUNCE, nil, nil);
+function WBT.AnnounceSpawnTime(kill_info, send_data_for_parsing)
+    SendChatMessage(CreateAnnounceMessage(kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
 end
+local AnnounceSpawnTime = WBT.AnnounceSpawnTime;
 
 function WBT.SetKillInfo(name, t_death)
     t_death = tonumber(t_death);
@@ -355,6 +375,62 @@ local function StartVisibilityHandler()
     );
 end
 
+function WBT.AceAddon:InitChatParsing()
+
+    local function PlayerSentMessage(sender)
+        -- Since \b and alike doesnt exist: use "frontier pattern": %f[%A]
+        return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
+    end
+
+    local function InitRequestParsing()
+        local request_parser = CreateFrame("Frame");
+        local answered_requesters = {};
+        request_parser:RegisterEvent("CHAT_MSG_SAY");
+        request_parser:SetScript("OnEvent",
+            function(self, event, msg, sender)
+                if event == "CHAT_MSG_SAY" 
+                        and msg == CHAT_MESSAGE_TIMER_REQUEST
+                        and not Util.SetContainsKey(answered_requesters, sender)
+                        and not PlayerSentMessage(sender) then
+
+                    if WBT.InBossZone() then
+                        local kill_info = WBT.KillInfoInCurrentZoneAndShard();
+                        if kill_info and kill_info:IsCompletelySafe({}) then
+                            AnnounceSpawnTime(kill_info, true);
+                            answered_requesters[sender] = sender;
+                        end
+                    end
+                end
+            end
+        );
+    end
+
+    local function InitSharedTimersParsing()
+        local timer_parser = CreateFrame("Frame");
+        timer_parser:RegisterEvent("CHAT_MSG_SAY");
+        timer_parser:SetScript("OnEvent",
+            function(self, event, msg, sender)
+                if event == "CHAT_MSG_SAY" then
+                    if PlayerSentMessage(sender) then
+                        return;
+                    elseif string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
+                        local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
+                        local guid = KillInfo.CreateGUID(name);
+                        local ignore_cyclic = true;
+                        if WBT.IsBoss(name) and not IsDead(guid, ignore_cyclic) then
+                            WBT.SetKillInfo(name, t_death);
+                            WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
+                        end
+                    end
+                end
+            end
+        );
+    end
+
+    InitRequestParsing();
+    InitSharedTimersParsing();
+end
+
 local function LoadSerializedKillInfos()
     for name, serialized in pairs(WBT.db.global.kill_infos) do
         g_kill_infos[name] = KillInfo:Deserialize(serialized);
@@ -416,7 +492,7 @@ local function InitKillInfoManager()
                             -- Do nothing.
                         else
                             if kill_info:ShouldAnnounce() then
-                                WBT.AnnounceSpawnTime(kill_info);
+                                AnnounceSpawnTime(kill_info, Config.send_data.get());
                             end
 
                             if kill_info:RespawnTriggered(Config.spawn_alert_sec_before.get()) then
@@ -475,6 +551,8 @@ function WBT.AceAddon:OnEnable()
 
     self:RegisterChatCommand("wbt", Config.SlashHandler);
     self:RegisterChatCommand("worldbosstimers", Config.SlashHandler);
+
+    self:InitChatParsing();
 
     RegisterEvents(); -- TODO: Update when this and unreg is called!
     -- UnregisterEvents();

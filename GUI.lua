@@ -363,18 +363,6 @@ local function closeOnClick(this)
     WBT.db.global.hide_gui = true;
 end
 
-function GUI.ButtonCallback()
-    if UnitAffectingCombat("player") then
-        -- It's not allowed to change the status of the "show nameplates always"
-        -- option while in combat.
-        WBT:PrintError("You can't change mode while in combat");
-        return;
-    end
-    local next_cb, next_text = GUI.btn_callback();
-    GUI.btn_callback = next_cb;
-    GUI.btn:SetText(next_text);
-end
-
 function GUI:New()
     if self.gui_container then
         self.gui_container:Release();
@@ -391,9 +379,8 @@ function GUI:New()
     self.btn = GUI.AceGUI:Create("Button");
     self.btn:SetWidth(self.width * BTN_REQ_SCALE);
     local btn_text = nil;
-    self.btn_callback, btn_text = Com.ActiveRequestMethod();
-    self.btn:SetCallback("OnClick", GUI.ButtonCallback);
-    self.btn:SetText(btn_text);
+    self.btn:SetText("Request kill data");
+    self.btn:SetCallback("OnClick", WBT.RequestKillData);
 
     self.btn_opts = GUI.AceGUI:Create("Button");
     self.btn_opts:SetText("/wbt");

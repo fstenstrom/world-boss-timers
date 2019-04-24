@@ -165,6 +165,7 @@ local spawn_alert_sound_kv_table = {
 };
 
 local DEFAULT_SPAWN_ALERT_OFFSET = 5;
+Config.send_data = ToggleItem:New("send_data", "Data sending in auto announce is now");
 Config.auto_announce = ToggleItem:New("auto_announce", "Automatic announcements are now");
 Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
 Config.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
@@ -252,13 +253,15 @@ function Config.SlashHandler(input)
 
         local error_msgs = {};
         if ki:IsCompletelySafe(error_msgs) then
-            WBT.AnnounceSpawnTime(ki);
+            WBT.AnnounceSpawnTime(ki, Config.send_data.get());
         else
             WBT:Print(Util.ColoredString(Util.COLOR_RED, "WARNING") .. ": Timer might be incorrect. Not announcing.", "SAY", nil, nil);
             for i, v in ipairs(error_msgs) do
                 WBT:Print(Util.ColoredString(Util.COLOR_RED, i) .. ": " .. v, "SAY", nil, nil);
             end
         end
+    elseif arg1 == "send" then
+        Config.send_data:Toggle();
     elseif arg1 == "ann" then
         Config.auto_announce:Toggle();
     elseif arg1 == "r"
@@ -269,6 +272,8 @@ function Config.SlashHandler(input)
             or arg1 == "saved"
             or arg1 == "save" then
         WBT.PrintKilledBosses();
+    elseif arg1 == "request" then
+        WBT.RequestKillData();
     elseif arg1 == "sound" then
         sound_type_args = {Config.SOUND_CLASSIC, Config.SOUND_FANCY};
         if Util.SetContainsValue(sound_type_args, arg2) then
@@ -365,6 +370,15 @@ Config.optionsTable = {
         width = "full",
         set = function(info, val) Config.cyclic:Toggle(); end,
         get = function(info) return Config.cyclic.get(); end,
+    },
+    auto_send_data = {
+        name = "Send timer info in auto announcements",
+        order = t_cnt:plusplus(),
+        desc = desc_toggle,
+        type = "toggle",
+        width = "full",
+        set = function(info, val) Config.send_data:Toggle(); end,
+        get = function(info) return Config.send_data.get() end,
     },
     auto_announce = {
         name = "Announce",
