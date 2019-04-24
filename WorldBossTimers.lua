@@ -524,6 +524,12 @@ function WBT.AceAddon:OnEnable()
     LibStub("AceComm-3.0"):Embed(Com);
 
     Com:Init(); -- Must init after db.
+    if Com.ShouldRevertRequestMode() then
+        Com.LeaveRequestMode();
+    end
+
+    -- Note that Com is currently not used, since it only works for
+    -- connected realms...
     Com:RegisterComm(Com.PREF_SR, Com.OnCommReceivedSR);
     Com:RegisterComm(Com.PREF_RR, Com.OnCommReceivedRR);
 

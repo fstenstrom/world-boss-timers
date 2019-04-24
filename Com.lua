@@ -108,6 +108,13 @@ function Com.ActiveRequestMethod()
     end
 end
 
+-- Since "RequestMode" is disabled, characters that were in Request mode
+-- when they logged out during addon update (to no longer support this mode)
+-- should be reverted.
+function Com.ShouldRevertRequestMode()
+    return WBT.db.char.restore_nameplates_show_always ~= nil;
+end
+
 function Com.CreateKillMessage(kill_info)
     return kill_info.name .. Com.DELIM2 .. tostring(kill_info:GetServerDeathTime());
 end
