@@ -9,7 +9,20 @@ local NameplateTracker = {};
 WBT.NameplateTracker = NameplateTracker;
 
 local tracker = CreateFrame("Frame");
+local COOLDOWN_OUTPUT = 120; -- Cooldown in seconds before outputting again (text/sound)
+
+tracker.no_output_until = 0; -- Server time, 0 guarantees that it will always output the first time after Addon is loaded
 local function TrackerCb(self, event, unit)
+    if GetServerTime() < self.no_output_until then
+        return;
+    end
+    self.no_output_until = GetServerTime() + COOLDOWN_OUTPUT;
+
+    local unit = unit; -- Provided if (event == NAME_PLATE_UNIT_ADDED)
+    if (event == "UPDATE_MOUSEOVER_UNIT") then
+        unit = "mouseover";
+    end
+
     local guid = UnitGUID(unit);
     local name = WBT.BossData.NameFromNpcGuid(guid, WBT.GetCurrentMapId());
     if name == nil then
@@ -22,10 +35,12 @@ local function TrackerCb(self, event, unit)
                     sound_tbl.keys.option, WBT.Config.spawn_alert_sound:get()
             )[sound_tbl.keys.file_id]
     );
+    FlashClientIcon();
     WBT:Print("Boss found: " .. WBT.GetColoredBossName(name));
 end
 
 --@do-not-package@
 tracker:SetScript("OnEvent", TrackerCb);
 tracker:RegisterEvent("NAME_PLATE_UNIT_ADDED");
+tracker:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
 --@end-do-not-package@
