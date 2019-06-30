@@ -6,11 +6,7 @@ WBT.Config = Config;
 local GUI = WBT.GUI;
 local Util = WBT.Util;
 local BossData = WBT.BossData;
-
-Config.SOUND_CLASSIC = "classic";
-Config.SOUND_FANCY = "fancy";
-
-local SOUND_KEY_BATTLE_BEGINS = "battle-begins";
+local Sound = WBT.Sound;
 
 local CYCLIC_HELP_TEXT = "This mode will repeat the boss timers if you miss the kill. A timer in " ..
         Util.ColoredString(Util.COLOR_RED, "red text") ..
@@ -82,26 +78,10 @@ end
 
 local SelectItem = {};
 
--- This function creates tables needed for looking up values for the selection.
--- kv_table: is a table on the form: kv_table = { { k = "selection string to display", v = "<some value" }, ... }
--- The problem is that "select" stores the value of the "key" as a key for the value which should be shown from
--- field "values". So when I want to get the real value, I need a separate table that uses the same key (but with
--- a different value). I could just use the index for this, but that's hard to debug. So I'm creating two tables.
--- kk: key2key, which is used during look up for string to show in select box
--- kv: key2value, which contains the value which is actually used by the backend
-function SelectItem:CreateTablesForSelectionLookup(kv_table)
-    self.kk = {};
-    self.kv = {};
-    for i, e in ipairs(kv_table) do
-        self.kk[e.k] = e.k;
-        self.kv[e.k] = e.v;
-    end
-end
-
 function SelectItem:OverrideGetter(default_key)
-    local default_getter = self.get;
+    local default_getter_fptr = self.get;
     self.get = function()
-        local key = default_getter();
+        local key = default_getter_fptr();
         if key == nil then
             return default_key;
         end
@@ -109,13 +89,16 @@ function SelectItem:OverrideGetter(default_key)
     end
 end
 
-function SelectItem:New(var_name, status_msg, kv_table, default_key)
+function SelectItem:New(var_name, status_msg, mkt, mkt_options_key, mkt_values_key, default_key)
     local si = ConfigItem:New(var_name, status_msg);
+    si.mkt = mkt; -- MultiKeyTable
+    si.mkt_options_key = mkt_options_key;
+    si.mkt_values_key = mkt_values_key;
+    si.options = si.mkt:GetAllSubVals(si.mkt_options_key);
 
     setmetatable(si, self);
     self.__index = self;
 
-    si:CreateTablesForSelectionLookup(kv_table);
     si:OverrideGetter(default_key);
 
     return si;
@@ -126,7 +109,8 @@ function SelectItem:Key()
 end
 
 function SelectItem:Value()
-    return self.kv[self:Key()];
+    local subtbl = self.mkt:GetSubtbl(self.mkt_options_key, self:Key());
+    return subtbl[self.mkt_values_key];
 end
 
 local RangeItem = {};
@@ -153,17 +137,6 @@ function RangeItem:New(var_name, status_msg, default_val)
     return si;
 end
 
-local spawn_alert_sound_kv_table = {
-    { k = "DISABLED",                     v = nil                                                  },
-    { k = "you-are-not-prepared",         v = "sound/creature/illidan/black_illidan_04.ogg"        },
-    { k = "prepare-yourselves",           v = "sound/creature/EadricThePure/AC_Eadric_Aggro01.ogg" },
-    { k = "alliance-bell",                v = "sound/doodad/belltollalliance.ogg"                  },
-    { k = "alarm-clock",                  v = "sound/interface/alarmclockwarning2.ogg"             },
-    { k = SOUND_KEY_BATTLE_BEGINS,        v = "sound/interface/ui_warfronts_battlebegin_horde.ogg" },
-    { k = "pvp-warning",                  v = "sound/interface/pvpwarningalliancemono.ogg"         },
-    { k = "drum-hit",                     v = "sound/doodad/fx_alarm_drum_hit_04.ogg"              },
-};
-
 local DEFAULT_SPAWN_ALERT_OFFSET = 5;
 Config.send_data = ToggleItem:New("send_data", "Data sending in auto announce is now");
 Config.auto_announce = ToggleItem:New("auto_announce", "Automatic announcements are now");
@@ -173,7 +146,7 @@ Config.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GU
 Config.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
 Config.highlight = ToggleItem:New("highlight", "Highlighting of current zone is now");
 Config.show_saved = ToggleItem:New("show_saved", "Showing if saved on boss (on timer) is now");
-Config.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", spawn_alert_sound_kv_table, SOUND_KEY_BATTLE_BEGINS);
+Config.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", Sound.sound_tbl.tbl, Sound.sound_tbl.keys.option, Sound.sound_tbl.keys.file_id, Sound.SOUND_KEY_BATTLE_BEGINS);
 Config.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Config.cyclic.set;
@@ -275,7 +248,7 @@ function Config.SlashHandler(input)
     elseif arg1 == "request" then
         WBT.RequestKillData();
     elseif arg1 == "sound" then
-        sound_type_args = {Config.SOUND_CLASSIC, Config.SOUND_FANCY};
+        sound_type_args = {Sound.SOUND_CLASSIC, Sound.SOUND_FANCY};
         if Util.SetContainsValue(sound_type_args, arg2) then
             WBT.db.global.sound_type = arg2;
             WBT:Print("SoundType: " .. arg2);
@@ -427,7 +400,7 @@ Config.optionsTable = {
         type = "select",
         style = "dropdown",
         width = "normal",
-        values = Config.spawn_alert_sound.kk,
+        values = Config.spawn_alert_sound.options,
         set = function(info, val) Config.spawn_alert_sound.set(val); end,
         get = function(info) return Config.spawn_alert_sound.get(); end,
     },

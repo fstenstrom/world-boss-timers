@@ -16,6 +16,7 @@ local BossData = WBT.BossData;
 local GUI = WBT.GUI;
 local Config = WBT.Config;
 local Com = WBT.Com;
+local Sound = WBT.Sound;
 
 
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
@@ -37,7 +38,7 @@ local defaults = {
     global = {
         kill_infos = {},
         sound_enabled = true,
-        sound_type = Config.SOUND_CLASSIC,
+        sound_type = WBT.Sound.SOUND_CLASSIC,
         auto_announce = true,
         send_data = true,
         cyclic = false,
@@ -285,8 +286,8 @@ local function PlaySoundAlertBossCombat(name)
     local sound_type = WBT.db.global.sound_type;
 
     local soundfile = BossData.Get(name).soundfile;
-    if sound_type:lower() == Config.SOUND_CLASSIC:lower() then
-        soundfile = BossData.SOUND_FILE_DEFAULT;
+    if sound_type:lower() == Sound.SOUND_CLASSIC:lower() then
+        soundfile = Sound.SOUND_FILE_DEFAULT;
     end
 
     Util.PlaySoundAlert(soundfile);

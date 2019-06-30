@@ -6,12 +6,10 @@
 local _, WBT = ...;
 
 local Util = WBT.Util;
+local Sound = WBT.Sound;
 
 local BossData = {};
 WBT.BossData = BossData;
-
-local SOUND_CLASSIC = "CLASSIC"
-local SOUND_FANCY = "FANCY";
 
 local function MinToSec(min)
     return min * 60;
@@ -29,8 +27,6 @@ local MIN_RESPAWN_ZANDALARI_WARBRINGER = MinToSec(30);
 local MAX_RESPAWN_ZANDALARI_WARBRINGER = MinToSec(60);
 
 local SOUND_DIR = "Interface/AddOns/WorldBossTimers/resources/sound/";
-
-BossData.SOUND_FILE_DEFAULT = "Sound/Event Sounds/Event_wardrum_ogre.ogg";
 
 local tracked_bosses = {
     ["Oondasta"] = {
@@ -63,7 +59,7 @@ local tracked_bosses = {
         map_id = 376,
         ids = {62346},
         id_wb = 2,
-        soundfile = SOUND_FILE_DEFAULT,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
         min_respawn = MAX_RESPAWN,
         max_respawn = MAX_RESPAWN,
         random_spawn_time = false,
@@ -75,7 +71,7 @@ local tracked_bosses = {
         map_id = 504,
         ids = {69099},
         id_wb = 3,
-        soundfile = SOUND_FILE_DEFAULT,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_NALAK,
         max_respawn = MAX_RESPAWN_NALAK,
         random_spawn_time = true,
@@ -87,7 +83,7 @@ local tracked_bosses = {
         map_id = 379,
         ids = {60491},
         id_wb = 1,
-        soundfile = SOUND_FILE_DEFAULT,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_SHA,
         max_respawn = MAX_RESPAWN_SHA,
         random_spawn_time = true,
@@ -99,7 +95,7 @@ local tracked_bosses = {
         map_id = 554,
         ids = {73167},
         id_wb = -1,
-        soundfile = SOUND_FILE_DEFAULT,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_HUOLON,
         max_respawn = MAX_RESPAWN_HUOLON,
         random_spawn_time = true,
@@ -173,7 +169,7 @@ local function ZandalariWarbringerFromTemplate(zone, map_id, color)
         map_id = map_id,
         ids = {69769, 69842, 69841},
         id_wb = -1,
-        soundfile = SOUND_FILE_DEFAULT,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
         min_respawn = MIN_RESPAWN_ZANDALARI_WARBRINGER,
         max_respawn = MAX_RESPAWN_ZANDALARI_WARBRINGER,
         random_spawn_time = true,

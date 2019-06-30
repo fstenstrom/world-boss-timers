@@ -156,3 +156,58 @@ end
 function Util.strtrim(s)
    return (s:gsub("^%s*(.-)%s*$", "%1"));
 end
+
+--[[
+    Table with the following structure: unnamed entries, where each entry is a table.
+    This table's key-value relation must be unique in respect to all other entries
+    in the MultiKeyTable. Ex:
+    local t = {
+        { k = 1, v = 2 },
+        { k = 2, v = 3 },
+        { k = 1, v = 4 }, -- Invalid, because 'k = 1' is already used,
+    };
+]]--
+Util.MultiKeyTable = {};
+
+function Util.MultiKeyTable:New(tbl)
+    local obj = {};
+    obj.tbl = tbl;
+
+    setmetatable(obj, self);
+    self.__index = self;
+
+    return obj;
+end
+
+--[[
+    Returns the subtable for which 'k = v' is true.
+]]--
+function Util.MultiKeyTable:GetSubtbl(k, v)
+    for _, subtbl in ipairs(self.tbl) do
+        for k_subtbl, v_subtbl in pairs(subtbl) do
+            if k_subtbl == k and v_subtbl == v then
+                return subtbl;
+            end
+        end
+    end
+
+    return nil;
+end
+
+
+--[[
+    Returns the values for each subtable with a key 'k' as a named table.
+    The table's key and value are the same. For example: ret_val[x] = x
+]]--
+function Util.MultiKeyTable:GetAllSubVals(k)
+    local subvals = {};
+    for _, subtbl in ipairs(self.tbl) do
+        local val = subtbl[k];
+        if val then
+            subvals[val] = val;
+        end
+    end
+
+    return subvals;
+end
+
