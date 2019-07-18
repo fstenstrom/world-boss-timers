@@ -272,13 +272,13 @@ function GUI:UpdateContent()
 end
 
 function GUI:Update()
-    self:LockOrUnlock();
     self:UpdateGUIVisibility();
 
     if not(self.visible) then
         return;
     end
 
+    self:LockOrUnlock();
     self:UpdateContent();
 end
 
