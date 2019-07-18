@@ -236,7 +236,7 @@ local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
 end
 
 function WBT.AnnounceSpawnTime(kill_info, send_data_for_parsing)
-    SendChatMessage(CreateAnnounceMessage(kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, nil, nil);
+    SendChatMessage(CreateAnnounceMessage(kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, DEFAULT_CHAT_FRAME.editBox.languageID, nil);
 end
 local AnnounceSpawnTime = WBT.AnnounceSpawnTime;
 
