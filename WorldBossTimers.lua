@@ -273,6 +273,7 @@ local function InitDeathTrackerFrame()
 
             if eventType == "UNIT_DIED" then
                 WBT.SetKillInfo(name, GetServerTime());
+                RequestRaidInfo(); -- Updates which bosses are saved
                 gui:Update();
             end
         end);
