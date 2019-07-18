@@ -138,6 +138,7 @@ function RangeItem:New(var_name, status_msg, default_val)
 end
 
 local DEFAULT_SPAWN_ALERT_OFFSET = 5;
+Config.lock = ToggleItem:New("lock", "GUI lock is now");
 Config.send_data = ToggleItem:New("send_data", "Data sending in auto announce is now");
 Config.auto_announce = ToggleItem:New("auto_announce", "Automatic announcements are now");
 Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
@@ -175,6 +176,7 @@ local function PrintHelp()
     WBT:Print("/wbt cyclic --> Toggle cyclic timers");
     WBT:Print("/wbt multi --> Toggle multi-realm/warmode timers");
     WBT:Print("/wbt zone --> Toggle show GUI in boss zones only");
+    WBT:Print("/wbt lock --> Toggle locking of GUI");
 end
 
 local function ShowGUI(show)
@@ -264,6 +266,9 @@ function Config.SlashHandler(input)
     elseif arg1 == "zone" then
         Config.show_boss_zone_only:Toggle();
         WBT.GUI:Update();
+    elseif arg1 == "lock" then
+        Config.lock:Toggle();
+        WBT.GUI:Update();
     elseif arg1 == "gui-reset" then
         WBT.GUI:ResetPosition();
     else
@@ -304,6 +309,15 @@ Config.optionsTable = {
         type = "description",
         fontSize = "medium",
         width = "full",
+    },
+    lock = {
+        name = "Lock GUI",
+        order = t_cnt:plusplus(),
+        desc = "Toggle if the GUI should be locked or movable",
+        type = "toggle",
+        width = "full",
+        set = function(info, val) Config.lock:Toggle(); end,
+        get = function(info) return Config.lock.get() end,
     },
     show = {
         name = "Show GUI",

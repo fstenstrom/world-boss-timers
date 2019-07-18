@@ -37,6 +37,7 @@ local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill 
 local defaults = {
     global = {
         kill_infos = {},
+        lock = false,
         sound_enabled = true,
         sound_type = WBT.Sound.SOUND_CLASSIC,
         auto_announce = true,

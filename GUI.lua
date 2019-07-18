@@ -122,6 +122,10 @@ function GUI:UpdateGUIVisibility()
     end
 end
 
+function GUI:LockOrUnlock()
+    self.window.frame:SetMovable(not Config.lock.get());
+end
+
 -- Ensure that right clicking outside of the window
 -- does not trigger the interactive label, or hide
 -- other GUI components.
@@ -268,6 +272,7 @@ function GUI:UpdateContent()
 end
 
 function GUI:Update()
+    self:LockOrUnlock();
     self:UpdateGUIVisibility();
 
     if not(self.visible) then
