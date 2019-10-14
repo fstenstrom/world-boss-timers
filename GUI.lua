@@ -24,7 +24,8 @@ local MAX_ENTRIES_DEFAULT = 7;
 local WIDTH_EXTENDED = 240;
 
 local BTN_OPTS_SCALE = 1 / 3;
-local BTN_REQ_SCALE = 1 - BTN_OPTS_SCALE;
+local BTN_REQ_SCALE = 1 / 3;
+local BTN_SHARE_SCALE = 1 / 3;
 
 
 --------------------------------------------------------------------------------
@@ -167,7 +168,7 @@ function GUI:UpdateWidth()
     end
 
     self.window:SetWidth(new_width);
-    self.btn:SetWidth(new_width * BTN_REQ_SCALE);
+    self.btn_req:SetWidth(new_width * BTN_REQ_SCALE);
     self.btn_opts:SetWidth(new_width * BTN_OPTS_SCALE);
     for _, label in pairs(self.labels) do
         label:SetWidth(GUI.LabelWidth(new_width));
@@ -381,16 +382,20 @@ function GUI:New()
     self.window.closebutton:SetScript("OnClick", closeOnClick);
     WBT.G_window = self.window;
 
-    self.btn = GUI.AceGUI:Create("Button");
-    self.btn:SetWidth(self.width * BTN_REQ_SCALE);
-    local btn_text = nil;
-    self.btn:SetText("Request kill data");
-    self.btn:SetCallback("OnClick", WBT.RequestKillData);
+    self.btn_req = GUI.AceGUI:Create("Button");
+    self.btn_req:SetWidth(self.width * BTN_REQ_SCALE);
+    self.btn_req:SetText("Req.");
+    self.btn_req:SetCallback("OnClick", WBT.RequestKillData);
 
     self.btn_opts = GUI.AceGUI:Create("Button");
     self.btn_opts:SetText("/wbt");
     self.btn_opts:SetWidth(self.width * BTN_OPTS_SCALE);
     self.btn_opts:SetCallback("OnClick", function() WBT.AceConfigDialog:Open(WBT.addon_name); end);
+
+    self.btn_share = GUI.AceGUI:Create("Button");
+    self.btn_share:SetWidth(self.width * BTN_SHARE_SCALE);
+    self.btn_share:SetText("Share");
+    self.btn_share:SetCallback("OnClick", WBT.GetSafeSpawnAnnouncerWithCooldown());
 
     self.gui_container = GUI.AceGUI:Create("SimpleGroup");
     self.gui_container.frame:SetFrameStrata("LOW");
@@ -398,7 +403,8 @@ function GUI:New()
     self.btn_container = GUI.AceGUI:Create("SimpleGroup");
     self.btn_container:SetLayout("flow");
     self.btn_container:AddChild(self.btn_opts);
-    self.btn_container:AddChild(self.btn);
+    self.btn_container:AddChild(self.btn_req);
+    self.btn_container:AddChild(self.btn_share);
     self.gui_container:AddChild(self.btn_container);
 
     -- I didn't notice any "OnClose" for the gui_container

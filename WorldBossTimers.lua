@@ -239,7 +239,28 @@ end
 function WBT.AnnounceSpawnTime(kill_info, send_data_for_parsing)
     SendChatMessage(CreateAnnounceMessage(kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, DEFAULT_CHAT_FRAME.editBox.languageID, nil);
 end
-local AnnounceSpawnTime = WBT.AnnounceSpawnTime;
+
+-- Callback for GUI share button
+function WBT.GetSafeSpawnAnnouncerWithCooldown()
+
+    -- Create closure that uses t_last_announce as a persistent/static variable
+    local t_last_announce = 0;
+    function AnnounceSpawnTimeIfSafe()
+        local kill_info = WBT.KillInfoInCurrentZoneAndShard();
+
+        local announced = false;
+        local t_now = GetServerTime();
+        if kill_info and kill_info:IsCompletelySafe({}) and (t_last_announce + 1) <= t_now then
+            WBT.AnnounceSpawnTime(kill_info, true);
+            t_last_announce = t_now;
+            announced = true;
+        end
+
+        return announced;
+    end
+
+    return AnnounceSpawnTimeIfSafe;
+end
 
 function WBT.SetKillInfo(name, t_death)
     t_death = tonumber(t_death);
@@ -399,7 +420,9 @@ function WBT.AceAddon:InitChatParsing()
                     if WBT.InBossZone() then
                         local kill_info = WBT.KillInfoInCurrentZoneAndShard();
                         if kill_info and kill_info:IsCompletelySafe({}) then
-                            AnnounceSpawnTime(kill_info, true);
+                            -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken by 8.2.5
+                            -- TODO: Consider if this could trigger some optional sparkle
+                            -- in the GUI instead
                             answered_requesters[sender] = sender;
                         end
                     end
@@ -495,7 +518,8 @@ local function InitKillInfoManager()
                             -- Do nothing.
                         else
                             if kill_info:ShouldAnnounce() then
-                                AnnounceSpawnTime(kill_info, Config.send_data.get());
+                                -- WBT.AnnounceSpawnTime(kill_info, Config.send_data.get()); DISABLED: broken in 8.2.5
+                                -- TODO: Consider if here should be something else
                             end
 
                             if kill_info:RespawnTriggered(Config.spawn_alert_sec_before.get()) then
