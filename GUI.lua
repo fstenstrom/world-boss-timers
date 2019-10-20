@@ -402,6 +402,7 @@ function GUI:New()
     self.gui_container:AddChild(self.window);
     self.btn_container = GUI.AceGUI:Create("SimpleGroup");
     self.btn_container:SetLayout("flow");
+    self.btn_container:SetWidth(self.width);
     self.btn_container:AddChild(self.btn_opts);
     self.btn_container:AddChild(self.btn_req);
     self.btn_container:AddChild(self.btn_share);
