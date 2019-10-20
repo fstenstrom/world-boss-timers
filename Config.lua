@@ -139,8 +139,6 @@ end
 
 local DEFAULT_SPAWN_ALERT_OFFSET = 5;
 Config.lock = ToggleItem:New("lock", "GUI lock is now");
-Config.send_data = ToggleItem:New("send_data", "Data sending in auto announce is now");
-Config.auto_announce = ToggleItem:New("auto_announce", "Automatic announcements are now");
 Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
 Config.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
 Config.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
@@ -165,7 +163,7 @@ local function PrintHelp()
     WBT:Print("/wbt reset --> Reset all kill info");
     WBT:Print("/wbt gui-reset --> Reset the position of the GUI");
     WBT:Print("/wbt saved --> Print your saved bosses");
-    WBT:Print("/wbt say --> Announce timers for boss in zone");
+    WBT:Print("/wbt share --> Announce timers for boss in zone");
     WBT:Print("/wbt show --> Show the timers frame");
     WBT:Print("/wbt hide --> Hide the timers frame");
     WBT:Print("/wbt send --> Toggle send timer data in auto announce");
@@ -202,8 +200,8 @@ function Config.SlashHandler(input)
         ShowGUI(false);
     elseif arg1 == "show" then
         ShowGUI(true);
-    elseif arg1 == "say"
-            or arg1 == "share"
+    elseif arg1 == "share"
+            or arg1 == "say"
             or arg1 == "a"
             or arg1 == "announce"
             or arg1 == "yell"
@@ -228,17 +226,13 @@ function Config.SlashHandler(input)
 
         local error_msgs = {};
         if ki:IsCompletelySafe(error_msgs) then
-            WBT.AnnounceSpawnTime(ki, Config.send_data.get());
+            WBT.AnnounceSpawnTime(ki, true);
         else
             WBT:Print(Util.ColoredString(Util.COLOR_RED, "WARNING") .. ": Timer might be incorrect. Not announcing.", "SAY", nil, nil);
             for i, v in ipairs(error_msgs) do
                 WBT:Print(Util.ColoredString(Util.COLOR_RED, i) .. ": " .. v, "SAY", nil, nil);
             end
         end
-    elseif arg1 == "send" then
-        Config.send_data:Toggle();
-    elseif arg1 == "ann" then
-        Config.auto_announce:Toggle();
     elseif arg1 == "r"
             or arg1 == "reset"
             or arg1 == "restart" then
@@ -299,12 +293,13 @@ Config.optionsTable = {
     },
     sharing_explanation_body = {
         name = -- Hint_1
-                "- Press the '" .. Util.ColoredString(Util.COLOR_ORANGE, "Request kill data") ..
-                "' button to request timers from other nearby " ..  Util.ColoredString(Util.COLOR_ORANGE, "WBT") ..
-                " users\n" ..
+                "- Press the " .. Util.ColoredString(Util.COLOR_ORANGE, "Req.") ..
+                " button to request timers from other nearby " ..  Util.ColoredString(Util.COLOR_ORANGE, "WBT") ..
+                " users. Since 8.2.5 this no longer causes automatic sharing. The other player must manually " ..
+                " share the timer by using the " .. Util.ColoredString(Util.COLOR_ORANGE, "Share") .. " button.\n" ..
                 -- Hint_2
                 "- Click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") ..
-                " to reset that (and only that) timer",
+                " to reset that (and only that) timer.",
         order = t_cnt:plusplus(),
         type = "description",
         fontSize = "medium",
@@ -354,24 +349,6 @@ Config.optionsTable = {
         width = "full",
         set = function(info, val) Config.cyclic:Toggle(); end,
         get = function(info) return Config.cyclic.get(); end,
-    },
-    auto_send_data = {
-        name = "Send timer info in auto announcements",
-        order = t_cnt:plusplus(),
-        desc = desc_toggle,
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Config.send_data:Toggle(); end,
-        get = function(info) return Config.send_data.get() end,
-    },
-    auto_announce = {
-        name = "Announce",
-        order = t_cnt:plusplus(),
-        desc = "Automatically announce spawn timers on certain time intervals",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Config.auto_announce:Toggle(); end,
-        get = function(info) return Config.auto_announce.get() end,
     },
     multi_realm = {
         name = "Multi-realm + Warmode",

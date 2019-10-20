@@ -40,8 +40,6 @@ local defaults = {
         lock = false,
         sound_enabled = true,
         sound_type = WBT.Sound.SOUND_CLASSIC,
-        auto_announce = true,
-        send_data = true,
         cyclic = false,
         hide_gui = false,
         multi_realm = false,
@@ -518,7 +516,7 @@ local function InitKillInfoManager()
                             -- Do nothing.
                         else
                             if kill_info:ShouldAnnounce() then
-                                -- WBT.AnnounceSpawnTime(kill_info, Config.send_data.get()); DISABLED: broken in 8.2.5
+                                -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken in 8.2.5
                                 -- TODO: Consider if here should be something else
                             end
 
