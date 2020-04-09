@@ -181,7 +181,7 @@ function GUI:GetLabelText(kill_info, all_info)
     local prefix = "";
     if all_info then
         prefix = Util.ColoredString(Util.COLOR_DARKGREEN, strsub(kill_info.realmName, 0, 3)) .. ":"
-                .. Util.ColoredString(Util.WarmodeColor(kill_info.realm_type), strsub(kill_info.realm_type, 0, 3)) .. ":";
+                .. Util.ColoredString(Util.WarmodeColor(kill_info.realm_type), strsub(kill_info.realm_type, 0, 1)) .. ":";
     end
     return prefix .. WBT.GetColoredBossName(kill_info.name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
 end
