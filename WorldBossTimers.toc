@@ -1,4 +1,4 @@
-## Interface: 80205
+## Interface: 80300
 ## Title: WorldBossTimers
 ## Notes: Creates a timer for world boss kills
 ## Author: Soulstorm
@@ -16,4 +16,3 @@ GUI.lua
 Config.lua
 KillInfo.lua
 WorldBossTimers.lua
-
