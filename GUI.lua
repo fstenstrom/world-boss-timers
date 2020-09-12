@@ -416,6 +416,13 @@ function GUI:New()
     self.window:SetCallback("OnClose", function()
         self:CleanUpWidgetsAndRelease();
     end);
+	
+    self.window.title:SetScript("OnMouseDown", function(this)
+        if self.window.frame:IsMovable() then
+            this:GetParent():StartMoving();
+        end
+        GUI.AceGUI:ClearFocus();
+    end);
 
     self:CreateLabels();
     self:InitPosition();
