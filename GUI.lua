@@ -8,7 +8,7 @@ local _, WBT = ...;
 local Util = WBT.Util;
 local BossData = WBT.BossData;
 local Com = WBT.Com;
-local Config = {}; -- Must be initialized later.
+local Options = {}; -- Must be initialized later.
 
 -- Provides the GUI API and performs checks if the GUI is shown etc.
 local GUI = {};
@@ -55,7 +55,7 @@ end
 
 
 function GUI:Init()
-    Config = WBT.Config;
+    Options = WBT.Options;
 end
 
 function GUI:CreateLabels()
@@ -67,7 +67,7 @@ function GUI:Restart()
 end
 
 local function ShowBossZoneOnlyAndOutsideZone()
-    return Config.show_boss_zone_only.get() and not WBT.InBossZone();
+    return Options.show_boss_zone_only.get() and not WBT.InBossZone();
 end
 
 function GUI:ShouldShow()
@@ -124,7 +124,7 @@ function GUI:UpdateGUIVisibility()
 end
 
 function GUI:LockOrUnlock()
-    self.window.frame:SetMovable(not Config.lock.get());
+    self.window.frame:SetMovable(not Options.lock.get());
 end
 
 -- Ensure that right clicking outside of the window
@@ -162,7 +162,7 @@ function GUI:UpdateHeight(n_entries)
 end
 
 function GUI:UpdateWidth()
-    local new_width = Config.multi_realm.get() and WIDTH_EXTENDED or WIDTH_DEFAULT;
+    local new_width = Options.multi_realm.get() and WIDTH_EXTENDED or WIDTH_DEFAULT;
     if self.width == new_width then
         return;
     end
@@ -245,10 +245,10 @@ function GUI:UpdateContent()
         if getmetatable(kill_info) ~= WBT.KillInfo then
             -- Do nothing.
         elseif WBT.IsDead(guid)
-                and (not(kill_info.cyclic) or Config.cyclic.get())
-                and (WBT.ThisServerAndWarmode(kill_info) or Config.multi_realm.get()) then
+                and (not(kill_info.cyclic) or Options.cyclic.get())
+                and (WBT.ThisServerAndWarmode(kill_info) or Options.multi_realm.get()) then
             n_shown_labels = n_shown_labels + 1;
-            label:SetText(self:GetLabelText(kill_info, Config.multi_realm.get()));
+            label:SetText(self:GetLabelText(kill_info, Options.multi_realm.get()));
 
             if not label.userdata.added then
                 self.window:AddChild(label);

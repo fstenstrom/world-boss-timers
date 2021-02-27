@@ -11,7 +11,7 @@
 local _, WBT = ...;
 
 local Util = WBT.Util;
-local Config = WBT.Config;
+local Options = WBT.Options;
 
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
@@ -240,7 +240,7 @@ function KillInfo:IsDead(ignore_cyclic)
         return false;
     end
     if self.cyclic then
-        if ignore_cyclic or not Config.cyclic.get() then
+        if ignore_cyclic or not Options.cyclic.get() then
             return false;
         end
         return true;
@@ -258,7 +258,7 @@ function KillInfo:HasRespawned()
 end
 
 function KillInfo.StartWorldBossDeathTimer()
-    if not(self:HasRespawned()) or (Config.CyclicEnabled() and not(self.reset)) then
+    if not(self:HasRespawned()) or (Options.CyclicEnabled() and not(self.reset)) then
         local timer_duration = self:GetSpawnTimeSec();
         local pretty_name = self.db.color .. name .. COLOR_DEFAULT .. ": ";
         self:StartTimer(timer_duration, 1, pretty_name);

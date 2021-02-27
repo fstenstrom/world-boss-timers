@@ -13,6 +13,6 @@ BossData.lua
 Com.lua
 NameplateTracker.lua
 GUI.lua
-Config.lua
+Options.lua
 KillInfo.lua
 WorldBossTimers.lua

@@ -36,7 +36,7 @@ local function TrackerCb(self, event, unit)
     local sound_tbl = WBT.Sound.sound_tbl;
     WBT.Util.PlaySoundAlert(
             sound_tbl.tbl:GetSubtbl(
-                    sound_tbl.keys.option, WBT.Config.spawn_alert_sound:get()
+                    sound_tbl.keys.option, WBT.Options.spawn_alert_sound:get()
             )[sound_tbl.keys.file_id]
     );
     FlashClientIcon();

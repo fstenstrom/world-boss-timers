@@ -14,7 +14,7 @@ local KillInfo = WBT.KillInfo;
 local Util = WBT.Util;
 local BossData = WBT.BossData;
 local GUI = WBT.GUI;
-local Config = WBT.Config;
+local Options = WBT.Options;
 local Com = WBT.Com;
 local Sound = WBT.Sound;
 
@@ -143,7 +143,7 @@ end
 function WBT.GetSpawnTimeOutput(kill_info)
     local text = kill_info:GetSpawnTimeAsText();
     local color = Util.COLOR_DEFAULT;
-    local highlight = Config.highlight.get()
+    local highlight = Options.highlight.get()
             and WBT.IsInZoneOfBoss(kill_info.name)
             and GetRealmName() == kill_info.realmName
             and Util.WarmodeStatus() == kill_info.realm_type;
@@ -162,7 +162,7 @@ function WBT.GetSpawnTimeOutput(kill_info)
     end
     text = Util.ColoredString(color, text);
 
-    if Config.show_saved.get() and WBT.IsSaved(kill_info.name) then
+    if Options.show_saved.get() and WBT.IsSaved(kill_info.name) then
         text = text .. " " .. Util.ColoredString(Util.ReverseColor(color), "X");
     end
 
@@ -300,7 +300,7 @@ local function InitDeathTrackerFrame()
 end
 
 local function PlaySoundAlertSpawn()
-    Util.PlaySoundAlert(Config.spawn_alert_sound:Value());
+    Util.PlaySoundAlert(Options.spawn_alert_sound:Value());
 end
 
 local function PlaySoundAlertBossCombat(name)
@@ -518,12 +518,12 @@ local function InitKillInfoManager()
                             -- TODO: Consider if here should be something else
                         end
 
-                        if kill_info:RespawnTriggered(Config.spawn_alert_sec_before.get()) then
+                        if kill_info:RespawnTriggered(Options.spawn_alert_sec_before.get()) then
                             FlashClientIcon();
                             PlaySoundAlertSpawn();
                         end
 
-                        if kill_info:Expired() and Config.cyclic.get() then
+                        if kill_info:Expired() and Options.cyclic.get() then
                             local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
                             kill_info.t_death = t_death_new
                             self.until_time = t_spawn;
@@ -561,7 +561,7 @@ function WBT.AceAddon:OnEnable()
 
     local AceConfig = LibStub("AceConfig-3.0");
 
-    AceConfig:RegisterOptionsTable(WBT.addon_name, Config.optionsTable, {});
+    AceConfig:RegisterOptionsTable(WBT.addon_name, Options.optionsTable, {});
     WBT.AceConfigDialog = LibStub("AceConfigDialog-3.0");
     WBT.AceConfigDialog:AddToBlizOptions(WBT.addon_name, WBT.addon_name, nil);
 
@@ -576,8 +576,8 @@ function WBT.AceAddon:OnEnable()
 
     StartVisibilityHandler();
 
-    self:RegisterChatCommand("wbt", Config.SlashHandler);
-    self:RegisterChatCommand("worldbosstimers", Config.SlashHandler);
+    self:RegisterChatCommand("wbt", Options.SlashHandler);
+    self:RegisterChatCommand("worldbosstimers", Options.SlashHandler);
 
     self:InitChatParsing();
 

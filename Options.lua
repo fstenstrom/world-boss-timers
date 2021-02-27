@@ -1,7 +1,7 @@
 local _, WBT = ...;
 
-local Config = {};
-WBT.Config = Config;
+local Options = {};
+WBT.Options = Options;
 
 local GUI = WBT.GUI;
 local Util = WBT.Util;
@@ -14,16 +14,16 @@ local CYCLIC_HELP_TEXT = "This mode will repeat the boss timers if you miss the 
 
 ----- Setters and Getters for options -----
 
-local ConfigItem = {};
+local OptionsItem = {};
 
-function ConfigItem.CreateDefaultGetter(var_name)
+function OptionsItem.CreateDefaultGetter(var_name)
     local function getter()
         return WBT.db.global[var_name];
     end
     return getter;
 end
 
-function ConfigItem.CreateDefaultSetter(var_name)
+function OptionsItem.CreateDefaultSetter(var_name)
     local function setter(state)
         WBT.db.global[var_name] = state;
         WBT.GUI:Rebuild();
@@ -31,10 +31,10 @@ function ConfigItem.CreateDefaultSetter(var_name)
     return setter;
 end
 
-function ConfigItem:New(var_name, status_msg)
+function OptionsItem:New(var_name, status_msg)
     local ci = {
-        get = ConfigItem.CreateDefaultGetter(var_name);
-        set = ConfigItem.CreateDefaultSetter(var_name);
+        get = OptionsItem.CreateDefaultGetter(var_name);
+        set = OptionsItem.CreateDefaultSetter(var_name);
         msg = status_msg,
     };
 
@@ -47,7 +47,7 @@ end
 local ToggleItem = {};
 
 function ToggleItem:New(var_name, status_msg)
-    local ti = ConfigItem:New(var_name, status_msg);
+    local ti = OptionsItem:New(var_name, status_msg);
 
     setmetatable(ti, self);
     self.__index = self;
@@ -90,7 +90,7 @@ function SelectItem:OverrideGetter(default_key)
 end
 
 function SelectItem:New(var_name, status_msg, mkt, mkt_options_key, mkt_values_key, default_key)
-    local si = ConfigItem:New(var_name, status_msg);
+    local si = OptionsItem:New(var_name, status_msg);
     si.mkt = mkt; -- MultiKeyTable
     si.mkt_options_key = mkt_options_key;
     si.mkt_values_key = mkt_values_key;
@@ -127,7 +127,7 @@ function RangeItem:OverrideGetter(default_val)
 end
 
 function RangeItem:New(var_name, status_msg, default_val)
-    local si = ConfigItem:New(var_name, status_msg);
+    local si = OptionsItem:New(var_name, status_msg);
 
     setmetatable(si, self);
     self.__index = self;
@@ -138,21 +138,21 @@ function RangeItem:New(var_name, status_msg, default_val)
 end
 
 local DEFAULT_SPAWN_ALERT_OFFSET = 5;
-Config.lock = ToggleItem:New("lock", "GUI lock is now");
-Config.sound = ToggleItem:New("sound_enabled", "Sound is now");
-Config.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
-Config.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
-Config.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
-Config.highlight = ToggleItem:New("highlight", "Highlighting of current zone is now");
-Config.show_saved = ToggleItem:New("show_saved", "Showing if saved on boss (on timer) is now");
-Config.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", Sound.sound_tbl.tbl, Sound.sound_tbl.keys.option, Sound.sound_tbl.keys.file_id, Sound.SOUND_KEY_BATTLE_BEGINS);
-Config.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
+Options.lock = ToggleItem:New("lock", "GUI lock is now");
+Options.sound = ToggleItem:New("sound_enabled", "Sound is now");
+Options.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
+Options.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
+Options.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
+Options.highlight = ToggleItem:New("highlight", "Highlighting of current zone is now");
+Options.show_saved = ToggleItem:New("show_saved", "Showing if saved on boss (on timer) is now");
+Options.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", Sound.sound_tbl.tbl, Sound.sound_tbl.keys.option, Sound.sound_tbl.keys.file_id, Sound.SOUND_KEY_BATTLE_BEGINS);
+Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
  -- Wrapping in some help printing for cyclic mode.
-local cyclic_set_temp = Config.cyclic.set;
-Config.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
+local cyclic_set_temp = Options.cyclic.set;
+Options.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
 -- Wrapping in 'play sound file when selected'.
-local spawn_alert_sound_set_temp = Config.spawn_alert_sound.set;
-Config.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Config.spawn_alert_sound:Value()); end
+local spawn_alert_sound_set_temp = Options.spawn_alert_sound.set;
+Options.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Options.spawn_alert_sound:Value()); end
 
 ----- Slash commands -----
 
@@ -193,7 +193,7 @@ local function ShowGUI(show)
     gui:Update();
 end
 
-function Config.SlashHandler(input)
+function Options.SlashHandler(input)
     arg1, arg2 = strsplit(" ", input);
 
     if arg1 == "hide" then
@@ -249,19 +249,19 @@ function Config.SlashHandler(input)
             WBT.db.global.sound_type = arg2;
             WBT:Print("SoundType: " .. arg2);
         else
-            Config.sound:Toggle();
+            Options.sound:Toggle();
         end
     elseif arg1 == "cyclic" then
-        Config.cyclic:Toggle();
+        Options.cyclic:Toggle();
         WBT.GUI:Update();
     elseif arg1 == "multi" then
-        Config.multi_realm:Toggle();
+        Options.multi_realm:Toggle();
         WBT.GUI:Update();
     elseif arg1 == "zone" then
-        Config.show_boss_zone_only:Toggle();
+        Options.show_boss_zone_only:Toggle();
         WBT.GUI:Update();
     elseif arg1 == "lock" then
-        Config.lock:Toggle();
+        Options.lock:Toggle();
         WBT.GUI:Update();
     elseif arg1 == "gui-reset" then
         WBT.GUI:ResetPosition();
@@ -280,7 +280,7 @@ end
 
 ----- Options table -----
 local desc_toggle = "Enable/Disable";
-Config.optionsTable = {
+Options.optionsTable = {
   type = "group",
   childGroups = "select",
   args = {
@@ -311,8 +311,8 @@ Config.optionsTable = {
         desc = "Toggle if the GUI should be locked or movable",
         type = "toggle",
         width = "full",
-        set = function(info, val) Config.lock:Toggle(); end,
-        get = function(info) return Config.lock.get() end,
+        set = function(info, val) Options.lock:Toggle(); end,
+        get = function(info) return Options.lock.get() end,
     },
     show = {
         name = "Show GUI",
@@ -329,8 +329,8 @@ Config.optionsTable = {
         desc = desc_toggle,
         type = "toggle",
         width = "full",
-        set = function(info, val) Config.show_boss_zone_only:Toggle(); end,
-        get = function(info) return Config.show_boss_zone_only.get() end,
+        set = function(info, val) Options.show_boss_zone_only:Toggle(); end,
+        get = function(info) return Options.show_boss_zone_only.get() end,
     },
     sound = {
         name = "Sound",
@@ -338,8 +338,8 @@ Config.optionsTable = {
         desc = desc_toggle,
         type = "toggle",
         width = "full",
-        set = function(info, val) Config.sound:Toggle(); end,
-        get = function(info) return Config.sound.get() end,
+        set = function(info, val) Options.sound:Toggle(); end,
+        get = function(info) return Options.sound.get() end,
     },
     cyclic = {
         name = "Cyclic (show expired)",
@@ -347,8 +347,8 @@ Config.optionsTable = {
         desc = "If you missed a kill, the timer will wrap around and will now have a red color",
         type = "toggle",
         width = "full",
-        set = function(info, val) Config.cyclic:Toggle(); end,
-        get = function(info) return Config.cyclic.get(); end,
+        set = function(info, val) Options.cyclic:Toggle(); end,
+        get = function(info) return Options.cyclic.get(); end,
     },
     multi_realm = {
         name = "Multi-realm + Warmode",
@@ -356,8 +356,8 @@ Config.optionsTable = {
         desc = "Show timers that are not for your current Realm or Warmode",
         type = "toggle",
         width = "full",
-        set = function(info, val) Config.multi_realm:Toggle(); end,
-        get = function(info) return Config.multi_realm.get() end,
+        set = function(info, val) Options.multi_realm:Toggle(); end,
+        get = function(info) return Options.multi_realm.get() end,
     },
     highlight = {
         name = "Highlight boss in current zone",
@@ -367,8 +367,8 @@ Config.optionsTable = {
                 Util.ColoredString(Util.COLOR_YELLOW, "Yellow") .." if timer expired (with Cyclic mode)",
         type = "toggle",
         width = "full",
-        set = function(info, val) Config.highlight:Toggle(); end,
-        get = function(info) return Config.highlight.get() end,
+        set = function(info, val) Options.highlight:Toggle(); end,
+        get = function(info) return Options.highlight.get() end,
     },
     show_saved = {
         name = "Show if saved",
@@ -378,8 +378,8 @@ Config.optionsTable = {
                 "NOTE: The color of the 'X' has no special meaning, it's just for improved visibility.",
         type = "toggle",
         width = "full",
-        set = function(info, val) Config.show_saved:Toggle(); end,
-        get = function(info) return Config.show_saved.get() end,
+        set = function(info, val) Options.show_saved:Toggle(); end,
+        get = function(info) return Options.show_saved.get() end,
     },
     spawn_alert_sound = {
         name = "Spawn alert sound",
@@ -388,9 +388,9 @@ Config.optionsTable = {
         type = "select",
         style = "dropdown",
         width = "normal",
-        values = Config.spawn_alert_sound.options,
-        set = function(info, val) Config.spawn_alert_sound.set(val); end,
-        get = function(info) return Config.spawn_alert_sound.get(); end,
+        values = Options.spawn_alert_sound.options,
+        set = function(info, val) Options.spawn_alert_sound.set(val); end,
+        get = function(info) return Options.spawn_alert_sound.get(); end,
     },
     spawn_alert_sec_before = {
         name = "Alert sec before spawn",
@@ -404,8 +404,8 @@ Config.optionsTable = {
         bigStep = 1,
         isPercent = false,
         width = "normal",
-        set = function(info, val) Config.spawn_alert_sec_before.set(val); end,
-        get = function(info) return Config.spawn_alert_sec_before.get(); end,
+        set = function(info, val) Options.spawn_alert_sec_before.set(val); end,
+        get = function(info) return Options.spawn_alert_sec_before.get(); end,
     },
   }
 }
