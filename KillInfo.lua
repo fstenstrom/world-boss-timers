@@ -93,7 +93,7 @@ end
 -- A KillInfo is no longer valid if its data was recorded before
 -- the KillInfo class was introduced.
 -- The field self.until_time did not exist then.
-function KillInfo:IsValid()
+function KillInfo:IsValidVersion()
     return self.version and self.version == CURRENT_VERSION;
 end
 
@@ -155,14 +155,14 @@ end
 -- server shard.
 -- If this happens, we don't want the data to propagate
 -- to other players.
-function KillInfo:IsCompletelySafe(error_msgs)
+function KillInfo:IsSafeToShare(error_msgs)
 
     -- It's possible to have one char with Warmode, and one
     -- without on the same server.
     local realm_type = Util.WarmodeStatus();
     local realmName = GetRealmName();
 
-    if not self:IsValid() then
+    if not self:IsValidVersion() then
         table.insert(error_msgs, "The kill was recorded with an old version of the Addon and is now outdated.");
     end
     if not self.safe then
@@ -211,7 +211,7 @@ end
 
 function KillInfo:GetSpawnTimeAsText()
     local outdated =  "--outdated--";
-    if not self:IsValid() then
+    if not self:IsValidVersion() then
         return outdated;
     end
 
@@ -236,7 +236,7 @@ end
 
 function KillInfo:IsDead(ignore_cyclic)
     local ignore_cyclic = ignore_cyclic == true; -- Sending in nil shall result in false
-    if self.reset or not self:IsValid() then
+    if self.reset or not self:IsValidVersion() then
         return false;
     end
     if self.cyclic then
@@ -274,7 +274,7 @@ function KillInfo:ShouldAnnounce()
             and Util.SetContainsValue(self.announce_times, self.remaining_time)
             and WBT.IsInZoneOfBoss(self.name)
             and WBT.BossData.Get(self.name).auto_announce
-            and self:IsCompletelySafe({});
+            and self:IsSafeToShare({});
 end
 
 function KillInfo:InTimeWindow(from, to)
@@ -287,7 +287,7 @@ function KillInfo:RespawnTriggered(offset)
     local until_time_offset = self.until_time - offset;
     local trigger = self:InTimeWindow(until_time_offset, until_time_offset + 1)
             and WBT.IsInZoneOfBoss(self.name)
-            and self:IsCompletelySafe({})
+            and self:IsSafeToShare({})
             and not self.has_triggered_respawn;
     if trigger then
         self.has_triggered_respawn = true;

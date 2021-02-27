@@ -128,7 +128,7 @@ function Com.OnCommReceivedSR(prefix, message, distribution, sender)
     -- UnitXXX calls, unless the sender is in the same party or raid as player.
     if WBT.InBossZone() then
         local kill_info = WBT.KillInfoInCurrentZoneAndShard();
-        if kill_info and kill_info:IsCompletelySafe({}) then
+        if kill_info and kill_info:IsSafeToShare({}) then
             local reply = Com.CreateKillMessage(kill_info);
             Com:SendCommMessage(Com.PREF_RR, reply, "WHISPER", sender);
         end

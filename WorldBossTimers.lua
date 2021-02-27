@@ -66,7 +66,7 @@ end
 
 function WBT.IsDead(guid, ignore_cyclic)
     local ki = g_kill_infos[guid];
-    if ki and ki:IsValid() then
+    if ki and ki:IsValidVersion() then
         return ki:IsDead(ignore_cyclic);
     end
 
@@ -248,7 +248,7 @@ function WBT.GetSafeSpawnAnnouncerWithCooldown()
 
         local announced = false;
         local t_now = GetServerTime();
-        if kill_info and kill_info:IsCompletelySafe({}) and (t_last_announce + 1) <= t_now then
+        if kill_info and kill_info:IsSafeToShare({}) and (t_last_announce + 1) <= t_now then
             WBT.AnnounceSpawnTime(kill_info, true);
             t_last_announce = t_now;
             announced = true;
@@ -417,7 +417,7 @@ function WBT.AceAddon:InitChatParsing()
 
                     if WBT.InBossZone() then
                         local kill_info = WBT.KillInfoInCurrentZoneAndShard();
-                        if kill_info and kill_info:IsCompletelySafe({}) then
+                        if kill_info and kill_info:IsSafeToShare({}) then
                             -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken by 8.2.5
                             -- TODO: Consider if this could trigger some optional sparkle
                             -- in the GUI instead
@@ -485,7 +485,7 @@ local function FilterValidKillInfosStep2()
     -- Find invalid.
     local invalid = {};
     for guid, ki in pairs(g_kill_infos) do
-        if not ki:IsValid() or ki.reset then
+        if not ki:IsValidVersion() or ki.reset then
             table.insert(invalid, guid);
         end
     end
@@ -508,7 +508,7 @@ local function InitKillInfoManager()
             self.since_update = self.since_update + elapsed;
             if (self.since_update > t_update) then
                 for _, kill_info in pairs(g_kill_infos) do
-                    if kill_info:IsValid() then
+                    if kill_info:IsValidVersion() then
 
                         kill_info:Update();
 

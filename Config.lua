@@ -213,7 +213,7 @@ function Config.SlashHandler(input)
         end
 
         local ki = WBT.KillInfoInCurrentZoneAndShard();
-        if not ki or not(ki:IsValid()) then
+        if not ki or not(ki:IsValidVersion()) then
             local msg = "No spawn timer for ";
             for _, boss in pairs(WBT.BossesInCurrentZone()) do
                 msg = msg .. WBT.GetColoredBossName(boss.name) .. ", "
@@ -225,7 +225,7 @@ function Config.SlashHandler(input)
         end
 
         local error_msgs = {};
-        if ki:IsCompletelySafe(error_msgs) then
+        if ki:IsSafeToShare(error_msgs) then
             WBT.AnnounceSpawnTime(ki, true);
         else
             WBT:Print(Util.ColoredString(Util.COLOR_RED, "WARNING") .. ": Timer might be incorrect. Not announcing.", "SAY", nil, nil);
