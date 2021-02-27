@@ -508,29 +508,26 @@ local function InitKillInfoManager()
             self.since_update = self.since_update + elapsed;
             if (self.since_update > t_update) then
                 for _, kill_info in pairs(g_kill_infos) do
-                    if kill_info:IsValidVersion() then
+                    kill_info:Update();
 
-                        kill_info:Update();
+                    if kill_info.reset then
+                        -- Do nothing.
+                    else
+                        if kill_info:ShouldAnnounce() then
+                            -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken in 8.2.5
+                            -- TODO: Consider if here should be something else
+                        end
 
-                        if kill_info.reset then
-                            -- Do nothing.
-                        else
-                            if kill_info:ShouldAnnounce() then
-                                -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken in 8.2.5
-                                -- TODO: Consider if here should be something else
-                            end
+                        if kill_info:RespawnTriggered(Config.spawn_alert_sec_before.get()) then
+                            FlashClientIcon();
+                            PlaySoundAlertSpawn();
+                        end
 
-                            if kill_info:RespawnTriggered(Config.spawn_alert_sec_before.get()) then
-                                FlashClientIcon();
-                                PlaySoundAlertSpawn();
-                            end
-
-                            if kill_info:Expired() and Config.cyclic.get() then
-                                local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
-                                kill_info.t_death = t_death_new
-                                self.until_time = t_spawn;
-                                kill_info.cyclic = true;
-                            end
+                        if kill_info:Expired() and Config.cyclic.get() then
+                            local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
+                            kill_info.t_death = t_death_new
+                            self.until_time = t_spawn;
+                            kill_info.cyclic = true;
                         end
                     end
                 end
