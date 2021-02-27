@@ -103,7 +103,7 @@ end
 
 function WBT.ThisServerAndWarmode(kill_info)
     return kill_info.realm_type == Util.WarmodeStatus()
-            and kill_info.realmName == GetRealmName();
+            and kill_info.connected_realms_id == KillInfo.GetConnectedRealmsID();
 end
 
 function WBT.InBossZone()
@@ -484,9 +484,9 @@ end
 local function FilterValidKillInfosStep2()
     -- Find invalid.
     local invalid = {};
-    for _, ki in pairs(g_kill_infos) do
+    for guid, ki in pairs(g_kill_infos) do
         if not ki:IsValid() or ki.reset then
-            table.insert(invalid, ki:GUID());
+            table.insert(invalid, guid);
         end
     end
 
@@ -604,16 +604,16 @@ local function StartSim(name, t)
     WBT.SetKillInfo(name, t);
 end
 
-local function SetKillInfo_GUID(name, t_death, realmName, realm_type)
+local function SetKillInfo_GUID(name, t_death, connected_realms_id, realm_type)
     t_death = tonumber(t_death);
-    local guid = KillInfo.CreateGUID(name, realmName, realm_type);
+    local guid = KillInfo.CreateGUID(name, connected_realms_id, realm_type);
     local ki = g_kill_infos[guid];
     if ki then
         ki:SetNewDeath(name, t_death);
     else
         ki = KillInfo:New(t_death, name);
     end
-    ki.realmName = realmName;
+    ki.connected_realms_id = connected_realms_id;
     ki.realm_type = realm_type;
 
     g_kill_infos[guid] = ki;

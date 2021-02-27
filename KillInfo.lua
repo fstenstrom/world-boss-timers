@@ -16,7 +16,7 @@ local Config = WBT.Config;
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-local CURRENT_VERSION = "v1.3";
+local CURRENT_VERSION = "v1.4";
 
 local RANDOM_DELIM = "-";
 
@@ -53,7 +53,7 @@ end
 function KillInfo.ParseGUID(guid)
     local valid_word = "([^;]+)";
     local pattern = "^" .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. "$";
-    local boss_name, realmName, realm_type, map_id = guid:match(pattern);
+    local boss_name, connected_realms_id, realm_type, map_id = guid:match(pattern);
 
     if not boss_name then
         return nil;
@@ -61,21 +61,33 @@ function KillInfo.ParseGUID(guid)
 
     return {
         boss_name = boss_name,
-        realmName = realmName,
+        connected_realms_id = connected_realms_id,
         realm_type = realm_type,
         map_id = map_id,
     };
 end
 
-function KillInfo.CreateGUID(name, realmName, realm_type, map_id)
-    local realmName = realmName or GetRealmName();
+function KillInfo.GetConnectedRealmsID()
+    local connected_realms = GetAutoCompleteRealms();
+    if connected_realms then
+        return table.concat(connected_realms, "_");
+    else
+        return GetRealmName();
+    end
+end
+
+function KillInfo.CreateGUID(name, connected_realms_id, realm_type, map_id)
+    -- Unique ID used as key in the global table of tracked KillInfos and GUI labels.
+
+    local connected_realms_id = connected_realms_id or KillInfo.GetConnectedRealmsID();
     local realm_type = realm_type or Util.WarmodeStatus();
     local map_id = map_id or WBT.GetCurrentMapId();
-    return name .. GUID_DELIM .. realmName .. GUID_DELIM .. realm_type .. GUID_DELIM .. map_id;
+
+    return table.concat({name, connected_realms_id, realm_type, map_id}, GUID_DELIM);
 end
 
 function KillInfo:GUID()
-    return self.CreateGUID(self.name, self.realmName, self.realm_type, self.map_id);
+    return self.CreateGUID(self.name, self.connected_realms_id, self.realm_type, self.map_id);
 end
 
 -- A KillInfo is no longer valid if its data was recorded before
@@ -92,6 +104,7 @@ function KillInfo:SetInitialValues(name)
     self.reset = false;
     self.safe = not IsInGroup();
     self.realmName = GetRealmName();
+    self.connected_realms_id = KillInfo.GetConnectedRealmsID();
     self.realm_type = Util.WarmodeStatus();
     self.map_id = WBT.GetCurrentMapId();
     self.db = WBT.BossData.Get(self.name);
@@ -161,8 +174,8 @@ function KillInfo:IsCompletelySafe(error_msgs)
     if not (self.realm_type == realm_type) then
         table.insert(error_msgs, "Kill was made on a " .. self.realm_type .. " realm, but are now on a " .. realm_type .. " realm.");
     end
-    if not (self.realmName == realmName) then
-        table.insert(error_msgs, "Kill was made on " .. self.realmName .. ", but are now on " .. realmName .. ".");
+    if not (self.realmName == realmName) and not tContains(GetAutoCompleteRealms(), realmName) then
+        table.insert(error_msgs, "Kill was made on " .. self.realmName .. ", but are now on unconnected realm " .. realmName .. ".");
     end
 
     if Util.TableIsEmpty(error_msgs) then
