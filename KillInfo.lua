@@ -16,7 +16,7 @@ local Options = WBT.Options;
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-local CURRENT_VERSION = "v1.7";
+KillInfo.CURRENT_VERSION = "v1.7";
 
 local RANDOM_DELIM = "-";
 
@@ -94,12 +94,12 @@ end
 -- the KillInfo class was introduced.
 -- The field self.until_time did not exist then.
 function KillInfo:IsValidVersion()
-    return self.version and self.version == CURRENT_VERSION;
+    return self.version and self.version == KillInfo.CURRENT_VERSION;
 end
 
 function KillInfo:SetInitialValues(name)
     self.name = name;
-    self.version = CURRENT_VERSION;
+    self.version = KillInfo.CURRENT_VERSION;
     self.cyclic = false;
     self.reset = false;
     self.safe = not IsInGroup();
@@ -110,6 +110,19 @@ function KillInfo:SetInitialValues(name)
     self.db = WBT.BossData.Get(self.name);
     self.announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
     self.has_triggered_respawn = false;
+end
+
+function KillInfo:Print(indent)
+    print(indent .. "name: "                  .. self.name);
+    print(indent .. "version: "               .. self.version);
+    print(indent .. "cyclic: "                .. tostring(self.cyclic));
+    print(indent .. "reset: "                 .. tostring(self.reset));
+    print(indent .. "safe: "                  .. tostring(self.safe));
+    print(indent .. "realmName: "             .. self.realmName);
+    print(indent .. "connected_realms_id: "   .. self.connected_realms_id);
+    print(indent .. "realm_type: "            .. self.realm_type);
+    print(indent .. "map_id: "                .. self.map_id);
+    print(indent .. "has_triggered_respawn: " .. tostring(self.has_triggered_respawn));
 end
 
 function KillInfo:SetNewDeath(name, t_death)

@@ -24,6 +24,43 @@ WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 -- Workaround to keep the nice WBT:Print function.
 WBT.Print = function(self, text) WBT.AceAddon:Print(text) end
 
+-- Global logger. OK since WoW is single-threaded.
+WBT.Logger = {};
+local Logger = WBT.Logger;
+Logger.LogLevels =  {
+    Nothing = {
+        value = 0;
+        name  = "Nothing";
+        color = Util.COLOR_DEFAULT;
+    },
+    Debug = {
+        value = 10;
+        name  = "Debug";
+        color = Util.COLOR_RED;
+    }
+};
+
+function Logger.SetLogLevel(log_level_str)
+    local log_level = Logger.LogLevels[log_level_str];
+    if log_level then
+        WBT:Print("Setting LogLevel to: " .. log_level.name);
+        WBT.db.char.log_level = log_level;
+    else
+        WBT:Print("Requested LogLevel '" .. log_level_str .. "' doesn't exist (input is case sensitive).");
+    end
+end
+
+function Logger.Log(log_level, ...)
+    if WBT.db.char.log_level.value >= log_level.value then
+        local msg_log_type = Util.ColoredString(log_level.color, log_level.name);
+        print("[" .. msg_log_type .. "]: " .. Util.MessageFromVarargs(...))
+    end
+end
+
+function Logger.Debug(...)
+    Logger.Log(Logger.LogLevels.Debug, ...);
+end
+
 local gui = {};
 local boss_death_frame;
 local boss_combat_frame;
@@ -46,13 +83,10 @@ local defaults = {
         show_boss_zone_only = false,
     },
     char = {
+        log_level = Logger.LogLevels.Nothing,
         boss = {},
     },
 };
-
-function WBT.DebugPrint(...)
-    print("DEBUG:", Util.MessageFromVarargs(...));
-end
 
 function WBT:PrintError(...)
     local text = "";
@@ -476,6 +510,7 @@ local function FilterValidKillInfosStep1()
 
     -- Remove invalid.
     for guid, ki in pairs(invalid) do
+        Logger.Debug("[PreDeserialize]: Removing invalid KI with GUID: " .. guid);
         WBT.db.global.kill_infos[guid] = nil;
     end
 end
@@ -492,6 +527,7 @@ local function FilterValidKillInfosStep2()
 
     -- Remove invalid.
     for _, guid in pairs(invalid) do
+        Logger.Debug("[PostDeserialize]: Removing invalid KI with GUID: " .. guid);
         WBT.db.global.kill_infos[guid] = nil;
     end
 end
@@ -601,7 +637,8 @@ local function StartSim(name, t)
     WBT.SetKillInfo(name, t);
 end
 
-local function SetKillInfo_GUID(name, t_death, connected_realms_id, realm_type)
+local function SetKillInfo_Advanced(name, t_death, connected_realms_id, realm_type, optVersion)
+    version = optVersion or KillInfo.CURRENT_VERSION;
     t_death = tonumber(t_death);
     local guid = KillInfo.CreateGUID(name, connected_realms_id, realm_type);
     local ki = g_kill_infos[guid];
@@ -612,6 +649,7 @@ local function SetKillInfo_GUID(name, t_death, connected_realms_id, realm_type)
     end
     ki.connected_realms_id = connected_realms_id;
     ki.realm_type = realm_type;
+    ki.version = version;
 
     g_kill_infos[guid] = ki;
 
@@ -622,20 +660,29 @@ local function SecToRespawn(name, t)
     return GetServerTime() - BossData.Get(name).max_respawn + t;
 end
 
+local function SimOutdatedVersionKill(name)
+    SetKillInfo_Advanced(name, SecToRespawn(name, 4), "Firehammer", Util.Warmode.ENABLED, "v_unsupported");
+end
+
 local function SimWarmodeKill(name)
-    SetKillInfo_GUID(name, SecToRespawn(name, 4), "Doomhammer", Util.Warmode.ENABLED);
+    SetKillInfo_Advanced(name, SecToRespawn(name, 4), "Doomhammer", Util.Warmode.ENABLED);
 end
 
 local function SimServerKill(name, server)
-    SetKillInfo_GUID(name, SecToRespawn(name, 4), server or "Majsbreaker", Util.Warmode.DISABLED);
+    SetKillInfo_Advanced(name, SecToRespawn(name, 4), server or "Majsbreaker", Util.Warmode.DISABLED);
 end
 
 local function SimKill(sec_to_respawn)
     for name, data in pairs(BossData.GetAll()) do
         StartSim(name, SecToRespawn(name, sec_to_respawn));
     end
+    SimKillSpecial();
+end
+
+local function SimKillSpecial()
     SimServerKill("Grellkin");
     SimWarmodeKill("Grellkin");
+    SimOutdatedVersionKill("Grellkin");
 end
 
 function dsim(n)
@@ -653,8 +700,24 @@ function dsim2()
     SimKill(25);
 end
 
+function dsim3()
+    SimKillSpecial();
+end
+
+function PrintAllKillInfos()
+    Logger.Debug("Printing all KI:s");
+    for guid, ki in pairs(g_kill_infos) do
+        print(guid)
+        ki:Print("  ");
+    end
+end
+
 function stopgui()
     kill_info_manager:SetScript("OnUpdate", nil);
+end
+
+function SetLogLevel(log_level_str)
+    Logger.SetLogLevel(log_level_str);
 end
 --@end-do-not-package@
 
