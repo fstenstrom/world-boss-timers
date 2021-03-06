@@ -69,10 +69,11 @@ end
 
 function KillInfo.GetConnectedRealmsID()
     local connected_realms = GetAutoCompleteRealms();
-    if connected_realms then
-        return table.concat(connected_realms, "_");
-    else
+    if next(connected_realms) == nil then
+        -- Empty table -> not connected realm.
         return GetRealmName();
+    else
+        return table.concat(connected_realms, "_");
     end
 end
 
