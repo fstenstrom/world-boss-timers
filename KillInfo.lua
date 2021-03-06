@@ -16,7 +16,7 @@ local Options = WBT.Options;
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-KillInfo.CURRENT_VERSION = "v1.7";
+KillInfo.CURRENT_VERSION = "v1.8";
 
 local RANDOM_DELIM = "-";
 
@@ -67,20 +67,14 @@ function KillInfo.ParseGUID(guid)
     };
 end
 
-function KillInfo.GetConnectedRealmsID()
-    local connected_realms = GetAutoCompleteRealms();
-    if next(connected_realms) == nil then
-        -- Empty table -> not connected realm.
-        return GetRealmName();
-    else
-        return table.concat(connected_realms, "_");
-    end
+function KillInfo.CreateConnectedRealmsID()
+    return table.concat(Util.GetConnectedRealms(), "_");
 end
 
 function KillInfo.CreateGUID(name, connected_realms_id, realm_type, map_id)
     -- Unique ID used as key in the global table of tracked KillInfos and GUI labels.
 
-    local connected_realms_id = connected_realms_id or KillInfo.GetConnectedRealmsID();
+    local connected_realms_id = connected_realms_id or KillInfo.CreateConnectedRealmsID();
     local realm_type = realm_type or Util.WarmodeStatus();
     local map_id = map_id or WBT.GetCurrentMapId();
 
@@ -99,17 +93,18 @@ function KillInfo:IsValidVersion()
 end
 
 function KillInfo:SetInitialValues(name)
-    self.name = name;
-    self.version = KillInfo.CURRENT_VERSION;
-    self.cyclic = false;
-    self.reset = false;
-    self.safe = not IsInGroup();
-    self.realmName = GetRealmName();
-    self.connected_realms_id = KillInfo.GetConnectedRealmsID();
-    self.realm_type = Util.WarmodeStatus();
-    self.map_id = WBT.GetCurrentMapId();
-    self.db = WBT.BossData.Get(self.name);
-    self.announce_times = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
+    self.name                  = name;
+    self.version               = KillInfo.CURRENT_VERSION;
+    self.cyclic                = false;
+    self.reset                 = false;
+    self.safe                  = not IsInGroup();
+    self.realm_name            = GetRealmName(); -- Only use for printing!
+    self.realm_name_normalized = GetNormalizedRealmName();
+    self.connected_realms_id   = KillInfo.CreateConnectedRealmsID();
+    self.realm_type            = Util.WarmodeStatus();
+    self.map_id                = WBT.GetCurrentMapId();
+    self.db                    = WBT.BossData.Get(self.name);
+    self.announce_times        = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
     self.has_triggered_respawn = false;
 end
 
@@ -119,7 +114,8 @@ function KillInfo:Print(indent)
     print(indent .. "cyclic: "                .. tostring(self.cyclic));
     print(indent .. "reset: "                 .. tostring(self.reset));
     print(indent .. "safe: "                  .. tostring(self.safe));
-    print(indent .. "realmName: "             .. self.realmName);
+    print(indent .. "realm_name: "            .. self.realm_name);
+    print(indent .. "realm_name_normalized: " .. self.realm_name_normalized);
     print(indent .. "connected_realms_id: "   .. self.connected_realms_id);
     print(indent .. "realm_type: "            .. self.realm_type);
     print(indent .. "map_id: "                .. self.map_id);
@@ -174,7 +170,6 @@ function KillInfo:IsSafeToShare(error_msgs)
     -- It's possible to have one char with Warmode, and one
     -- without on the same server.
     local realm_type = Util.WarmodeStatus();
-    local realmName = GetRealmName();
 
     if not self:IsValidVersion() then
         table.insert(error_msgs, "The kill was recorded with an old version of the Addon and is now outdated.");
@@ -186,10 +181,10 @@ function KillInfo:IsSafeToShare(error_msgs)
         table.insert(error_msgs, "Last kill wasn't recorded. This is just an estimate.");
     end
     if not (self.realm_type == realm_type) then
-        table.insert(error_msgs, "Kill was made on a " .. self.realm_type .. " realm, but are now on a " .. realm_type .. " realm.");
+        table.insert(error_msgs, "Kill was made on a " .. self.realm_type .. " realm, but you are now on a " .. realm_type .. " realm.");
     end
-    if not (self.realmName == realmName) and not tContains(GetAutoCompleteRealms(), realmName) then
-        table.insert(error_msgs, "Kill was made on " .. self.realmName .. ", but are now on unconnected realm " .. realmName .. ".");
+    if not tContains(Util.GetConnectedRealms(), self.realm_name_normalized) then
+        table.insert(error_msgs, "Kill was made on " .. self.realm_name .. ", but you are now on unconnected realm " .. GetRealmName() .. ".");
     end
 
     if Util.TableIsEmpty(error_msgs) then
@@ -277,10 +272,6 @@ function KillInfo.StartWorldBossDeathTimer()
         local pretty_name = self.db.color .. name .. COLOR_DEFAULT .. ": ";
         self:StartTimer(timer_duration, 1, pretty_name);
     end
-end
-
-function KillInfo:IsOnValidShard()
-    return self.realmName == GetRealmName() and self.realm_type == Util.WarmodeStatus();
 end
 
 function KillInfo:ShouldAnnounce()

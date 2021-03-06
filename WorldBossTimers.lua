@@ -137,7 +137,7 @@ end
 
 function WBT.ThisServerAndWarmode(kill_info)
     return kill_info.realm_type == Util.WarmodeStatus()
-            and kill_info.connected_realms_id == KillInfo.GetConnectedRealmsID();
+            and kill_info.connected_realms_id == KillInfo.CreateConnectedRealmsID();
 end
 
 function WBT.InBossZone()
@@ -179,7 +179,7 @@ function WBT.GetSpawnTimeOutput(kill_info)
     local color = Util.COLOR_DEFAULT;
     local highlight = Options.highlight.get()
             and WBT.IsInZoneOfBoss(kill_info.name)
-            and GetRealmName() == kill_info.realmName
+            and tContains(Util.GetConnectedRealms(), kill_info.realm_name_normalized)
             and Util.WarmodeStatus() == kill_info.realm_type;
     if kill_info.cyclic then
         if highlight then
@@ -672,17 +672,17 @@ local function SimServerKill(name, server)
     SetKillInfo_Advanced(name, SecToRespawn(name, 4), server or "Majsbreaker", Util.Warmode.DISABLED);
 end
 
+local function SimKillSpecial()
+    SimServerKill("Grellkin");
+    SimWarmodeKill("Grellkin");
+    SimOutdatedVersionKill("Grellkin");
+end
+
 local function SimKill(sec_to_respawn)
     for name, data in pairs(BossData.GetAll()) do
         StartSim(name, SecToRespawn(name, sec_to_respawn));
     end
     SimKillSpecial();
-end
-
-local function SimKillSpecial()
-    SimServerKill("Grellkin");
-    SimWarmodeKill("Grellkin");
-    SimOutdatedVersionKill("Grellkin");
 end
 
 function dsim(n)
