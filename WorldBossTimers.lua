@@ -196,7 +196,7 @@ function WBT.GetSpawnTimeOutput(kill_info)
     end
     text = Util.ColoredString(color, text);
 
-    if Options.show_saved.get() and WBT.IsSaved(kill_info.name) then
+    if Options.show_saved.get() and BossData.IsSaved(kill_info.name) then
         text = text .. " " .. Util.ColoredString(Util.ReverseColor(color), "X");
     end
 
@@ -383,23 +383,12 @@ end
 function WBT.AceAddon:OnInitialize()
 end
 
-function WBT.IsSaved(name)
-    local n_saved = GetNumSavedWorldBosses();
-    for i=1, n_saved do
-        local _, id_wb = GetSavedWorldBossInfo(i);
-        if id_wb == BossData.Get(name).id_wb then
-            return true;
-        end
-    end
-    return false;
-end
-
 function WBT.PrintKilledBosses()
     WBT:Print("Tracked world bosses killed:");
 
     local none_killed = true;
     for _, boss in pairs(BossData.GetAll()) do
-        if WBT.IsSaved(boss.name) then
+        if BossData.IsSaved(boss.name) then
             none_killed = false;
             WBT:Print(GetColoredBossName(boss.name));
         end

@@ -6,7 +6,6 @@
 local _, WBT = ...;
 
 local Util = WBT.Util;
-local BossData = WBT.BossData;
 local Com = WBT.Com;
 local Options = {}; -- Must be initialized later.
 
