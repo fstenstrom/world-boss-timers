@@ -207,12 +207,7 @@ function Options.SlashHandler(input)
         ShowGUI(false);
     elseif arg1 == "show" then
         ShowGUI(true);
-    elseif arg1 == "share"
-            or arg1 == "say"
-            or arg1 == "a"
-            or arg1 == "announce"
-            or arg1 == "yell"
-            or arg1 == "tell" then
+    elseif arg1 == "share" then
 
         if not WBT.InBossZone() then
             WBT:Print("You can't announce outside of a boss zone.");
