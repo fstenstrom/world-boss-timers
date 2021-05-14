@@ -36,7 +36,7 @@ Logger.LogLevels =  {
     Debug = {
         value = 10;
         name  = "Debug";
-        color = Util.COLOR_RED;
+        color = Util.COLOR_BLUE;
     }
 };
 
@@ -68,10 +68,23 @@ function Logger.SetLogLevel(level_name)
     end
 end
 
+-- @param varargs   A single table containing a list of strings, or varargs of
+--                  strings.
 function Logger.Log(log_level, ...)
-    if WBT.db.char.log_level.value >= log_level.value then
-        local msg_log_type = Util.ColoredString(log_level.color, log_level.name);
-        print("[" .. msg_log_type .. "]: " .. Util.MessageFromVarargs(...))
+    if WBT.db.char.log_level.value < log_level.value then
+        return;
+    end
+
+    local prefix = "[" .. Util.ColoredString(log_level.color, log_level.name) .. "]: ";
+    local arg1 = select(1, ...);
+    if not arg1 then
+        return;
+    elseif Util.IsTable(arg1) then
+        for _, msg in pairs(arg1) do
+            WBT:Print(prefix .. msg)
+        end
+    else
+        WBT:Print(prefix .. Util.MessageFromVarargs(...))
     end
 end
 
@@ -297,13 +310,27 @@ function WBT.GetSafeSpawnAnnouncerWithCooldown()
     local t_last_announce = 0;
     function AnnounceSpawnTimeIfSafe()
         local kill_info = WBT.KillInfoInCurrentZoneAndShard();
-
         local announced = false;
         local t_now = GetServerTime();
-        if kill_info and kill_info:IsSafeToShare({}) and (t_last_announce + 1) <= t_now then
+
+        if not kill_info then
+            Logger.Debug("No timer found for current zone.");
+            return announced;
+        end
+        if not ((t_last_announce + 1) <= t_now) then
+            Logger.Debug("Can only share once per second.");
+            return announced;
+        end
+
+        local errors = {};
+        if kill_info:IsSafeToShare(errors) then
             WBT.AnnounceSpawnTime(kill_info, true);
             t_last_announce = t_now;
             announced = true;
+        else
+            Logger.Debug("Cannot share timer for " .. GetColoredBossName(kill_info.name) .. ":");
+            Logger.Debug(errors);
+            return announced;
         end
 
         return announced;

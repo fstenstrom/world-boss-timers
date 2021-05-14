@@ -15,6 +15,7 @@ Util.COLOR_ORANGE     = "|cffffdd1e";
 Util.COLOR_LIGHTGREEN = "|cff35e059";
 Util.COLOR_DARKGREEN  = "|cff50c41f";
 Util.COLOR_YELLOW     = "|cfff2e532";
+Util.COLOR_BLUE       = "|cff0394fc";
 
 Util.Warmode = {
     DISABLED = "Normal",
@@ -70,6 +71,10 @@ end
 
 function Util.TableIsEmpty(tbl)
     return next(tbl) == nil
+end
+
+function Util.IsTable(obj)
+    return type(obj) == "table";
 end
 
 function Util.SetContainsKey(set, key)

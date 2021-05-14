@@ -97,7 +97,7 @@ function KillInfo:SetInitialValues(name)
     self.version               = KillInfo.CURRENT_VERSION;
     self.cyclic                = false;
     self.reset                 = false;
-    self.safe                  = not IsInGroup();
+    self.safe                  = not IsInGroup(); -- TODO: Rename.
     self.realm_name            = GetRealmName(); -- Only use for printing!
     self.realm_name_normalized = GetNormalizedRealmName();
     self.connected_realms_id   = KillInfo.CreateConnectedRealmsID();
@@ -152,10 +152,6 @@ function KillInfo:Deserialize(serialized)
     return ki;
 end
 
-function KillInfo:GetColoredBossName(name)
-    return self.db.color .. name .. COLOR_DEFAULT;
-end
-
 function KillInfo:HasRandomSpawnTime(name)
     return self.db.min_respawn ~= self.db.max_respawn;
 end
@@ -172,13 +168,13 @@ function KillInfo:IsSafeToShare(error_msgs)
     local realm_type = Util.WarmodeStatus();
 
     if not self:IsValidVersion() then
-        table.insert(error_msgs, "The kill was recorded with an old version of the Addon and is now outdated.");
+        table.insert(error_msgs, "The timer was created with an old version of WBT and is now outdated.");
     end
     if not self.safe then
         table.insert(error_msgs, "Player was in a group during previous kill.");
     end
     if self.cyclic then
-        table.insert(error_msgs, "Last kill wasn't recorded. This is just an estimate.");
+        table.insert(error_msgs, "Timer has expired.");
     end
     if not (self.realm_type == realm_type) then
         table.insert(error_msgs, "Kill was made on a " .. self.realm_type .. " realm, but you are now on a " .. realm_type .. " realm.");
