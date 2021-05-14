@@ -138,14 +138,14 @@ function RangeItem:New(var_name, status_msg, default_val)
 end
 
 local DEFAULT_SPAWN_ALERT_OFFSET = 5;
-Options.lock = ToggleItem:New("lock", "GUI lock is now");
-Options.sound = ToggleItem:New("sound_enabled", "Sound is now");
-Options.multi_realm = ToggleItem:New("multi_realm", "Multi-Realm/Warmode option is now");
-Options.show_boss_zone_only = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
-Options.cyclic = ToggleItem:New("cyclic", "Cyclic mode is now");
-Options.highlight = ToggleItem:New("highlight", "Highlighting of current zone is now");
-Options.show_saved = ToggleItem:New("show_saved", "Showing if saved on boss (on timer) is now");
-Options.spawn_alert_sound = SelectItem:New("spawn_alert_sound", "Spawn alert sound is now", Sound.sound_tbl.tbl, Sound.sound_tbl.keys.option, Sound.sound_tbl.keys.file_id, Sound.SOUND_KEY_BATTLE_BEGINS);
+Options.lock                   = ToggleItem:New("lock",                "GUI lock is now");
+Options.sound                  = ToggleItem:New("sound_enabled",       "Sound is now");
+Options.multi_realm            = ToggleItem:New("multi_realm",         "Multi-Realm/Warmode option is now");
+Options.show_boss_zone_only    = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
+Options.cyclic                 = ToggleItem:New("cyclic",              "Cyclic mode is now");
+Options.highlight              = ToggleItem:New("highlight",           "Highlighting of current zone is now");
+Options.show_saved             = ToggleItem:New("show_saved",          "Showing if saved on boss (on timer) is now");
+Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", Sound.sound_tbl.tbl, Sound.sound_tbl.keys.option, Sound.sound_tbl.keys.file_id, Sound.SOUND_KEY_BATTLE_BEGINS);
 Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
  -- Wrapping in some help printing for cyclic mode.
 local cyclic_set_temp = Options.cyclic.set;
@@ -160,22 +160,22 @@ local function PrintHelp()
     WBT.AceConfigDialog:Open(WBT.addon_name);
     local indent = "   ";
     WBT:Print("WorldBossTimers slash commands:");
-    WBT:Print("/wbt reset --> Reset all kill info");
-    WBT:Print("/wbt gui-reset --> Reset the position of the GUI");
-    WBT:Print("/wbt saved --> Print your saved bosses");
-    WBT:Print("/wbt share --> Announce timers for boss in zone");
-    WBT:Print("/wbt show --> Show the timers frame");
-    WBT:Print("/wbt hide --> Hide the timers frame");
-    WBT:Print("/wbt send --> Toggle send timer data in auto announce");
-    WBT:Print("/wbt sound --> Toggle sound alerts");
-    --WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'");
-    --WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'");
-    WBT:Print("/wbt ann --> Toggle automatic announcements");
-    WBT:Print("/wbt cyclic --> Toggle cyclic timers");
-    WBT:Print("/wbt multi --> Toggle multi-realm/warmode timers");
-    WBT:Print("/wbt zone --> Toggle show GUI in boss zones only");
-    WBT:Print("/wbt lock --> Toggle locking of GUI");
-    WBT:Print("/wbt log <level> --> Set log level for debug purposes");
+    WBT:Print("/wbt reset"       .. " --> Reset all kill info");
+    WBT:Print("/wbt gui-reset"   .. " --> Reset the position of the GUI");
+    WBT:Print("/wbt saved"       .. " --> Print your saved bosses");
+    WBT:Print("/wbt share"       .. " --> Announce timers for boss in zone");
+    WBT:Print("/wbt show"        .. " --> Show the timers frame");
+    WBT:Print("/wbt hide"        .. " --> Hide the timers frame");
+    WBT:Print("/wbt send"        .. " --> Toggle send timer data in auto announce");
+    WBT:Print("/wbt sound"       .. " --> Toggle sound alerts");
+    WBT:Print("/wbt ann"         .. " --> Toggle automatic announcements");
+    WBT:Print("/wbt cyclic"      .. " --> Toggle cyclic timers");
+    WBT:Print("/wbt multi"       .. " --> Toggle multi-realm/warmode timers");
+    WBT:Print("/wbt zone"        .. " --> Toggle show GUI in boss zones only");
+    WBT:Print("/wbt lock"        .. " --> Toggle locking of GUI");
+    WBT:Print("/wbt log <level>" .. " --> Set log level for debug purposes");
+--  WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'");
+--  WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'");
 end
 
 local function ShowGUI(show)
