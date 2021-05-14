@@ -40,13 +40,31 @@ Logger.LogLevels =  {
     }
 };
 
-function Logger.SetLogLevel(log_level_str)
-    local log_level = Logger.LogLevels[log_level_str];
+
+function Logger.PrintLogLevels()
+    WBT:Print("Valid LogLevel values:");
+    for k, _ in pairs(Logger.LogLevels) do
+        WBT:Print(k);
+    end
+end
+
+-- @param level_name    Log level given as string.
+function Logger.SetLogLevel(level_name)
+    if not level_name then
+        Logger.PrintLogLevels();
+        return;
+    end
+
+    -- Make sure input starts with uppercase and rest is lowercase to match
+    -- table keys.
+    level_name = level_name:sub(1,1):upper() .. level_name:sub(2,level_name:len()):lower();
+
+    local log_level = Logger.LogLevels[level_name];
     if log_level then
-        WBT:Print("Setting LogLevel to: " .. log_level.name);
+        WBT:Print("Setting log level to: " .. log_level.name);
         WBT.db.char.log_level = log_level;
     else
-        WBT:Print("Requested LogLevel '" .. log_level_str .. "' doesn't exist (input is case sensitive).");
+        WBT:Print("Requested log level '" .. level_name .. "' doesn't exist.");
     end
 end
 
@@ -705,8 +723,8 @@ function stopgui()
     kill_info_manager:SetScript("OnUpdate", nil);
 end
 
-function SetLogLevel(log_level_str)
-    Logger.SetLogLevel(log_level_str);
+function SetLogLevel(level_name)
+    Logger.SetLogLevel(level_name);
 end
 --@end-do-not-package@
 

@@ -175,6 +175,7 @@ local function PrintHelp()
     WBT:Print("/wbt multi --> Toggle multi-realm/warmode timers");
     WBT:Print("/wbt zone --> Toggle show GUI in boss zones only");
     WBT:Print("/wbt lock --> Toggle locking of GUI");
+    WBT:Print("/wbt log <level> --> Set log level for debug purposes");
 end
 
 local function ShowGUI(show)
@@ -194,7 +195,13 @@ local function ShowGUI(show)
 end
 
 function Options.SlashHandler(input)
-    arg1, arg2 = strsplit(" ", input);
+    local arg1, arg2 = strsplit(" ", input);
+    if arg1 then
+        arg1 = arg1:lower();
+    end
+    if arg2 then
+        arg2 = arg2:lower();
+    end
 
     if arg1 == "hide" then
         ShowGUI(false);
@@ -265,6 +272,8 @@ function Options.SlashHandler(input)
         WBT.GUI:Update();
     elseif arg1 == "gui-reset" then
         WBT.GUI:ResetPosition();
+    elseif arg1 == "log" then
+        WBT.Logger.SetLogLevel(arg2);
     else
         PrintHelp();
     end
