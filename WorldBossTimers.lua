@@ -611,7 +611,7 @@ local function InitKillInfoManager()
                     if kill_info.reset then
                         -- Do nothing.
                     else
-                        if kill_info:ShouldAnnounce() then
+                        if kill_info:ShouldAutoAnnounce() then
                             -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken in 8.2.5
                             -- TODO: Consider if here should be something else
                         end

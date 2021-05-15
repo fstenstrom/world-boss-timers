@@ -270,7 +270,7 @@ function KillInfo.StartWorldBossDeathTimer()
     end
 end
 
-function KillInfo:ShouldAnnounce()
+function KillInfo:ShouldAutoAnnounce()
     return WBT.db.global.auto_announce
             and Util.SetContainsValue(self.announce_times, self.remaining_time)
             and WBT.IsInZoneOfBoss(self.name)
