@@ -23,6 +23,7 @@ WBT.Functions = {
     AnnounceTimerInChat = nil;
 };
 
+WBT.Dev = {};
 
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 
@@ -163,12 +164,7 @@ function WBT.BossesInCurrentZone()
             table.insert(t, boss);
         end
     end
-
-    if not Util.TableIsEmpty(t) then
-        return t;
-    end
-
-    return nil;
+    return t;
 end
 
 function WBT.ThisServerAndWarmode(kill_info)
@@ -188,26 +184,48 @@ function WBT.InBossZone()
     return false;
 end
 
--- Returns the KillInfo in the current zone and shard that should be
--- used for announcements.
--- Returns nil if no matching entry found.
-function WBT.KillInfoInCurrentZoneAndShard()
-    if WBT.InBossZone() then
-        -- Double hosting zones: Kun-Lai Summit hosts both ZWB and Sha
-        -- Announce options:
-        -- 1. Both
-        -- 2. Base on X, Y coords
-        -- 3. Only announce Sha <current implementation>
+-- Returns the KillInfos in the current zone and shard (connected realm,
+-- warmode, etc.) that should be used for announcements, or an empty table if no
+-- matching entry found.
+function WBT.KillInfosInCurrentZoneAndShard()
+    local res = {};
+    -- For zones with multiple bosses such as Kun-Lai and Mechagon,
+    -- calculate circle in coords around spawn location 
+    for _, boss in pairs(WBT.BossesInCurrentZone()) do
+        table.insert(res, g_kill_infos[KillInfo.CreateGUID(boss.name)]);
+    end
+    return res;
+end
 
-        -- Note: Only one boss per zone may have the 'announce' field set to true.
-        for _, boss in pairs(WBT.BossesInCurrentZone()) do
-            if boss.auto_announce then
-                return g_kill_infos[KillInfo.CreateGUID(boss.name)];
-            end
+function WBT.GetPlayerCoords()
+    return C_Map.GetPlayerMapPosition(WBT.GetCurrentMapId(), "PLAYER"):GetXY();
+end
+
+function WBT.PlayerDistanceToBoss(boss_name)
+    local x, y = WBT.GetPlayerCoords();
+    local boss = BossData.Get(boss_name);
+    return math.sqrt((x - boss.perimiter.origin.x)^2 + (y - boss.perimiter.origin.y)^2);
+end
+
+-- Returns true if player is within boss perimiter, which is defined as a circle
+-- around spawn location.
+function WBT.PlayerIsInBossPerimiter(boss_name)
+    return WBT.PlayerDistanceToBoss(boss_name) < BossData.Get(boss_name).perimiter.radius;
+end
+
+-- Returns the first valid kill info found at current map position, or nil if
+-- none found.
+function WBT.KillInfoAtCurrentMapPosition()
+    local found = {};
+    for _, ki in pairs(WBT.KillInfosInCurrentZoneAndShard()) do
+        if WBT.PlayerIsInBossPerimiter(ki.name) then
+            table.insert(found, ki);
         end
     end
-
-    return nil;
+    if Util.TableLength(found) > 1 then
+        Logger.Debug("More than one boss found at current position. Only using first.");
+    end
+    return found[1];
 end
 
 function WBT.GetSpawnTimeOutput(kill_info)
@@ -306,7 +324,7 @@ end
 
 function WBT.AnnounceSpawnTime(kill_info, send_data_for_parsing)
     local msg = CreateAnnounceMessage(kill_info, send_data_for_parsing);
-    if Options.silent.get() then
+    if Options.dev_silent.get() then
         WBT:Print(msg);
     else
         SendChatMessage(msg, CHANNEL_ANNOUNCE, DEFAULT_CHAT_FRAME.editBox.languageID, nil);
@@ -319,12 +337,12 @@ local function GetSafeSpawnAnnouncerWithCooldown()
     -- Create closure that uses t_last_announce as a persistent/static variable
     local t_last_announce = 0;
     function AnnounceSpawnTimeIfSafe()
-        local kill_info = WBT.KillInfoInCurrentZoneAndShard();
+        local kill_info = WBT.KillInfoAtCurrentMapPosition();
         local announced = false;
         local t_now = GetServerTime();
 
         if not kill_info then
-            Logger.Debug("No timer found for current zone.");
+            Logger.Debug("No timer found for current location.");
             return announced;
         end
         if not ((t_last_announce + 1) <= t_now) then
@@ -494,7 +512,7 @@ function WBT.AceAddon:InitChatParsing()
                         and not PlayerSentMessage(sender) then
 
                     if WBT.InBossZone() then
-                        local kill_info = WBT.KillInfoInCurrentZoneAndShard();
+                        local kill_info = WBT.KillInfoAtCurrentMapPosition();
                         if kill_info and kill_info:IsSafeToShare({}) then
                             -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken by 8.2.5
                             -- TODO: Consider if this could trigger some optional sparkle
@@ -671,12 +689,46 @@ function WBT.AceAddon:OnDisable()
 end
 
 --@do-not-package@
+function WBT.Dev.PrettyPrintLocation()
+   local map_id = WBT.GetCurrentMapId();
+   local x, y = WBT.GetPlayerCoords();
+   -- Number of decimals is arbitrarily chosen.
+   print(string.format([[
+        map_id = %d,
+        perimiter = {
+            origin = {
+                x = %.8f,
+                y = %.8f,
+            },
+            radius = TODO_MANUALLY,
+        },
+   ]], map_id, x, y));
+end
+
+function WBT.Dev.PrintPlayerDistanceToBoss(boss_name)
+    if not boss_name then
+        WBT:PrintError("Invalid argument: nil");
+        return;
+    end
+    if not WBT.IsBoss(boss_name) then
+        WBT:PrintError("Invalid argument. Not a boss: " .. boss_name);
+        return;
+    end
+    if not WBT.IsInZoneOfBoss(boss_name) then
+        WBT:PrintError("Not in correct zone for " .. boss_name);
+        return;
+    end
+    print(WBT.PlayerDistanceToBoss(boss_name));
+end
+--@end-do-not-package@
+
+--@do-not-package@
 function RandomServerName()
-	local res = ""
-	for i = 1, 10 do
-		res = res .. string.char(math.random(97, 122))
-	end
-	return res
+    local res = ""
+    for i = 1, 10 do
+        res = res .. string.char(math.random(97, 122))
+    end
+    return res
 end
 
 local function StartSim(name, t)

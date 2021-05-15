@@ -145,7 +145,7 @@ Options.show_boss_zone_only    = ToggleItem:New("show_boss_zone_only", "Only sho
 Options.cyclic                 = ToggleItem:New("cyclic",              "Cyclic mode is now");
 Options.highlight              = ToggleItem:New("highlight",           "Highlighting of current zone is now");
 Options.show_saved             = ToggleItem:New("show_saved",          "Showing if saved on boss (on timer) is now");
-Options.silent                 = ToggleItem:New("silent",              "Silent mode is now"); -- Dev option.
+Options.dev_silent             = ToggleItem:New("dev_silent",          "Silent mode is now");
 Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", Sound.sound_tbl.tbl, Sound.sound_tbl.keys.option, Sound.sound_tbl.keys.file_id, Sound.SOUND_KEY_BATTLE_BEGINS);
 Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
  -- Wrapping in some help printing for cyclic mode.
@@ -200,9 +200,6 @@ function Options.SlashHandler(input)
     if arg1 then
         arg1 = arg1:lower();
     end
-    if arg2 then
-        arg2 = arg2:lower();
-    end
 
     if arg1 == "hide" then
         ShowGUI(false);
@@ -244,8 +241,15 @@ function Options.SlashHandler(input)
         WBT.GUI:ResetPosition();
     elseif arg1 == "log" then
         WBT.Logger.SetLogLevel(arg2);
-    elseif arg1 == "silent" then
-        Options.silent:Toggle();
+--@do-not-package@
+    elseif arg1 == "dev_silent" then
+        Options.dev_silent:Toggle();
+    elseif arg1 == "dev_print_location" then
+        WBT.Dev.PrettyPrintLocation();
+    elseif arg1 == "dev_print_distance" then
+        -- TODO: Doesn't work if boss name has space in it.
+        WBT.Dev.PrintPlayerDistanceToBoss(arg2);
+--@end-do-not-package@
     else
         PrintHelp();
     end

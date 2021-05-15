@@ -73,6 +73,14 @@ function Util.TableIsEmpty(tbl)
     return next(tbl) == nil
 end
 
+function Util.TableLength(tbl)
+    local cnt = 0;
+    for _ in pairs(tbl) do
+        cnt = cnt + 1;
+    end
+    return cnt;
+end
+
 function Util.IsTable(obj)
     return type(obj) == "table";
 end
