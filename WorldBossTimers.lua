@@ -305,7 +305,12 @@ local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
 end
 
 function WBT.AnnounceSpawnTime(kill_info, send_data_for_parsing)
-    SendChatMessage(CreateAnnounceMessage(kill_info, send_data_for_parsing), CHANNEL_ANNOUNCE, DEFAULT_CHAT_FRAME.editBox.languageID, nil);
+    local msg = CreateAnnounceMessage(kill_info, send_data_for_parsing);
+    if Options.silent.get() then
+        WBT:Print(msg);
+    else
+        SendChatMessage(msg, CHANNEL_ANNOUNCE, DEFAULT_CHAT_FRAME.editBox.languageID, nil);
+    end
 end
 
 -- Callback for GUI share button

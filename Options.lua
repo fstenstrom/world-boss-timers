@@ -145,6 +145,7 @@ Options.show_boss_zone_only    = ToggleItem:New("show_boss_zone_only", "Only sho
 Options.cyclic                 = ToggleItem:New("cyclic",              "Cyclic mode is now");
 Options.highlight              = ToggleItem:New("highlight",           "Highlighting of current zone is now");
 Options.show_saved             = ToggleItem:New("show_saved",          "Showing if saved on boss (on timer) is now");
+Options.silent                 = ToggleItem:New("silent",              "Silent mode is now"); -- Dev option.
 Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", Sound.sound_tbl.tbl, Sound.sound_tbl.keys.option, Sound.sound_tbl.keys.file_id, Sound.SOUND_KEY_BATTLE_BEGINS);
 Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
  -- Wrapping in some help printing for cyclic mode.
@@ -243,6 +244,8 @@ function Options.SlashHandler(input)
         WBT.GUI:ResetPosition();
     elseif arg1 == "log" then
         WBT.Logger.SetLogLevel(arg2);
+    elseif arg1 == "silent" then
+        Options.silent:Toggle();
     else
         PrintHelp();
     end
