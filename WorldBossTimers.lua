@@ -18,6 +18,11 @@ local Options = WBT.Options;
 local Com = WBT.Com;
 local Sound = WBT.Sound;
 
+-- Functions that will be created during startup.
+WBT.Functions = {
+    AnnounceTimerInChat = nil;
+};
+
 
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 
@@ -304,7 +309,7 @@ function WBT.AnnounceSpawnTime(kill_info, send_data_for_parsing)
 end
 
 -- Callback for GUI share button
-function WBT.GetSafeSpawnAnnouncerWithCooldown()
+local function GetSafeSpawnAnnouncerWithCooldown()
 
     -- Create closure that uses t_last_announce as a persistent/static variable
     local t_last_announce = 0;
@@ -624,6 +629,8 @@ function WBT.AceAddon:OnEnable()
     -- connected realms...
     Com:RegisterComm(Com.PREF_SR, Com.OnCommReceivedSR);
     Com:RegisterComm(Com.PREF_RR, Com.OnCommReceivedRR);
+
+    WBT.Functions.AnnounceTimerInChat = GetSafeSpawnAnnouncerWithCooldown();
 
     FilterValidKillInfosStep1();
 

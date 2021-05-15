@@ -208,33 +208,7 @@ function Options.SlashHandler(input)
     elseif arg1 == "show" then
         ShowGUI(true);
     elseif arg1 == "share" then
-
-        if not WBT.InBossZone() then
-            WBT:Print("You can't announce outside of a boss zone.");
-            return;
-        end
-
-        local ki = WBT.KillInfoInCurrentZoneAndShard();
-        if not ki or not(ki:IsValidVersion()) then
-            local msg = "No spawn timer for ";
-            for _, boss in pairs(WBT.BossesInCurrentZone()) do
-                msg = msg .. WBT.GetColoredBossName(boss.name) .. ", "
-            end
-            msg = msg:sub(0, -3); -- Remove the trailing ', '.
-
-            WBT:Print(msg);
-            return;
-        end
-
-        local error_msgs = {};
-        if ki:IsSafeToShare(error_msgs) then
-            WBT.AnnounceSpawnTime(ki, true);
-        else
-            WBT:Print(Util.ColoredString(Util.COLOR_RED, "WARNING") .. ": Timer might be incorrect. Not announcing.", "SAY", nil, nil);
-            for i, v in ipairs(error_msgs) do
-                WBT:Print(Util.ColoredString(Util.COLOR_RED, i) .. ": " .. v, "SAY", nil, nil);
-            end
-        end
+        WBT.Functions.AnnounceTimerInChat();
     elseif arg1 == "r"
             or arg1 == "reset"
             or arg1 == "restart" then

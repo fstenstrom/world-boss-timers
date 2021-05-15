@@ -394,16 +394,16 @@ function GUI:New()
     self.btn_share = GUI.AceGUI:Create("Button");
     self.btn_share:SetWidth(self.width * BTN_SHARE_SCALE);
     self.btn_share:SetText("Share");
-    self.btn_share:SetCallback("OnClick", WBT.GetSafeSpawnAnnouncerWithCooldown());
+    self.btn_share:SetCallback("OnClick", WBT.Functions.AnnounceTimerInChat);
 
     self.btn_container = GUI.AceGUI:Create("SimpleGroup");
-	self.btn_container.frame:SetFrameStrata("LOW");
+    self.btn_container.frame:SetFrameStrata("LOW");
     self.btn_container:SetLayout("flow");
     self.btn_container:SetWidth(self.width);
     self.btn_container:AddChild(self.btn_opts);
     self.btn_container:AddChild(self.btn_req);
     self.btn_container:AddChild(self.btn_share);
-	
+
     self.gui_container = GUI.AceGUI:Create("SimpleGroup");
     self.gui_container.frame:SetFrameStrata("LOW");
     self.gui_container:AddChild(self.window);
@@ -415,7 +415,7 @@ function GUI:New()
     self.window:SetCallback("OnClose", function()
         self:CleanUpWidgetsAndRelease();
     end);
-	
+
     self.window.title:SetScript("OnMouseDown", function(this)
         if self.window.frame:IsMovable() then
             this:GetParent():StartMoving();
