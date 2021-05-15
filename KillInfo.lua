@@ -262,14 +262,6 @@ function KillInfo:HasRespawned()
     return not self:IsDead();
 end
 
-function KillInfo.StartWorldBossDeathTimer()
-    if not(self:HasRespawned()) or (Options.CyclicEnabled() and not(self.reset)) then
-        local timer_duration = self:GetSpawnTimeSec();
-        local pretty_name = self.db.color .. name .. COLOR_DEFAULT .. ": ";
-        self:StartTimer(timer_duration, 1, pretty_name);
-    end
-end
-
 function KillInfo:ShouldAutoAnnounce()
     return WBT.db.global.auto_announce
             and Util.SetContainsValue(self.announce_times, self.remaining_time)
