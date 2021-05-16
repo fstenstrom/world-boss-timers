@@ -719,6 +719,9 @@ function WBT.AceAddon:OnDisable()
 end
 
 --@do-not-package@
+
+-- Run this when standing at boss location to get a dump of what needs to be put
+-- in BossData.
 function Dev.PrettyPrintLocation()
    local map_id = WBT.GetCurrentMapId();
    local x, y = WBT.GetPlayerCoords();
@@ -735,6 +738,8 @@ function Dev.PrettyPrintLocation()
    ]], map_id, x, y));
 end
 
+-- Run this to check how far the player is from a boss location as defined in
+-- BossData.
 function Dev.PrintPlayerDistanceToBoss(boss_name)
     if not boss_name then
         WBT:PrintError("Invalid argument: nil");
@@ -751,6 +756,7 @@ function Dev.PrintPlayerDistanceToBoss(boss_name)
     print(WBT.PlayerDistanceToBoss(boss_name));
 end
 
+-- Useful for examining current state of backend.
 function Dev.PrintAllKillInfos()
     Logger.Debug("Printing all KI:s");
     for guid, ki in pairs(g_kill_infos) do
@@ -758,4 +764,11 @@ function Dev.PrintAllKillInfos()
         ki:Print("  ");
     end
 end
+
+-- Useful to stop getting lua errors so the stack trace can be examined without
+-- getting refreshed all the time.
+function Dev.StopGUI()
+    kill_info_manager:SetScript("OnUpdate", nil);
+end
+
 --@end-do-not-package@
