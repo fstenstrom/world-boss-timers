@@ -694,7 +694,7 @@ function WBT.AceAddon:OnEnable()
     WBT.AceConfigDialog = LibStub("AceConfigDialog-3.0");
     WBT.AceConfigDialog:AddToBlizOptions(WBT.addon_name, WBT.addon_name, nil);
 
-    gui = WBT.GUI:New();
+    gui = GUI:New();
 
     InitDeathTrackerFrame();
     InitCombatScannerFrame();

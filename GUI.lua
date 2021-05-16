@@ -72,7 +72,6 @@ local function ShowBossZoneOnlyAndOutsideZone()
 end
 
 function GUI:ShouldShow()
-    -- cnd -> condition
     if (ShowBossZoneOnlyAndOutsideZone()) then
         return false;
     end
@@ -428,7 +427,8 @@ function GUI:New()
     self:InitPosition();
     self:RecordPositioning();
 
-    self:Show();
+    self:Show();                -- Just sets a well defined state of visibility...
+    self:UpdateGUIVisibility(); -- ... that will be updated here.
 
     return self;
 end
