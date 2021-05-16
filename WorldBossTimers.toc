@@ -16,3 +16,4 @@ GUI.lua
 Options.lua
 KillInfo.lua
 WorldBossTimers.lua
+Test.lua
