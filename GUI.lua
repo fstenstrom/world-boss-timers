@@ -22,9 +22,11 @@ local MAX_ENTRIES_DEFAULT = 7;
 
 local WIDTH_EXTENDED = 240;
 
-local BTN_OPTS_SCALE = 1 / 3;
-local BTN_REQ_SCALE = 1 / 3;
-local BTN_SHARE_SCALE = 1 / 3;
+-- The sum of the relatives is not 1, because I've had issues with "Flow"
+-- elements sometimes overflowing to next line then.
+local BTN_OPTS_REL_WIDTH  = 30/100;
+local BTN_REQ_REL_WIDTH   = 30/100;
+local BTN_SHARE_REL_WIDTH = 39/100; -- Needs the extra width or name might not show.
 
 
 --------------------------------------------------------------------------------
@@ -166,14 +168,12 @@ function GUI:UpdateWidth()
         return;
     end
 
+    self.width = new_width;
     self.window:SetWidth(new_width);
-    self.btn_req:SetWidth(new_width * BTN_REQ_SCALE);
-    self.btn_opts:SetWidth(new_width * BTN_OPTS_SCALE);
+    self.btn_container:SetWidth(new_width);
     for _, label in pairs(self.labels) do
         label:SetWidth(GUI.LabelWidth(new_width));
     end
-
-    self.width = new_width;
 end
 
 function GUI:GetLabelText(kill_info, all_info)
@@ -382,23 +382,23 @@ function GUI:New()
     WBT.G_window = self.window;
 
     self.btn_req = GUI.AceGUI:Create("Button");
-    self.btn_req:SetWidth(self.width * BTN_REQ_SCALE);
+    self.btn_req:SetRelativeWidth(BTN_REQ_REL_WIDTH);
     self.btn_req:SetText("Req.");
     self.btn_req:SetCallback("OnClick", WBT.RequestKillData);
 
     self.btn_opts = GUI.AceGUI:Create("Button");
     self.btn_opts:SetText("/wbt");
-    self.btn_opts:SetWidth(self.width * BTN_OPTS_SCALE);
+    self.btn_opts:SetRelativeWidth(BTN_OPTS_REL_WIDTH);
     self.btn_opts:SetCallback("OnClick", function() WBT.AceConfigDialog:Open(WBT.addon_name); end);
 
     self.btn_share = GUI.AceGUI:Create("Button");
-    self.btn_share:SetWidth(self.width * BTN_SHARE_SCALE);
+    self.btn_share:SetRelativeWidth(BTN_SHARE_REL_WIDTH);
     self.btn_share:SetText("Share");
     self.btn_share:SetCallback("OnClick", WBT.Functions.AnnounceTimerInChat);
 
     self.btn_container = GUI.AceGUI:Create("SimpleGroup");
     self.btn_container.frame:SetFrameStrata("LOW");
-    self.btn_container:SetLayout("flow");
+    self.btn_container:SetLayout("Flow");
     self.btn_container:SetWidth(self.width);
     self.btn_container:AddChild(self.btn_opts);
     self.btn_container:AddChild(self.btn_req);
@@ -406,6 +406,7 @@ function GUI:New()
 
     self.gui_container = GUI.AceGUI:Create("SimpleGroup");
     self.gui_container.frame:SetFrameStrata("LOW");
+    self.gui_container:SetLayout("List");
     self.gui_container:AddChild(self.window);
     self.gui_container:AddChild(self.btn_container);
 
