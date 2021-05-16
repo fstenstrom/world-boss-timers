@@ -369,7 +369,7 @@ local function GetSafeSpawnAnnouncerWithCooldown()
         local t_now = GetServerTime();
 
         if not kill_info then
-            Logger.Info("No timer found for current location/realm/warmode.");
+            Logger.Info("No timer found for current location+realm+warmode.");
             return announced;
         end
         if not ((t_last_announce + 1) <= t_now) then
