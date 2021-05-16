@@ -2,20 +2,20 @@
 --[[
 
 # Release tests:
-1. Kill Rukhmar twice.
+1. Perform all other tests.
+2. Kill Rukhmar twice.
     a. 1st time: Check that you get timer.
     b. 2nd time: Check that you get alerts and that she spawns as expected.
-2. Perform all other tests.
 
 # Before push to master tests:
-1. For any module touched, relevant tests.
+1. For any changed module, perform relevant tests.
 2. Manually check that happy path and most edge cases work. If necessary also write down a test for it here.
 
 #--------------------------------------------------------------------------------
 
 # Communication tests:
-1. Request timer via GUI. Check chat message appears.
-2. Share timer with other via button. Check they receive it.
+1. Request timer via GUI. Check that chat message appears.
+2. Share timer with other player via button. Check that they receive it.
 
 # GUI tests:
 1. Go to non-boss zone and run StartTimers25. Check that GUI looks OK and that you don't get any alerts. Change options arbitrarily and check that GUI looks OK.
