@@ -1,4 +1,3 @@
---@do-not-package@
 --[[
 
 # Release tests:
@@ -129,4 +128,3 @@ function Test.StartTimersRandomServer()
         SimServerKill("Grellkin", RandomServerName())
     end
 end
---@end-do-not-package@

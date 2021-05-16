@@ -16,4 +16,6 @@ GUI.lua
 Options.lua
 KillInfo.lua
 WorldBossTimers.lua
+--@do-not-package@
 Test.lua
+--@end-do-not-package@
