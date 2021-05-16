@@ -16,6 +16,7 @@ Util.COLOR_LIGHTGREEN = "|cff35e059";
 Util.COLOR_DARKGREEN  = "|cff50c41f";
 Util.COLOR_YELLOW     = "|cfff2e532";
 Util.COLOR_BLUE       = "|cff0394fc";
+Util.COLOR_PURPLE     = "|cffbf00ff";
 
 Util.Warmode = {
     DISABLED = "Normal",

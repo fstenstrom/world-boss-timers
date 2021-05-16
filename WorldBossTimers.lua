@@ -31,7 +31,9 @@ WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 WBT.Print = function(self, text) WBT.AceAddon:Print(text) end
 
 -- Global logger. OK since WoW is single-threaded.
-WBT.Logger = {};
+WBT.Logger = {
+    options_tbl = nil; -- Used to show options in GUI.
+};
 local Logger = WBT.Logger;
 Logger.LogLevels =  {
     Nothing = {
@@ -39,25 +41,47 @@ Logger.LogLevels =  {
         name  = "Nothing";
         color = Util.COLOR_DEFAULT;
     },
+    Info = {
+        value = 1;
+        name  = "Info";
+        color = Util.COLOR_BLUE;
+    },
     Debug = {
         value = 10;
         name  = "Debug";
-        color = Util.COLOR_BLUE;
+        color = Util.COLOR_PURPLE;
     }
 };
 
+function Logger.InitializeOptionsTable()
+    local tmp = {};
+    for _, v in pairs(Logger.LogLevels) do
+        table.insert(tmp, {option = v.name, log_level = v.name});
+    end
+    Logger.options_tbl = {
+        keys = {
+            option = "option",
+            log_level = "log_level",
+        },
+        tbl = WBT.Util.MultiKeyTable:New(tmp),
+    };
+end
 
-function Logger.PrintLogLevels()
-    WBT:Print("Valid LogLevel values:");
-    for k, _ in pairs(Logger.LogLevels) do
-        WBT:Print(k);
+function Logger.Initialize()
+    Logger.InitializeOptionsTable();
+end
+
+function Logger.PrintLogLevelHelp()
+    WBT:Print("Valid <level> values:");
+    for k in pairs(Logger.LogLevels) do
+        WBT:Print("  " .. k:lower());
     end
 end
 
 -- @param level_name    Log level given as string.
-function Logger.SetLogLevel(level_name)
+function Logger.SetLogLevel(level_name, verbose)
     if not level_name then
-        Logger.PrintLogLevels();
+        Logger.PrintLogLevelHelp();
         return;
     end
 
@@ -67,8 +91,10 @@ function Logger.SetLogLevel(level_name)
 
     local log_level = Logger.LogLevels[level_name];
     if log_level then
-        WBT:Print("Setting log level to: " .. log_level.name);
-        WBT.db.char.log_level = log_level;
+        if verbose then
+            WBT:Print("Setting log level to: " .. Util.ColoredString(log_level.color, log_level.name));
+        end
+        WBT.db.global.log_level = level_name;
     else
         WBT:Print("Requested log level '" .. level_name .. "' doesn't exist.");
     end
@@ -77,7 +103,7 @@ end
 -- @param varargs   A single table containing a list of strings, or varargs of
 --                  strings.
 function Logger.Log(log_level, ...)
-    if WBT.db.char.log_level.value < log_level.value then
+    if Logger.LogLevels[WBT.db.global.log_level].value < log_level.value then
         return;
     end
 
@@ -98,6 +124,10 @@ function Logger.Debug(...)
     Logger.Log(Logger.LogLevels.Debug, ...);
 end
 
+function Logger.Info(...)
+    Logger.Log(Logger.LogLevels.Info, ...);
+end
+
 local gui = {};
 local boss_death_frame;
 local boss_combat_frame;
@@ -108,7 +138,7 @@ local ICON_SKULL = "{rt8}";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
 local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 
-local defaults = {
+WBT.defaults = {
     global = {
         kill_infos = {},
         lock = false,
@@ -118,9 +148,9 @@ local defaults = {
         hide_gui = false,
         multi_realm = false,
         show_boss_zone_only = false,
+        log_level = "Info",
     },
     char = {
-        log_level = Logger.LogLevels.Nothing,
         boss = {},
     },
 };
@@ -213,9 +243,8 @@ function WBT.PlayerIsInBossPerimiter(boss_name)
     return WBT.PlayerDistanceToBoss(boss_name) < BossData.Get(boss_name).perimiter.radius;
 end
 
--- Returns the first valid kill info found at current map position, or nil if
--- none found.
-function WBT.KillInfoAtCurrentMapPosition()
+-- Returns the first valid kill info found or nil if none found.
+function WBT.KillInfoAtCurrentPositionRealmWarmode()
     local found = {};
     for _, ki in pairs(WBT.KillInfosInCurrentZoneAndShard()) do
         if WBT.PlayerIsInBossPerimiter(ki.name) then
@@ -337,16 +366,16 @@ local function GetSafeSpawnAnnouncerWithCooldown()
     -- Create closure that uses t_last_announce as a persistent/static variable
     local t_last_announce = 0;
     function AnnounceSpawnTimeIfSafe()
-        local kill_info = WBT.KillInfoAtCurrentMapPosition();
+        local kill_info = WBT.KillInfoAtCurrentPositionRealmWarmode();
         local announced = false;
         local t_now = GetServerTime();
 
         if not kill_info then
-            Logger.Debug("No timer found for current location.");
+            Logger.Info("No timer found for current location/realm/warmode.");
             return announced;
         end
         if not ((t_last_announce + 1) <= t_now) then
-            Logger.Debug("Can only share once per second.");
+            Logger.Info("Can only share once per second.");
             return announced;
         end
 
@@ -356,8 +385,8 @@ local function GetSafeSpawnAnnouncerWithCooldown()
             t_last_announce = t_now;
             announced = true;
         else
-            Logger.Debug("Cannot share timer for " .. GetColoredBossName(kill_info.name) .. ":");
-            Logger.Debug(errors);
+            Logger.Info("Cannot share timer for " .. GetColoredBossName(kill_info.name) .. ":");
+            Logger.Info(errors);
             return announced;
         end
 
@@ -512,7 +541,7 @@ function WBT.AceAddon:InitChatParsing()
                         and not PlayerSentMessage(sender) then
 
                     if WBT.InBossZone() then
-                        local kill_info = WBT.KillInfoAtCurrentMapPosition();
+                        local kill_info = WBT.KillInfoAtCurrentPositionRealmWarmode();
                         if kill_info and kill_info:IsSafeToShare({}) then
                             -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken by 8.2.5
                             -- TODO: Consider if this could trigger some optional sparkle
@@ -640,7 +669,7 @@ end
 function WBT.AceAddon:OnEnable()
     GUI.Init();
 
-	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", defaults);
+	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", WBT.defaults);
     LibStub("AceComm-3.0"):Embed(Com);
 
     Com:Init(); -- Must init after db.
@@ -661,6 +690,8 @@ function WBT.AceAddon:OnEnable()
 
     local AceConfig = LibStub("AceConfig-3.0");
 
+    Logger.Initialize();
+    Options.Initialize();
     AceConfig:RegisterOptionsTable(WBT.addon_name, Options.optionsTable, {});
     WBT.AceConfigDialog = LibStub("AceConfigDialog-3.0");
     WBT.AceConfigDialog:AddToBlizOptions(WBT.addon_name, WBT.addon_name, nil);
@@ -805,7 +836,7 @@ end
 function PrintAllKillInfos()
     Logger.Debug("Printing all KI:s");
     for guid, ki in pairs(g_kill_infos) do
-        print(guid)
+        Logger.Debug(guid)
         ki:Print("  ");
     end
 end

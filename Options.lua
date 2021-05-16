@@ -12,6 +12,8 @@ local CYCLIC_HELP_TEXT = "This mode will repeat the boss timers if you miss the 
         Util.ColoredString(Util.COLOR_RED, "red text") ..
         " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.";
 
+local DEFAULT_SPAWN_ALERT_OFFSET = 5;
+
 ----- Setters and Getters for options -----
 
 local OptionsItem = {};
@@ -137,23 +139,29 @@ function RangeItem:New(var_name, status_msg, default_val)
     return si;
 end
 
-local DEFAULT_SPAWN_ALERT_OFFSET = 5;
-Options.lock                   = ToggleItem:New("lock",                "GUI lock is now");
-Options.sound                  = ToggleItem:New("sound_enabled",       "Sound is now");
-Options.multi_realm            = ToggleItem:New("multi_realm",         "Multi-Realm/Warmode option is now");
-Options.show_boss_zone_only    = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
-Options.cyclic                 = ToggleItem:New("cyclic",              "Cyclic mode is now");
-Options.highlight              = ToggleItem:New("highlight",           "Highlighting of current zone is now");
-Options.show_saved             = ToggleItem:New("show_saved",          "Showing if saved on boss (on timer) is now");
-Options.dev_silent             = ToggleItem:New("dev_silent",          "Silent mode is now");
-Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", Sound.sound_tbl.tbl, Sound.sound_tbl.keys.option, Sound.sound_tbl.keys.file_id, Sound.SOUND_KEY_BATTLE_BEGINS);
-Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
- -- Wrapping in some help printing for cyclic mode.
-local cyclic_set_temp = Options.cyclic.set;
-Options.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
--- Wrapping in 'play sound file when selected'.
-local spawn_alert_sound_set_temp = Options.spawn_alert_sound.set;
-Options.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Options.spawn_alert_sound:Value()); end
+function Options.InitializeItems()
+    local logger_opts = WBT.Logger.options_tbl;
+    local sound_opts =  Sound.sound_tbl;
+    Options.lock                   = ToggleItem:New("lock",                "GUI lock is now");
+    Options.sound                  = ToggleItem:New("sound_enabled",       "Sound is now");
+    Options.multi_realm            = ToggleItem:New("multi_realm",         "Multi-Realm/Warmode option is now");
+    Options.show_boss_zone_only    = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
+    Options.cyclic                 = ToggleItem:New("cyclic",              "Cyclic mode is now");
+    Options.highlight              = ToggleItem:New("highlight",           "Highlighting of current zone is now");
+    Options.show_saved             = ToggleItem:New("show_saved",          "Showing if saved on boss (on timer) is now");
+    Options.dev_silent             = ToggleItem:New("dev_silent",          "Silent mode is now");
+    Options.log_level              = SelectItem:New("log_level",             "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
+    Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    Sound.SOUND_KEY_BATTLE_BEGINS);
+    Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
+     -- Wrapping in some help printing for cyclic mode.
+    local cyclic_set_temp = Options.cyclic.set;
+    Options.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
+    -- Wrapping in 'play sound file when selected'.
+    local spawn_alert_sound_set_temp = Options.spawn_alert_sound.set;
+    Options.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Options.spawn_alert_sound:Value()); end
+    -- Overriding setter for log_level to use same method as from CLI:
+    Options.log_level.set = function(state) WBT.Logger.SetLogLevel(state, false); end
+end
 
 ----- Slash commands -----
 
@@ -240,7 +248,7 @@ function Options.SlashHandler(input)
     elseif arg1 == "gui-reset" then
         WBT.GUI:ResetPosition();
     elseif arg1 == "log" then
-        WBT.Logger.SetLogLevel(arg2);
+        WBT.Logger.SetLogLevel(arg2, true);
 --@do-not-package@
     elseif arg1 == "dev_silent" then
         Options.dev_silent:Toggle();
@@ -264,134 +272,152 @@ function t_cnt:plusplus()
 end
 
 ----- Options table -----
-local desc_toggle = "Enable/Disable";
-Options.optionsTable = {
-  type = "group",
-  childGroups = "select",
-  args = {
-    sharing_explanation_header = {
-        name = Util.ColoredString(Util.COLOR_ORANGE, "Hints:"),
-        order = t_cnt:plusplus(),
-        type = "description",
-        fontSize = "large",
-        width = "full",
-    },
-    sharing_explanation_body = {
-        name = -- Hint_1
-                "- Press the " .. Util.ColoredString(Util.COLOR_ORANGE, "Req.") ..
-                " button to request timers from other nearby " ..  Util.ColoredString(Util.COLOR_ORANGE, "WBT") ..
-                " users. Since 8.2.5 this no longer causes automatic sharing. The other player must manually " ..
-                " share the timer by using the " .. Util.ColoredString(Util.COLOR_ORANGE, "Share") .. " button.\n" ..
-                -- Hint_2
-                "- Click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") ..
-                " to reset that (and only that) timer.",
-        order = t_cnt:plusplus(),
-        type = "description",
-        fontSize = "medium",
-        width = "full",
-    },
-    lock = {
-        name = "Lock GUI",
-        order = t_cnt:plusplus(),
-        desc = "Toggle if the GUI should be locked or movable",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Options.lock:Toggle(); end,
-        get = function(info) return Options.lock.get() end,
-    },
-    show = {
-        name = "Show GUI",
-        order = t_cnt:plusplus(),
-        desc = desc_toggle,
-        type = "toggle",
-        width = "full",
-        set = function(info, val) ShowGUI(val) end,
-        get = function(info) return not WBT.db.global.hide_gui; end
-    },
-    show_boss_zone_only = {
-        name = "Only show GUI in boss zones",
-        order = t_cnt:plusplus(),
-        desc = desc_toggle,
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Options.show_boss_zone_only:Toggle(); end,
-        get = function(info) return Options.show_boss_zone_only.get() end,
-    },
-    sound = {
-        name = "Sound",
-        order = t_cnt:plusplus(),
-        desc = desc_toggle,
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Options.sound:Toggle(); end,
-        get = function(info) return Options.sound.get() end,
-    },
-    cyclic = {
-        name = "Cyclic (show expired)",
-        order = t_cnt:plusplus(),
-        desc = "If you missed a kill, the timer will wrap around and will now have a red color",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Options.cyclic:Toggle(); end,
-        get = function(info) return Options.cyclic.get(); end,
-    },
-    multi_realm = {
-        name = "Multi-realm + Warmode",
-        order = t_cnt:plusplus(),
-        desc = "Show timers that are not for your current Realm or Warmode",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Options.multi_realm:Toggle(); end,
-        get = function(info) return Options.multi_realm.get() end,
-    },
-    highlight = {
-        name = "Highlight boss in current zone",
-        order = t_cnt:plusplus(),
-        desc = "The boss in your current zone will have a different color if your Realm + Warmode matches the timer:\n" ..
-                Util.ColoredString(Util.COLOR_LIGHTGREEN, "Green") .. " if timer not expired\n" ..
-                Util.ColoredString(Util.COLOR_YELLOW, "Yellow") .." if timer expired (with Cyclic mode)",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Options.highlight:Toggle(); end,
-        get = function(info) return Options.highlight.get() end,
-    },
-    show_saved = {
-        name = "Show if saved",
-        order = t_cnt:plusplus(),
-        desc = "Appends a colored 'X' (" .. Util.ColoredString(Util.COLOR_RED, "X") .. "/" .. Util.ColoredString(Util.COLOR_GREEN, "X") .. ")" ..
-                " after the timer if you are saved for the boss.\n" ..
-                "NOTE: The color of the 'X' has no special meaning, it's just for improved visibility.",
-        type = "toggle",
-        width = "full",
-        set = function(info, val) Options.show_saved:Toggle(); end,
-        get = function(info) return Options.show_saved.get() end,
-    },
-    spawn_alert_sound = {
-        name = "Spawn alert sound",
-        order = t_cnt:plusplus(),
-        desc = "Sound alert that plays when boss spawns",
-        type = "select",
-        style = "dropdown",
-        width = "normal",
-        values = Options.spawn_alert_sound.options,
-        set = function(info, val) Options.spawn_alert_sound.set(val); end,
-        get = function(info) return Options.spawn_alert_sound.get(); end,
-    },
-    spawn_alert_sec_before = {
-        name = "Alert sec before spawn",
-        order = t_cnt:plusplus(),
-        desc = "How many seconds before boss spawns that alerts should happen",
-        type = "range",
-        min = 0,
-        max = 60*5,
-        softMin = 0,
-        softMax = 30,
-        bigStep = 1,
-        isPercent = false,
-        width = "normal",
-        set = function(info, val) Options.spawn_alert_sec_before.set(val); end,
-        get = function(info) return Options.spawn_alert_sec_before.get(); end,
-    },
-  }
-}
+function Options.InitializeOptionsTable()
+    local desc_toggle = "Enable/Disable";
 
+    Options.optionsTable = {
+      type = "group",
+      childGroups = "select",
+      args = {
+        sharing_explanation_header = {
+            name = Util.ColoredString(Util.COLOR_ORANGE, "Hints:"),
+            order = t_cnt:plusplus(),
+            type = "description",
+            fontSize = "large",
+            width = "full",
+        },
+        sharing_explanation_body = {
+            name = -- Hint_1
+                    "- Press the " .. Util.ColoredString(Util.COLOR_ORANGE, "Req.") ..
+                    " button to request timers from other nearby " ..  Util.ColoredString(Util.COLOR_ORANGE, "WBT") ..
+                    " users. Since 8.2.5 this no longer causes automatic sharing. The other player must manually " ..
+                    " share the timer by using the " .. Util.ColoredString(Util.COLOR_ORANGE, "Share") .. " button.\n" ..
+                    -- Hint_2
+                    "- Click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") ..
+                    " to reset that (and only that) timer.",
+            order = t_cnt:plusplus(),
+            type = "description",
+            fontSize = "medium",
+            width = "full",
+        },
+        lock = {
+            name = "Lock GUI",
+            order = t_cnt:plusplus(),
+            desc = "Toggle if the GUI should be locked or movable",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.lock:Toggle(); end,
+            get = function(info) return Options.lock.get() end,
+        },
+        show = {
+            name = "Show GUI",
+            order = t_cnt:plusplus(),
+            desc = desc_toggle,
+            type = "toggle",
+            width = "full",
+            set = function(info, val) ShowGUI(val) end,
+            get = function(info) return not WBT.db.global.hide_gui; end
+        },
+        show_boss_zone_only = {
+            name = "Only show GUI in boss zones",
+            order = t_cnt:plusplus(),
+            desc = desc_toggle,
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.show_boss_zone_only:Toggle(); end,
+            get = function(info) return Options.show_boss_zone_only.get() end,
+        },
+        sound = {
+            name = "Sound",
+            order = t_cnt:plusplus(),
+            desc = desc_toggle,
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.sound:Toggle(); end,
+            get = function(info) return Options.sound.get() end,
+        },
+        cyclic = {
+            name = "Cyclic (show expired)",
+            order = t_cnt:plusplus(),
+            desc = "If you missed a kill, the timer will wrap around and will now have a red color",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.cyclic:Toggle(); end,
+            get = function(info) return Options.cyclic.get(); end,
+        },
+        multi_realm = {
+            name = "Multi-realm + Warmode",
+            order = t_cnt:plusplus(),
+            desc = "Show timers that are not for your current Realm or Warmode",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.multi_realm:Toggle(); end,
+            get = function(info) return Options.multi_realm.get() end,
+        },
+        highlight = {
+            name = "Highlight boss in current zone",
+            order = t_cnt:plusplus(),
+            desc = "The boss in your current zone will have a different color if your Realm + Warmode matches the timer:\n" ..
+                    Util.ColoredString(Util.COLOR_LIGHTGREEN, "Green") .. " if timer not expired\n" ..
+                    Util.ColoredString(Util.COLOR_YELLOW, "Yellow") .." if timer expired (with Cyclic mode)",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.highlight:Toggle(); end,
+            get = function(info) return Options.highlight.get() end,
+        },
+        show_saved = {
+            name = "Show if saved",
+            order = t_cnt:plusplus(),
+            desc = "Appends a colored 'X' (" .. Util.ColoredString(Util.COLOR_RED, "X") .. "/" .. Util.ColoredString(Util.COLOR_GREEN, "X") .. ")" ..
+                    " after the timer if you are saved for the boss.\n" ..
+                    "NOTE: The color of the 'X' has no special meaning, it's just for improved visibility.",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.show_saved:Toggle(); end,
+            get = function(info) return Options.show_saved.get() end,
+        },
+        log_level = {
+            name = "Log level",
+            order = t_cnt:plusplus(),
+            desc = "Log level",
+            type = "select",
+            style = "dropdown",
+            width = "normal",
+            values = Options.log_level.options,
+            set = function(info, val) Options.log_level.set(val); end,
+            get = function(info) return Options.log_level.get(); end,
+        },
+        spawn_alert_sound = {
+            name = "Spawn alert sound",
+            order = t_cnt:plusplus(),
+            desc = "Sound alert that plays when boss spawns",
+            type = "select",
+            style = "dropdown",
+            width = "normal",
+            values = Options.spawn_alert_sound.options,
+            set = function(info, val) Options.spawn_alert_sound.set(val); end,
+            get = function(info) return Options.spawn_alert_sound.get(); end,
+        },
+        spawn_alert_sec_before = {
+            name = "Alert sec before spawn",
+            order = t_cnt:plusplus(),
+            desc = "How many seconds before boss spawns that alerts should happen",
+            type = "range",
+            min = 0,
+            max = 60*5,
+            softMin = 0,
+            softMax = 30,
+            bigStep = 1,
+            isPercent = false,
+            width = "normal",
+            set = function(info, val) Options.spawn_alert_sec_before.set(val); end,
+            get = function(info) return Options.spawn_alert_sec_before.get(); end,
+        },
+      }
+    }
+end
+
+function Options.Initialize()
+    Options.InitializeItems();
+    Options.InitializeOptionsTable();
+end
