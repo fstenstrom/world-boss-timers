@@ -160,7 +160,7 @@ function Options.InitializeItems()
     local spawn_alert_sound_set_temp = Options.spawn_alert_sound.set;
     Options.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Options.spawn_alert_sound:Value()); end
     -- Overriding setter for log_level to use same method as from CLI:
-    Options.log_level.set = function(state) WBT.Logger.SetLogLevel(state, false); end
+    Options.log_level.set = function(state) WBT.Logger.SetLogLevel(state); end
 end
 
 ----- Slash commands -----
@@ -248,7 +248,7 @@ function Options.SlashHandler(input)
     elseif arg1 == "gui-reset" then
         WBT.GUI:ResetPosition();
     elseif arg1 == "log" then
-        WBT.Logger.SetLogLevel(arg2, true);
+        WBT.Logger.SetLogLevel(arg2);
 --@do-not-package@
     elseif arg1 == "dev_silent" then
         Options.dev_silent:Toggle();

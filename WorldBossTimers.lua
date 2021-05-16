@@ -79,7 +79,7 @@ function Logger.PrintLogLevelHelp()
 end
 
 -- @param level_name    Log level given as string.
-function Logger.SetLogLevel(level_name, verbose)
+function Logger.SetLogLevel(level_name)
     if not level_name then
         Logger.PrintLogLevelHelp();
         return;
@@ -91,9 +91,7 @@ function Logger.SetLogLevel(level_name, verbose)
 
     local log_level = Logger.LogLevels[level_name];
     if log_level then
-        if verbose then
-            WBT:Print("Setting log level to: " .. Util.ColoredString(log_level.color, log_level.name));
-        end
+        WBT:Print("Setting log level to: " .. Util.ColoredString(log_level.color, log_level.name));
         WBT.db.global.log_level = level_name;
     else
         WBT:Print("Requested log level '" .. level_name .. "' doesn't exist.");
