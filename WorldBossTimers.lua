@@ -140,14 +140,21 @@ local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill 
 WBT.defaults = {
     global = {
         kill_infos = {},
+        sound_type = Sound.SOUND_CLASSIC,
+        -- Options:
         lock = false,
         sound_enabled = true,
-        sound_type = WBT.Sound.SOUND_CLASSIC,
-        cyclic = false,
-        hide_gui = false,
         multi_realm = false,
         show_boss_zone_only = false,
+        cyclic = false,
+        highlight = false,
+        show_saved = false,
+        dev_silent = false,
         log_level = "Info",
+        spawn_alert_sound = Sound.SOUND_KEY_BATTLE_BEGINS,
+        spawn_alert_sec_before = 5,
+        -- Options without matching OptionsItem:
+        hide_gui = false,
     },
     char = {
         boss = {},

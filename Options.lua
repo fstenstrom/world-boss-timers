@@ -12,8 +12,6 @@ local CYCLIC_HELP_TEXT = "This mode will repeat the boss timers if you miss the 
         Util.ColoredString(Util.COLOR_RED, "red text") ..
         " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.";
 
-local DEFAULT_SPAWN_ALERT_OFFSET = 5;
-
 ----- Setters and Getters for options -----
 
 local OptionsItem = {};
@@ -151,8 +149,8 @@ function Options.InitializeItems()
     Options.show_saved             = ToggleItem:New("show_saved",          "Showing if saved on boss (on timer) is now");
     Options.dev_silent             = ToggleItem:New("dev_silent",          "Silent mode is now");
     Options.log_level              = SelectItem:New("log_level",             "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
-    Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    Sound.SOUND_KEY_BATTLE_BEGINS);
-    Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", DEFAULT_SPAWN_ALERT_OFFSET);
+    Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    WBT.defaults.global.spawn_alert_sound);
+    Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", WBT.defaults.global.spawn_alert_sec_before);
      -- Wrapping in some help printing for cyclic mode.
     local cyclic_set_temp = Options.cyclic.set;
     Options.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
