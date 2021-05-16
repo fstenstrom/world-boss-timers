@@ -10,20 +10,21 @@ WBT.addon_name = "WorldBossTimers";
 wbt = WBT;
 --@end-do-not-package@
 
+WBT.Dev = {};
+
 local KillInfo = WBT.KillInfo;
-local Util = WBT.Util;
 local BossData = WBT.BossData;
-local GUI = WBT.GUI;
-local Options = WBT.Options;
-local Com = WBT.Com;
-local Sound = WBT.Sound;
+local Options  = WBT.Options;
+local Sound    = WBT.Sound;
+local Util     = WBT.Util;
+local GUI      = WBT.GUI;
+local Com      = WBT.Com;
+local Dev      = WBT.Dev;
 
 -- Functions that will be created during startup.
 WBT.Functions = {
     AnnounceTimerInChat = nil;
 };
-
-WBT.Dev = {};
 
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 
@@ -718,7 +719,7 @@ function WBT.AceAddon:OnDisable()
 end
 
 --@do-not-package@
-function WBT.Dev.PrettyPrintLocation()
+function Dev.PrettyPrintLocation()
    local map_id = WBT.GetCurrentMapId();
    local x, y = WBT.GetPlayerCoords();
    -- Number of decimals is arbitrarily chosen.
@@ -734,7 +735,7 @@ function WBT.Dev.PrettyPrintLocation()
    ]], map_id, x, y));
 end
 
-function WBT.Dev.PrintPlayerDistanceToBoss(boss_name)
+function Dev.PrintPlayerDistanceToBoss(boss_name)
     if not boss_name then
         WBT:PrintError("Invalid argument: nil");
         return;
@@ -749,15 +750,62 @@ function WBT.Dev.PrintPlayerDistanceToBoss(boss_name)
     end
     print(WBT.PlayerDistanceToBoss(boss_name));
 end
+
+function Dev.PrintAllKillInfos()
+    Logger.Debug("Printing all KI:s");
+    for guid, ki in pairs(g_kill_infos) do
+        Logger.Debug(guid)
+        ki:Print("  ");
+    end
+end
 --@end-do-not-package@
 
 --@do-not-package@
-function RandomServerName()
-    local res = ""
+--[[
+
+# Release tests:
+1. Kill Rukhmar twice.
+    a. 1st time: Check that you get timer.
+    b. 2nd time: Check that you get alerts and that she spawns as expected.
+2. Perform all other tests.
+
+# Before push to master tests:
+1. For any module touched, relevant tests.
+2. Manually check that happy path and most edge cases work. If necessary also write down a test for it here.
+
+#--------------------------------------------------------------------------------
+
+# Communication tests:
+1. Request timer via GUI. Check chat message appears.
+2. Share timer with other via button. Check they receive it.
+
+# GUI tests:
+1. Go to non-boss zone and start CheckTimer25. Check that GUI looks OK and that you don't get any alerts. Change options arbitrarily and check that GUI looks OK.
+    a. Repeat in boss zone. Check that you get alerts.
+2. After (1.):
+    a. /reload and check that everything looks OK.
+    b. Relog and check that everything looks OK.
+3. Spam all buttons exploratorily. Check that nothing breaks.
+
+# Backend tests
+1. Start CheckTimer25. Check that GUI behaves as expected. 
+
+# Logger tests
+1. Clear all timers. Enter the perimiter of some boss and try to share. Check that Info message looks OK.
+2. Start CheckTimer4 and let it expire. Enter the perimiter of some boss and try to share. Check that Info message looks OK.
+
+# CLI tests
+1. Set log level to 'Nothing' via CLI. Check that GUI options shows correct value. Repeat Logger tests and verify that nothing is printed.
+2. Set log level to 'Info' via CLI. Repeat (1.) but now check that the logger tests actually pass.
+
+]]--
+
+local function RandomServerName()
+    local res = "";
     for i = 1, 10 do
-        res = res .. string.char(math.random(97, 122))
+        res = res .. string.char(math.random(97, 122));
     end
-    return res
+    return res;
 end
 
 local function StartSim(name, t)
@@ -831,20 +879,8 @@ function dsim3()
     SimKillSpecial();
 end
 
-function PrintAllKillInfos()
-    Logger.Debug("Printing all KI:s");
-    for guid, ki in pairs(g_kill_infos) do
-        Logger.Debug(guid)
-        ki:Print("  ");
-    end
-end
-
 function stopgui()
     kill_info_manager:SetScript("OnUpdate", nil);
-end
-
-function SetLogLevel(level_name)
-    Logger.SetLogLevel(level_name);
 end
 --@end-do-not-package@
 
