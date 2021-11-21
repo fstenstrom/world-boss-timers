@@ -67,7 +67,9 @@ function ToggleItem.GetColoredStatus(status_var)
 end
 
 function ToggleItem:PrintFormattedStatus(status_var)
-    WBT:Print(self.msg .. " " .. self.GetColoredStatus(status_var) .. ".");
+    if self.msg then
+        WBT:Print(self.msg .. " " .. self.GetColoredStatus(status_var) .. ".");
+    end
 end
 
 function ToggleItem:Toggle()
@@ -137,10 +139,27 @@ function RangeItem:New(var_name, status_msg, default_val)
     return si;
 end
 
+local function ShowGUI(show)
+    local gui = GUI;
+    if show then
+        WBT.db.global.hide_gui = false;
+        if gui:ShouldShow() then
+            gui:Show();
+        else
+            WBT:Print("The GUI will show when next you enter a boss zone.");
+        end
+    else
+        WBT.db.global.hide_gui = true;
+        gui:Hide();
+    end
+    gui:Update();
+end
+
 function Options.InitializeItems()
     local logger_opts = WBT.Logger.options_tbl;
     local sound_opts =  Sound.sound_tbl;
     Options.lock                   = ToggleItem:New("lock",                "GUI lock is now");
+    Options.show_gui               = ToggleItem:New("show_gui",            nil);
     Options.sound                  = ToggleItem:New("sound_enabled",       "Sound is now");
     Options.multi_realm            = ToggleItem:New("multi_realm",         "Multi-Realm/Warmode option is now");
     Options.show_boss_zone_only    = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
@@ -159,6 +178,9 @@ function Options.InitializeItems()
     Options.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Options.spawn_alert_sound:Value()); end
     -- Overriding setter for log_level to use same method as from CLI:
     Options.log_level.set = function(state) WBT.Logger.SetLogLevel(state); end
+    -- Option show_gui is a bit complicated. Override overything:
+    Options.show_gui.set = function(state) ShowGUI(state); end                -- Makes the option more snappy.
+    Options.show_gui.get = function() return not WBT.db.global.hide_gui; end  -- I don't want to rename db variable, so just negate (hide -> show).
 end
 
 ----- Slash commands -----
@@ -171,8 +193,9 @@ local function PrintHelp()
     WBT:Print("/wbt gui-reset"   .. " --> Reset the position of the GUI");
     WBT:Print("/wbt saved"       .. " --> Print your saved bosses");
     WBT:Print("/wbt share"       .. " --> Announce timers for boss in zone");
-    WBT:Print("/wbt show"        .. " --> Show the timers frame");
-    WBT:Print("/wbt hide"        .. " --> Hide the timers frame");
+    WBT:Print("/wbt show"        .. " --> Show the timers window");
+    WBT:Print("/wbt hide"        .. " --> Hide the timers window");
+    WBT:Print("/wbt gui-toggle"  .. " --> Toggle visibility of the timers window");
     WBT:Print("/wbt send"        .. " --> Toggle send timer data in auto announce");
     WBT:Print("/wbt sound"       .. " --> Toggle sound alerts");
     WBT:Print("/wbt ann"         .. " --> Toggle automatic announcements");
@@ -185,22 +208,6 @@ local function PrintHelp()
 --  WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'");
 end
 
-local function ShowGUI(show)
-    local gui = GUI;
-    if show then
-        WBT.db.global.hide_gui = false;
-        if gui:ShouldShow() then
-            gui:Show();
-        else
-            WBT:Print("The GUI will show when next you enter a boss zone.");
-        end
-    else
-        WBT.db.global.hide_gui = true;
-        gui:Hide();
-    end
-    gui:Update();
-end
-
 function Options.SlashHandler(input)
     local arg1, arg2 = strsplit(" ", input);
     if arg1 then
@@ -211,6 +218,8 @@ function Options.SlashHandler(input)
         ShowGUI(false);
     elseif arg1 == "show" then
         ShowGUI(true);
+    elseif arg1 == "gui-toggle" then
+        Options.show_gui:Toggle();
     elseif arg1 == "share" then
         WBT.Functions.AnnounceTimerInChat();
     elseif arg1 == "r"
@@ -313,8 +322,8 @@ function Options.InitializeOptionsTable()
             desc = desc_toggle,
             type = "toggle",
             width = "full",
-            set = function(info, val) ShowGUI(val) end,
-            get = function(info) return not WBT.db.global.hide_gui; end
+            set = function(info, val) Options.show_gui:Toggle(); end,
+            get = function(info) return Options.show_gui.get(); end,
         },
         show_boss_zone_only = {
             name = "Only show GUI in boss zones",
@@ -323,7 +332,7 @@ function Options.InitializeOptionsTable()
             type = "toggle",
             width = "full",
             set = function(info, val) Options.show_boss_zone_only:Toggle(); end,
-            get = function(info) return Options.show_boss_zone_only.get() end,
+            get = function(info) return Options.show_boss_zone_only.get(); end,
         },
         sound = {
             name = "Sound",
@@ -332,7 +341,7 @@ function Options.InitializeOptionsTable()
             type = "toggle",
             width = "full",
             set = function(info, val) Options.sound:Toggle(); end,
-            get = function(info) return Options.sound.get() end,
+            get = function(info) return Options.sound.get(); end,
         },
         cyclic = {
             name = "Cyclic (show expired)",
@@ -350,7 +359,7 @@ function Options.InitializeOptionsTable()
             type = "toggle",
             width = "full",
             set = function(info, val) Options.multi_realm:Toggle(); end,
-            get = function(info) return Options.multi_realm.get() end,
+            get = function(info) return Options.multi_realm.get(); end,
         },
         highlight = {
             name = "Highlight boss in current zone",
@@ -361,7 +370,7 @@ function Options.InitializeOptionsTable()
             type = "toggle",
             width = "full",
             set = function(info, val) Options.highlight:Toggle(); end,
-            get = function(info) return Options.highlight.get() end,
+            get = function(info) return Options.highlight.get(); end,
         },
         show_saved = {
             name = "Show if saved",
@@ -372,7 +381,7 @@ function Options.InitializeOptionsTable()
             type = "toggle",
             width = "full",
             set = function(info, val) Options.show_saved:Toggle(); end,
-            get = function(info) return Options.show_saved.get() end,
+            get = function(info) return Options.show_saved.get(); end,
         },
         log_level = {
             name = "Log level",
