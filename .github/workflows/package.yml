@@ -1,0 +1,19 @@
+name: Package
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout addon
+        uses: actions/checkout@v2
+
+      - name: Package
+        uses: BigWigsMods/packager@v1
+        env:
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
