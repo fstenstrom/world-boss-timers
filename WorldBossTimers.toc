@@ -1,8 +1,8 @@
-## Interface: 90200
+## Interface: 100000
 ## Title: WorldBossTimers
 ## Notes: Creates timers for world bosses
 ## Author: Soulstorm
-## Version: v1.9.3
+## Version: v1.9.7
 ## SavedVariables: WorldBossTimersDB
 
 embeds.xml
