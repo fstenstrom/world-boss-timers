@@ -198,7 +198,6 @@ local function PrintHelp()
     WBT:Print("/wbt gui-toggle"  .. " --> Toggle visibility of the timers window");
     WBT:Print("/wbt send"        .. " --> Toggle send timer data in auto announce");
     WBT:Print("/wbt sound"       .. " --> Toggle sound alerts");
-    WBT:Print("/wbt ann"         .. " --> Toggle automatic announcements");
     WBT:Print("/wbt cyclic"      .. " --> Toggle cyclic timers");
     WBT:Print("/wbt multi"       .. " --> Toggle multi-realm/warmode timers");
     WBT:Print("/wbt zone"        .. " --> Toggle show GUI in boss zones only");
