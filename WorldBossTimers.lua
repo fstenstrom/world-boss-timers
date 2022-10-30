@@ -316,18 +316,19 @@ local function UnregisterEvents()
     boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
 end
 
+-- Intended to be called from clicking an interactive label.
 function WBT.ResetBoss(guid)
     local kill_info = g_kill_infos[guid];
-    local name = KillInfo.ParseGUID(guid).boss_name;
 
-    if not kill_info.cyclic then
-        local cyclic_mode = Util.COLOR_RED .. "Cyclic Mode" .. Util.COLOR_DEFAULT;
-        WBT:Print("Clicking a world boss that is in " .. cyclic_mode .. " will reset it."
-            .. " Try '/wbt cyclic' for more info.");
-    else
+    if IsControlKeyDown() and (IsShiftKeyDown() or kill_info.cyclic) then
         kill_info:Reset();
         gui:Update();
-        WBT:Print(GetColoredBossName(name) .. " has been reset.");
+        local name = KillInfo.ParseGUID(guid).boss_name;
+        Logger.Info(GetColoredBossName(name) .. " has been reset.");
+    else
+        local cyclic = Util.ColoredString(Util.COLOR_RED, "cyclic");
+        WBT:Print("Ctrl-clicking a timer that is " .. cyclic .. " will reset it."
+              .. " Ctrl-shift-clicking will reset any timer. For more info about " .. cyclic .. " mode: /wbt cyclic");
     end
 end
 
