@@ -510,7 +510,7 @@ function WBT.PrintKilledBosses()
 end
 
 function WBT.ResetKillInfo()
-    WBT:Print("Resetting all kill info.");
+    WBT:Print("Resetting all timers.");
     for _, kill_info in pairs(g_kill_infos) do
         kill_info:Reset();
     end

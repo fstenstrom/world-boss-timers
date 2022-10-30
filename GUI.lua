@@ -175,7 +175,7 @@ function GUI:UpdateWidth()
     end
 end
 
-function GUI:GetLabelText(kill_info, all_info)
+function GUI.GetLabelText(kill_info, all_info)
     local prefix = "";
     if all_info then
         prefix = Util.ColoredString(Util.COLOR_DARKGREEN, strsub(kill_info.realm_name_normalized, 0, 3)) .. ":"
@@ -201,43 +201,45 @@ function GUI:Rebuild()
         if label == nil or getmetatable(kill_info) ~= WBT.KillInfo then
             -- Do nothing.
         else
-            GUI:RemoveLabel(guid, label);
+            self:RemoveLabel(guid, label);
         end
     end
     self:Update();
 end
 
-function GUI:FreshKillTrigger(kill_info, label)
-    -- Not setting t_death_window from outside, to be certain that it doesn't
-    -- change between calls (saying this since the same variable name is used
-    -- in some other function).
-    local t_death_window = 3;  -- Arbitrarily chosen value.
-    local tf = not kill_info:Expired()
-            and kill_info:GetTimeSinceDeath() < t_death_window
-            and label.userdata.fresh_kill_flag ~= true;
-    if tf then
-        label.userdata.fresh_kill_flag = true;
+-- Returns true when a kill_info has a fresh kill that needs to be updated for the label.
+function GUI.KillInfoHasFreshKill(kill_info, label)
+    local t_death = kill_info:GetServerDeathTime();
+    if label.userdata.t_death ~= t_death then
+        label.userdata.t_death = t_death;
+        return true;
+    else
+        return false;
     end
-    return tf;
 end
 
-function GUI:CyclicLabelResetTrigger(kill_info, label)
-    -- Not setting t_death_window from outside, to be certain that it doesn't
-    -- change between calls (saying this since the same variable name is used
-    -- in some other function).
-    local t_death_window = 3;  -- Arbitrarily chosen value.
-    local tf = kill_info:Expired()
-            and kill_info.db.max_respawn - kill_info:GetSpawnTimeSec() < t_death_window
-            and (label.userdata.time_last_reset == nil
-                or label.userdata.time_last_reset + t_death_window < GetServerTime());
-    if tf then
-        label.userdata.time_last_reset = GetServerTime();
+-- True when the timer for a cyclic label restarted (i.e. made a lap).
+-- This includes the event that a kill info goes from non-expired to expired.
+function GUI.CyclicKillInfoRestarted(kill_info, label)
+    local t_next_spawn = kill_info:GetSpawnTimeSec();
+    if label.userdata.time_next_spawn < t_next_spawn then
+        label.userdata.time_next_spawn = t_next_spawn;
+        return true;
+    else
+        return false;
     end
-    return tf;
 end
 
+-- Builds and/or updates what labels as necessary.
 function GUI:UpdateContent()
     local n_shown_labels = 0;
+    local needs_rebuild = false;
+
+    -- Note that labels are added in a certain order, which corresponds to the order they will
+    -- be displayed in the Window. If there is a need to re-order a label, then the solution
+    -- is to call GUI.Rebuild().
+    -- The reason for a rebuild instead of sorting is that the labels are bound to internal AceGUI objects
+    -- and I don't want to try to sort them.
     for guid, kill_info in Util.spairs(WBT.db.global.kill_infos, WBT.KillInfo.CompareTo) do
         local label = self.labels[guid] or self:CreateNewLabel(guid);
         if getmetatable(kill_info) ~= WBT.KillInfo then
@@ -246,28 +248,32 @@ function GUI:UpdateContent()
                 and (not(kill_info.cyclic) or Options.cyclic.get())
                 and (WBT.ThisServerAndWarmode(kill_info) or Options.multi_realm.get()) then
             n_shown_labels = n_shown_labels + 1;
-            label:SetText(self:GetLabelText(kill_info, Options.multi_realm.get()));
+            label:SetText(GUI.GetLabelText(kill_info, Options.multi_realm.get()));
 
             if not label.userdata.added then
                 self.window:AddChild(label);
                 label.userdata.added = true;
             else
-                if self:FreshKillTrigger(kill_info, label) or self:CyclicLabelResetTrigger(kill_info, label) then
-                    self:Rebuild(); -- Warning: recursive call!
-                    return; -- Returning here, since above call is recursive.
+                if GUI.KillInfoHasFreshKill(kill_info, label) or GUI.CyclicKillInfoRestarted(kill_info, label) then
+                    -- The order of the labels needs to be updated, so rebuild.
+                    needs_rebuild = true;
                 end
             end
         else
             if label.userdata.added then
                 -- The label is apparently not automatically removed from the
-                -- self.window.children table, so it has to be done manually...
+                -- self.window.children table, so it has to be done manually.
                 self:RemoveLabel(guid, label);
             end
         end
     end
 
-    self:UpdateHeight(n_shown_labels);
-    self:UpdateWidth();
+    if needs_rebuild then
+        self:Rebuild(); -- Warning: recursive call!
+    else
+        self:UpdateHeight(n_shown_labels);
+        self:UpdateWidth();
+    end
 end
 
 function GUI:Update()
