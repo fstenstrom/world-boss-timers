@@ -655,8 +655,9 @@ function WBT.AceAddon:InitChatParsing()
                     if PlayerSentMessage(sender) then
                         return;
                     elseif string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
+                        -- NOTE: The name may contain dots and spaces, e.g. 'A. Harverster'.
                         local name, data = string.match(msg,
-                                "[^A-Z]*([A-Z][a-z%s]+)[^\(]*" ..  -- The name and any potential {rt8} from old versions.
+                                "[^A-Z]*([A-Z][a-z%s\.]+)[^\(]*" ..  -- The name and any potential {rt8} from old versions.
                                 "%(" .. SERVER_DEATH_TIME_PREFIX .. "([%w-\-]+)" .. "%)");  -- The data/payload.
                         if not data then
                             Logger.Debug("[Parsing]: Failed to parse timer. Unknown format.");
