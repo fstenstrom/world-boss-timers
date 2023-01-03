@@ -292,10 +292,14 @@ end
 function WBT.GetSpawnTimeOutput(kill_info)
     local text = kill_info:GetSpawnTimeAsText();
     local color = Util.COLOR_DEFAULT;
+
+    local same_shard = kill_info.shard_id == WBT.GetCurrentShardID();
+    local same_realm = tContains(Util.GetConnectedRealms(), kill_info.realm_name_normalized);
+    local same_warmode = Util.WarmodeStatus() == kill_info.realm_type;
     local highlight = Options.highlight.get()
             and WBT.IsInZoneOfBoss(kill_info.name)
-            and tContains(Util.GetConnectedRealms(), kill_info.realm_name_normalized)
-            and Util.WarmodeStatus() == kill_info.realm_type;
+            and (same_shard or (kill_info.shard_id == nil and same_realm and same_warmode));
+
     if kill_info.cyclic then
         if highlight then
             color = Util.COLOR_YELLOW;
