@@ -137,7 +137,6 @@ local g_kill_infos = {};
 local g_current_shard_id;
 
 local CHANNEL_ANNOUNCE = "SAY";
-local ICON_SKULL = "{rt8}";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
 local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
 
@@ -175,8 +174,22 @@ function WBT:PrintError(...)
     WBT:Print(text);
 end
 
-function WBT.IsDead(guid, ignore_cyclic)
-    local ki = g_kill_infos[guid];
+function WBT.GetCurrentShardID()
+    -- Getter for access via other modules.
+    return g_current_shard_id;
+end
+
+function WBT.ParseShardID(unit_guid)
+    local unit_type = strsplit("-", unit_guid);
+    if unit_type == "Creature" then
+        return select(5, strsplit("-", unit_guid));
+    else
+        return nil;
+    end
+end
+
+function WBT.IsDead(ki_id, ignore_cyclic)
+    local ki = g_kill_infos[ki_id];
     if ki and ki:IsValidVersion() then
         return ki:IsDead(ignore_cyclic);
     end
@@ -232,7 +245,16 @@ function WBT.KillInfosInCurrentZoneAndShard()
     -- For zones with multiple bosses such as Kun-Lai and Mechagon,
     -- calculate circle in coords around spawn location 
     for _, boss in pairs(WBT.BossesInCurrentZone()) do
-        table.insert(res, g_kill_infos[KillInfo.CreateGUID(boss.name)]);
+        local ki_no_shard = g_kill_infos[KillInfo.CreateID(boss.name)];
+        if ki_no_shard then
+            table.insert(res, ki_no_shard);
+        end
+        if g_current_shard_id then
+            local ki_shard = g_kill_infos[KillInfo.CreateID(boss.name, g_current_shard_id)];
+            if ki_shard then
+                table.insert(res, ki_shard);
+            end
+        end
     end
     return res;
 end
@@ -321,13 +343,13 @@ local function UnregisterEvents()
 end
 
 -- Intended to be called from clicking an interactive label.
-function WBT.ResetBoss(guid)
-    local kill_info = g_kill_infos[guid];
+function WBT.ResetBoss(ki_id)
+    local kill_info = g_kill_infos[ki_id];
 
     if IsControlKeyDown() and (IsShiftKeyDown() or kill_info.cyclic) then
         kill_info:Reset();
         gui:Update();
-        local name = KillInfo.ParseGUID(guid).boss_name;
+        local name = KillInfo.ParseID(ki_id).boss_name;
         Logger.Info(GetColoredBossName(name) .. " has been reset.");
     else
         local cyclic = Util.ColoredString(Util.COLOR_RED, "cyclic");
@@ -344,21 +366,25 @@ local function UpdateCyclicStates()
     end
 end
 
-local function CreateServerDeathTimeParseable(kill_info, send_data_for_parsing)
-    local t_death_parseable = "";
+-- TODO: Rename. Also creates some structural texts and not just the payload.
+-- (The name is also parsed, but it's not conevient to be part of payload.)
+local function CreatePayload(kill_info, send_data_for_parsing)
+    local payload = "";
     if send_data_for_parsing then
-        t_death_parseable = " (" .. SERVER_DEATH_TIME_PREFIX .. kill_info:GetServerDeathTime() .. ")";
+        local shard_id_suffix = "";
+        if kill_info:HasShardID() then
+            shard_id_suffix = "-" .. kill_info.shard_id;
+        end
+        payload = " (" .. SERVER_DEATH_TIME_PREFIX .. kill_info:GetServerDeathTime() .. shard_id_suffix .. ")";
     end
 
-    return t_death_parseable;
+    return payload;
 end
 
 local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
     local spawn_time = kill_info:GetSpawnTimeAsText();
-    local t_death_parseable = CreateServerDeathTimeParseable(kill_info, send_data_for_parsing);
-
-    local msg = ICON_SKULL .. kill_info.name .. ICON_SKULL .. ": " .. spawn_time .. t_death_parseable;
-
+    local payload = CreatePayload(kill_info, send_data_for_parsing);
+    local msg = kill_info.name .. ": " .. spawn_time .. payload;
     return msg;
 end
 
@@ -407,39 +433,40 @@ local function GetSafeSpawnAnnouncerWithCooldown()
     return AnnounceSpawnTimeIfSafe;
 end
 
-function WBT.SetKillInfo(name, t_death)
+function WBT.PutOrUpdateKillInfo(name, shard_id, t_death)
     t_death = tonumber(t_death);
-    local guid = KillInfo.CreateGUID(name);
-    local ki = g_kill_infos[guid];
+    local ki_id = KillInfo.CreateID(name, shard_id);
+    local ki = g_kill_infos[ki_id];
     if ki then
         ki:SetNewDeath(name, t_death);
     else
-        ki = KillInfo:New(t_death, name);
+        ki = KillInfo:New(name, t_death, shard_id);
     end
 
-    g_kill_infos[guid] = ki;
+    g_kill_infos[ki_id] = ki;
 
     gui:Update();
 end
 
 local function InitDeathTrackerFrame()
     if boss_death_frame ~= nil then
-        return
+        return;
     end
 
     boss_death_frame = CreateFrame("Frame");
     boss_death_frame:SetScript("OnEvent", function(...)
-            local _, eventType, _, _, _, _, _, destGUID, _ = CombatLogGetCurrentEventInfo();
+            local _, eventType, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
 
             -- Convert to English name from GUID, to make it work for
             -- localization.
-            local name = BossData.NameFromNpcGuid(destGUID, WBT.GetCurrentMapId());
+            local name = BossData.NameFromUnitGuid(dest_unit_guid, WBT.GetCurrentMapId());
             if name == nil then
                 return;
             end
 
             if eventType == "UNIT_DIED" then
-                WBT.SetKillInfo(name, GetServerTime());
+                local shard_id = WBT.ParseShardID(dest_unit_guid);
+                WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
                 RequestRaidInfo(); -- Updates which bosses are saved
                 gui:Update();
             end
@@ -472,11 +499,11 @@ local function InitCombatScannerFrame()
     boss_combat_frame.t_next = 0;
 
     function ScanWorldBossCombat(...)
-		local destGUID = select(8, CombatLogGetCurrentEventInfo());
+		local dest_unit_guid = select(8, CombatLogGetCurrentEventInfo());
 
         -- Convert to English name from GUID, to make it work for
         -- localization.
-        local name = BossData.NameFromNpcGuid(destGUID, WBT.GetCurrentMapId());
+        local name = BossData.NameFromUnitGuid(dest_unit_guid, WBT.GetCurrentMapId());
         if name == nil then
             return;
         end
@@ -542,8 +569,8 @@ local function StartShardDetectionHandler()
         local guid = UnitGUID("mouseover");
         local unit_type = strsplit("-", guid);
         if unit_type == "Creature" then
-            g_current_shard_id = select(5, strsplit("-", guid));
-            print("Detected new shard: ", g_current_shard_id);
+            g_current_shard_id = WBT.ParseShardID(guid);
+            Logger.Debug("[ShardDetection]: New shard ID detected: ", g_current_shard_id);
             self:UnregisterEvents();
         end
     end);
@@ -553,7 +580,8 @@ local function StartShardDetectionHandler()
     f_restart:RegisterEvent("ZONE_CHANGED_NEW_AREA");
     f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
     f_restart:SetScript("OnEvent", function(...)
-        g_current_shard_id = nil;  -- Invalidate old shard id.
+        g_current_shard_id = nil;
+        Logger.Debug("[ShardDetection]: Possibly shard change. Shard ID invalidated.");
 
         -- Wait a while before starting to detect the new shard. When phasing to a new shard it will still
         -- take a while for mobs to despawn in the old shard. These will still give the (incorrect) old shard
@@ -615,11 +643,24 @@ function WBT.AceAddon:InitChatParsing()
                     if PlayerSentMessage(sender) then
                         return;
                     elseif string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
-                        local name, t_death = string.match(msg, ".*([A-Z][a-z]+).*" .. SERVER_DEATH_TIME_PREFIX .. "(%d+)");
-                        local guid = KillInfo.CreateGUID(name);
+                        local name, data = string.match(msg,
+                                "[^A-Z]*([A-Z][a-z%s]+)[^\(]*" ..  -- The name and any potential {rt8} from old versions.
+                                "%(" .. SERVER_DEATH_TIME_PREFIX .. "([%w-\-]+)" .. "%)");  -- The data/payload.
+                        if not data then
+                            Logger.Debug("[Parsing]: Failed to parse timer. Unknown format.");
+                            return;
+                        end
+                        local t_death, shard_id = strsplit("-", data);  -- Missing shard_id from old versions is OK.
+                        local ki_id = KillInfo.CreateID(name, shard_id);
                         local ignore_cyclic = true;
-                        if WBT.IsBoss(name) and not IsDead(guid, ignore_cyclic) then
-                            WBT.SetKillInfo(name, t_death);
+                        if not WBT.IsBoss(name) then
+                            Logger.Debug("[Parsing]: Failed to parse timer. Unknown boss name: ", name);
+                            return;
+                        elseif IsDead(ki_id, ignore_cyclic) then
+                            Logger.Debug("[Parsing]: Ignoring shared timer. Player already has fresh timer.");
+                            return;
+                        else
+                            WBT.PutOrUpdateKillInfo(name, shard_id, t_death);
                             WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
                         end
                     end
@@ -638,23 +679,23 @@ local function LoadSerializedKillInfos()
     end
 end
 
--- Step1 is performed before deserialization and looks just at the GUID.
+-- Step1 is performed before deserialization and looks just at the ID.
 local function FilterValidKillInfosStep1()
     -- Perform filtering in two steps to avoid what I guess would
     -- be some kind of "ConcurrentModificationException".
 
-    -- Find invalid.
+    -- Find invalid:
     local invalid = {};
-    for guid, ki in pairs(WBT.db.global.kill_infos) do
-        if not KillInfo.ValidGUID(guid) then
-            invalid[guid] = ki;
+    for id, ki in pairs(WBT.db.global.kill_infos) do
+        if not KillInfo.IsValidID(id) then
+            invalid[id] = ki;
         end
     end
 
-    -- Remove invalid.
-    for guid, ki in pairs(invalid) do
-        Logger.Debug("[PreDeserialize]: Removing invalid KI with GUID: " .. guid);
-        WBT.db.global.kill_infos[guid] = nil;
+    -- Remove invalid:
+    for id, ki in pairs(invalid) do
+        Logger.Debug("[PreDeserialize]: Removing invalid KI with ID: " .. id);
+        WBT.db.global.kill_infos[id] = nil;
     end
 end
 
@@ -662,16 +703,16 @@ end
 local function FilterValidKillInfosStep2()
     -- Find invalid.
     local invalid = {};
-    for guid, ki in pairs(g_kill_infos) do
+    for id, ki in pairs(g_kill_infos) do
         if not ki:IsValidVersion() or ki.reset then
-            table.insert(invalid, guid);
+            table.insert(invalid, id);
         end
     end
 
     -- Remove invalid.
-    for _, guid in pairs(invalid) do
-        Logger.Debug("[PostDeserialize]: Removing invalid KI with GUID: " .. guid);
-        WBT.db.global.kill_infos[guid] = nil;
+    for _, id in pairs(invalid) do
+        Logger.Debug("[PostDeserialize]: Removing invalid KI with ID: " .. id);
+        WBT.db.global.kill_infos[id] = nil;
     end
 end
 
@@ -814,8 +855,8 @@ end
 -- Useful for examining current state of backend.
 function Dev.PrintAllKillInfos()
     Logger.Debug("Printing all KI:s");
-    for guid, ki in pairs(g_kill_infos) do
-        Logger.Debug(guid)
+    for id, ki in pairs(g_kill_infos) do
+        Logger.Debug(id)
         ki:Print("  ");
     end
 end

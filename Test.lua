@@ -61,37 +61,46 @@ local function AdjustedDeathTime(name, dt_expire)
     return GetServerTime() - BossData.Get(name).max_respawn + dt_expire;
 end
 
-local function StartSim(name, dt_expire)
-    WBT.SetKillInfo(name, AdjustedDeathTime(name, dt_expire));
+local function CurrentShardID()
+    local cur_shard_id = WBT.GetCurrentShardID();
+    if not cur_shard_id then
+        print("WARNING: WBT test function running with shard_id=nil");
+    end
+    return cur_shard_id;
 end
 
-local function SetKillInfo_Advanced(name, dt_expire, connected_realms_id, realm_type, optVersion)
+local function StartSim(name, dt_expire)
+    WBT.PutOrUpdateKillInfo(name, cur_shard_id, AdjustedDeathTime(name, dt_expire));
+end
+
+local function PutOrUpdateKillInfo_Advanced(name, dt_expire, connected_realms_id, realm_type, optVersion)
     local version = optVersion or KillInfo.CURRENT_VERSION;
     local t_death = AdjustedDeathTime(name, dt_expire);
-    local guid = KillInfo.CreateGUID(name, connected_realms_id, realm_type);
-    local ki = WBT.db.global.kill_infos[guid];
+    local shard_id = CurrentShardID();
+    local ki_id = KillInfo.CreateID(name, connected_realms_id, realm_type);
+    local ki = WBT.db.global.kill_infos[ki_id];
     if ki then
         ki:SetNewDeath(name, t_death);
     else
-        ki = KillInfo:New(t_death, name);
+        ki = KillInfo:New(name, t_death, shard_id);
     end
     ki.connected_realms_id = connected_realms_id;
     ki.realm_type = realm_type;
     ki.version = version;
 
-    WBT.db.global.kill_infos[guid] = ki;
+    WBT.db.global.kill_infos[ki_id] = ki;
 end
 
 local function SimOutdatedVersionKill(name, dt_expire)
-    SetKillInfo_Advanced(name, dt_expire, "Firehammer", Util.Warmode.ENABLED, "v_unsupported");
+    PutOrUpdateKillInfo_Advanced(name, dt_expire, "Firehammer", Util.Warmode.ENABLED, "v_unsupported");
 end
 
 local function SimWarmodeKill(name, dt_expire)
-    SetKillInfo_Advanced(name, dt_expire, "Doomhammer", Util.Warmode.ENABLED);
+    PutOrUpdateKillInfo_Advanced(name, dt_expire, "Doomhammer", Util.Warmode.ENABLED);
 end
 
 local function SimServerKill(name, dt_expire, server)
-    SetKillInfo_Advanced(name, dt_expire, server or "Majsbreaker", Util.Warmode.DISABLED);
+    PutOrUpdateKillInfo_Advanced(name, dt_expire, server or "Majsbreaker", Util.Warmode.DISABLED);
 end
 
 local function SimKillSpecial(dt_expire)

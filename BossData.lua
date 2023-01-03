@@ -284,13 +284,8 @@ function BossData.Get(name)
     return tracked_bosses[name];
 end
 
-local function GetNpcId(guid)
-    return select(6, strsplit("-", guid));
-end
-
--- Note that guid here is the GUID assigned by WoW, not from KillInfo.
-function BossData.GetFromNpcGuid(guid, map_id)
-    local npc_id = GetNpcId(guid);
+function BossData.GetFromUnitGuid(guid, map_id)
+    local npc_id = select(6, strsplit("-", guid));
     for _, data in pairs(tracked_bosses) do
         for _, id in pairs(data.ids) do
             if npc_id == tostring(id) and map_id == data.map_id then
@@ -302,8 +297,8 @@ function BossData.GetFromNpcGuid(guid, map_id)
     return nil;
 end
 
-function BossData.NameFromNpcGuid(guid, map_id)
-    local data = BossData.GetFromNpcGuid(guid, map_id);
+function BossData.NameFromUnitGuid(guid, map_id)
+    local data = BossData.GetFromUnitGuid(guid, map_id);
     if data then
         return data.name;
     end

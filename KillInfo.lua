@@ -16,11 +16,12 @@ local Options = WBT.Options;
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-KillInfo.CURRENT_VERSION = "v1.8";
+KillInfo.CURRENT_VERSION = "v1.10";
 
 local RANDOM_DELIM = "-";
 
-local GUID_DELIM = ";";
+local ID_DELIM        = ";";
+local ID_PART_UNKNOWN = "_";
 
 function KillInfo.CompareTo(t, a, b)
     -- "if I'm comparing 'a' and 'b', return true when 'a' should come first"
@@ -45,15 +46,13 @@ function KillInfo.CompareTo(t, a, b)
     return k1:GetSpawnTimeSec() < k2:GetSpawnTimeSec();
 end
 
-function KillInfo.ValidGUID(guid)
-    return KillInfo.ParseGUID(guid) and true;
+function KillInfo.IsValidID(id)
+    return KillInfo.ParseID(id) and true;
 end
 
 -- Returns nil if the parsing fails.
-function KillInfo.ParseGUID(guid)
-    local valid_word = "([^;]+)";
-    local pattern = "^" .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. GUID_DELIM .. valid_word .. "$";
-    local boss_name, connected_realms_id, realm_type, map_id = guid:match(pattern);
+function KillInfo.ParseID(id)
+    local boss_name, shard_id, connected_realms_id, realm_type, map_id = strsplit(ID_DELIM, id);
 
     if not boss_name then
         return nil;
@@ -61,6 +60,7 @@ function KillInfo.ParseGUID(guid)
 
     return {
         boss_name = boss_name,
+        shard_id = shard_id,
         connected_realms_id = connected_realms_id,
         realm_type = realm_type,
         map_id = map_id,
@@ -71,18 +71,23 @@ function KillInfo.CreateConnectedRealmsID()
     return table.concat(Util.GetConnectedRealms(), "_");
 end
 
-function KillInfo.CreateGUID(name, connected_realms_id, realm_type, map_id)
+function KillInfo.CreateID(name, shard_id, connected_realms_id, realm_type, map_id)
     -- Unique ID used as key in the global table of tracked KillInfos and GUI labels.
 
     local connected_realms_id = connected_realms_id or KillInfo.CreateConnectedRealmsID();
+    local shard_id   = shard_id   or ID_PART_UNKNOWN;
     local realm_type = realm_type or Util.WarmodeStatus();
-    local map_id = map_id or WBT.GetCurrentMapId();
+    local map_id     = map_id     or WBT.GetCurrentMapId();
 
-    return table.concat({name, connected_realms_id, realm_type, map_id}, GUID_DELIM);
+    return table.concat({name, shard_id, connected_realms_id, realm_type, map_id}, ID_DELIM);
 end
 
-function KillInfo:GUID()
-    return self.CreateGUID(self.name, self.connected_realms_id, self.realm_type, self.map_id);
+function KillInfo:ID()
+    return self.CreateID(self.name, self.shard_id, self.connected_realms_id, self.shard_id, self.realm_type, self.map_id);
+end
+
+function KillInfo:HasShardID()
+    return self.shard_id ~= nil;
 end
 
 -- A KillInfo is no longer valid if its data was recorded before
@@ -97,7 +102,6 @@ function KillInfo:SetInitialValues(name)
     self.version               = KillInfo.CURRENT_VERSION;
     self.cyclic                = false;
     self.reset                 = false;
-    self.safe                  = not IsInGroup(); -- TODO: Rename.
     self.realm_name            = GetRealmName(); -- Only use for printing!
     self.realm_name_normalized = GetNormalizedRealmName();
     self.connected_realms_id   = KillInfo.CreateConnectedRealmsID();
@@ -113,10 +117,10 @@ function KillInfo:Print(indent)
     print(indent .. "version: "               .. self.version);
     print(indent .. "cyclic: "                .. tostring(self.cyclic));
     print(indent .. "reset: "                 .. tostring(self.reset));
-    print(indent .. "safe: "                  .. tostring(self.safe));
     print(indent .. "realm_name: "            .. self.realm_name);
     print(indent .. "realm_name_normalized: " .. self.realm_name_normalized);
     print(indent .. "connected_realms_id: "   .. self.connected_realms_id);
+    print(indent .. "shard_id: "              .. (self.shard_id or "nil"));
     print(indent .. "realm_type: "            .. self.realm_type);
     print(indent .. "map_id: "                .. self.map_id);
     print(indent .. "has_triggered_respawn: " .. tostring(self.has_triggered_respawn));
@@ -134,13 +138,15 @@ function KillInfo:SetNewDeath(name, t_death)
     return self.until_time < GetServerTime();
 end
 
-function KillInfo:New(t_death, name)
+function KillInfo:New(name, t_death, shard_id)
     local ki = {};
 
     setmetatable(ki, self);
     self.__index = self;
 
     ki:SetNewDeath(name, t_death);
+
+    ki.shard_id = shard_id;
 
     return ki;
 end
@@ -170,17 +176,24 @@ function KillInfo:IsSafeToShare(error_msgs)
     if not self:IsValidVersion() then
         table.insert(error_msgs, "The timer was created with an old version of WBT and is now outdated.");
     end
-    if not self.safe then
-        table.insert(error_msgs, "Player was in a group during previous kill.");
-    end
     if self.cyclic then
         table.insert(error_msgs, "Timer has expired.");
     end
-    if not (self.realm_type == realm_type) then
-        table.insert(error_msgs, "Kill was made on a " .. self.realm_type .. " realm, but you are now on a " .. realm_type .. " realm.");
-    end
-    if not tContains(Util.GetConnectedRealms(), self.realm_name_normalized) then
-        table.insert(error_msgs, "Kill was made on " .. self.realm_name .. ", but you are now on unconnected realm " .. GetRealmName() .. ".");
+    if self.shard_id then
+        local cur_shard_id = WBT.GetCurrentShardID();
+        if not cur_shard_id then
+            table.insert(error_msgs, "Current shard ID is unknown. It will automatically be detected when mouse-overing any NPC.");  -- Except pets...
+        elseif self.shard_id ~= cur_shard_id then
+            table.insert(error_msgs, "Kill was made on shard ID " .. self.shard_id .. ", but you are on " .. cur_shard_id .. ".");
+        end
+    else
+        -- Should only happen for timer received from someone with an old version of WBT.
+        if self.realm_type ~= realm_type then
+            table.insert(error_msgs, "Kill was made on a " .. self.realm_type .. " realm, but you are now on a " .. realm_type .. " realm.");
+        end
+        if not tContains(Util.GetConnectedRealms(), self.realm_name_normalized) then
+            table.insert(error_msgs, "Kill was made on " .. self.realm_name .. ", but you are now on unconnected realm " .. GetRealmName() .. ".");
+        end
     end
 
     if Util.TableIsEmpty(error_msgs) then

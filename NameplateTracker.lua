@@ -28,7 +28,7 @@ local function TrackerCb(self, event, unit)
         return;
     end
 
-    local name = WBT.BossData.NameFromNpcGuid(guid, WBT.GetCurrentMapId());
+    local name = WBT.BossData.NameFromUnitGuid(guid, WBT.GetCurrentMapId());
     if name == nil then
         return;
     end
