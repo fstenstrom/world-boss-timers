@@ -558,19 +558,27 @@ local function StartShardDetectionHandler()
 
     local f_detect_shard = CreateFrame("Frame");
     function f_detect_shard:RegisterEvents()
+        -- NOTE: This could be improved to also look in combat log, but
+        -- doesn't really feel worth adding right now.
+        self:RegisterEvent("PLAYER_TARGET_CHANGED");
         self:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
     end
     function f_detect_shard:UnregisterEvents()
+        self:UnregisterEvent("PLAYER_TARGET_CHANGED");
         self:UnregisterEvent("UPDATE_MOUSEOVER_UNIT");
     end
 
     -- Handler for detecting the current shard id.
     f_detect_shard:RegisterEvents();
-    f_detect_shard:SetScript("OnEvent", function(self, ...)
-        if not UnitExists("mouseover") then
+    f_detect_shard:SetScript("OnEvent", function(self, event, ...)
+        local unit = "target";
+        if event == "UPDATE_MOUSEOVER_UNIT" then
+            unit = "mouseover";
+        end
+        if not UnitExists(unit) then
             return;
         end
-        local guid = UnitGUID("mouseover");
+        local guid = UnitGUID(unit);
         local unit_type = strsplit("-", guid);
         if unit_type == "Creature" then
             g_current_shard_id = WBT.ParseShardID(guid);
