@@ -132,6 +132,10 @@ local boss_death_frame;
 local boss_combat_frame;
 local g_kill_infos = {};
 
+-- The shard id that the player currently is at. Intended only for highlighting
+-- of timers in GUI.
+local g_current_shard_id;
+
 local CHANNEL_ANNOUNCE = "SAY";
 local ICON_SKULL = "{rt8}";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
@@ -424,8 +428,8 @@ local function InitDeathTrackerFrame()
     end
 
     boss_death_frame = CreateFrame("Frame");
-    boss_death_frame:SetScript("OnEvent", function(event, ...)
-            local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo();
+    boss_death_frame:SetScript("OnEvent", function(...)
+            local _, eventType, _, _, _, _, _, destGUID, _ = CombatLogGetCurrentEventInfo();
 
             -- Convert to English name from GUID, to make it work for
             -- localization.
@@ -464,11 +468,11 @@ local function InitCombatScannerFrame()
 
     boss_combat_frame = CreateFrame("Frame");
 
-    local time_out = 60*2; -- Legacy world bosses SHOULD die in this time.
+    local time_out = 60*2; -- Old expansion world bosses SHOULD die in this time.
     boss_combat_frame.t_next = 0;
 
-    function boss_combat_frame:DoScanWorldBossCombat(event, ...)
-		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName = CombatLogGetCurrentEventInfo()
+    function ScanWorldBossCombat(...)
+		local destGUID = select(8, CombatLogGetCurrentEventInfo());
 
         -- Convert to English name from GUID, to make it work for
         -- localization.
@@ -478,15 +482,15 @@ local function InitCombatScannerFrame()
         end
 
         local t = GetServerTime();
-        if WBT.IsBoss(name) and t > self.t_next then
+        if WBT.IsBoss(name) and t > boss_combat_frame.t_next then
             WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
             PlaySoundAlertBossCombat(name);
             FlashClientIcon();
-            self.t_next = t + time_out;
+            boss_combat_frame.t_next = t + time_out;
         end
     end
 
-    boss_combat_frame:SetScript("OnEvent", boss_combat_frame.DoScanWorldBossCombat);
+    boss_combat_frame:SetScript("OnEvent", ScanWorldBossCombat);
 end
 
 function WBT.AceAddon:OnInitialize()
@@ -519,11 +523,52 @@ function WBT.ResetKillInfo()
     gui:Update();
 end
 
+local function StartShardDetectionHandler()
+
+    local f_detect_shard = CreateFrame("Frame");
+    function f_detect_shard:RegisterEvents()
+        self:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
+    end
+    function f_detect_shard:UnregisterEvents()
+        self:UnregisterEvent("UPDATE_MOUSEOVER_UNIT");
+    end
+
+    -- Handler for detecting the current shard id.
+    f_detect_shard:RegisterEvents();
+    f_detect_shard:SetScript("OnEvent", function(self, ...)
+        if not UnitExists("mouseover") then
+            return;
+        end
+        local guid = UnitGUID("mouseover");
+        local unit_type = strsplit("-", guid);
+        if unit_type == "Creature" then
+            g_current_shard_id = select(5, strsplit("-", guid));
+            print("Detected new shard: ", g_current_shard_id);
+            self:UnregisterEvents();
+        end
+    end);
+
+    -- Handler for refreshing the shard id.
+    local f_restart = CreateFrame("Frame");
+    f_restart:RegisterEvent("ZONE_CHANGED_NEW_AREA");
+    f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
+    f_restart:SetScript("OnEvent", function(...)
+        g_current_shard_id = nil;  -- Invalidate old shard id.
+
+        -- Wait a while before starting to detect the new shard. When phasing to a new shard it will still
+        -- take a while for mobs to despawn in the old shard. These will still give the (incorrect) old shard
+        -- id.
+        C_Timer.After(3, function(...)  -- Phasing time seems to be like ~1 sec, so 3 sec should often be OK.
+            f_detect_shard:RegisterEvents();
+        end);
+    end);
+end
+
 local function StartVisibilityHandler()
-    local visibilty_handler_frame = CreateFrame("Frame");
-    visibilty_handler_frame:RegisterEvent("ZONE_CHANGED_NEW_AREA");
-    visibilty_handler_frame:SetScript("OnEvent",
-        function(e, ...)
+    local f = CreateFrame("Frame");
+    f:RegisterEvent("ZONE_CHANGED_NEW_AREA");
+    f:SetScript("OnEvent",
+        function(...)
             gui:Update();
         end
     );
@@ -704,6 +749,8 @@ function WBT.AceAddon:OnEnable()
     WBT.AceConfigDialog:AddToBlizOptions(WBT.addon_name, WBT.addon_name, nil);
 
     gui = GUI:New();
+
+    StartShardDetectionHandler();
 
     InitDeathTrackerFrame();
     InitCombatScannerFrame();

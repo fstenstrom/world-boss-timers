@@ -1,8 +1,8 @@
--- ----------------------------------------------------------------------------
---  A persistent timer for World Bosses.
--- ----------------------------------------------------------------------------
+-- Handler for playing a notification sound when mousing over bosses.
+-- 
+-- NOTE: Currently only enabled for development (handler initialization is not packaged).
 
--- addonName, addonTable = ...;
+
 local _, WBT = ...;
 
 local NameplateTracker = {};

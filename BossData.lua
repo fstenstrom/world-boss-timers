@@ -285,8 +285,7 @@ function BossData.Get(name)
 end
 
 local function GetNpcId(guid)
-    local type, zero, server_id, instance_id, zone_uid, npc_id, spawn_uid = strsplit("-", guid);
-    return npc_id;
+    return select(6, strsplit("-", guid));
 end
 
 -- Note that guid here is the GUID assigned by WoW, not from KillInfo.
