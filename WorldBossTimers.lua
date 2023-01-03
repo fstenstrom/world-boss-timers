@@ -246,12 +246,12 @@ function WBT.KillInfosInCurrentZoneAndShard()
     -- calculate circle in coords around spawn location 
     for _, boss in pairs(WBT.BossesInCurrentZone()) do
         local ki_no_shard = g_kill_infos[KillInfo.CreateID(boss.name)];
-        if ki_no_shard then
+        if ki_no_shard and not ki_no_shard.reset then
             table.insert(res, ki_no_shard);
         end
         if g_current_shard_id then
             local ki_shard = g_kill_infos[KillInfo.CreateID(boss.name, g_current_shard_id)];
-            if ki_shard then
+            if ki_shard and not ki_shard.reset then
                 table.insert(res, ki_shard);
             end
         end
