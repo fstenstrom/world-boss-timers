@@ -44,7 +44,7 @@ local function TrackerCb(self, event, unit)
 end
 
 --@do-not-package@
-tracker:SetScript("OnEvent", TrackerCb);
-tracker:RegisterEvent("NAME_PLATE_UNIT_ADDED");
-tracker:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
+-- tracker:SetScript("OnEvent", TrackerCb);
+-- tracker:RegisterEvent("NAME_PLATE_UNIT_ADDED");
+-- tracker:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
 --@end-do-not-package@
