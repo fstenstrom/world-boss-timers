@@ -289,17 +289,14 @@ function WBT.KillInfoAtCurrentPositionRealmWarmode()
     return found[1];
 end
 
+function WBT.InZoneAndShardForTimer(kill_info)
+    local check_realm_on_missing_shard = true;
+    return WBT.IsInZoneOfBoss(kill_info.name) and kill_info:IsOnCurrentShard(check_realm_on_missing_shard);
+end
+
 function WBT.GetSpawnTimeOutput(kill_info)
-    local text = kill_info:GetSpawnTimeAsText();
-    local color = Util.COLOR_DEFAULT;
-
-    local same_shard = kill_info.shard_id == WBT.GetCurrentShardID();
-    local same_realm = tContains(Util.GetConnectedRealms(), kill_info.realm_name_normalized);
-    local same_warmode = Util.WarmodeStatus() == kill_info.realm_type;
-    local highlight = Options.highlight.get()
-            and WBT.IsInZoneOfBoss(kill_info.name)
-            and (same_shard or (kill_info.shard_id == nil and same_realm and same_warmode));
-
+    local highlight = Options.highlight.get() and WBT.InZoneAndShardForTimer(kill_info);
+    local color;
     if kill_info.cyclic then
         if highlight then
             color = Util.COLOR_YELLOW;
@@ -310,9 +307,11 @@ function WBT.GetSpawnTimeOutput(kill_info)
         if highlight then
             color = Util.COLOR_LIGHTGREEN;
         else
-            -- Do nothing, default case.
+            color = Util.COLOR_DEFAULT;
         end
     end
+
+    local text = kill_info:GetSpawnTimeAsText();
     text = Util.ColoredString(color, text);
 
     if Options.show_saved.get() and BossData.IsSaved(kill_info.name) then
@@ -751,7 +750,7 @@ local function InitKillInfoManager()
                             -- TODO: Consider if here should be something else
                         end
 
-                        if kill_info:RespawnTriggered(Options.spawn_alert_sec_before.get()) then
+                        if kill_info:ShouldHaveRespawnAlertPlay(Options.spawn_alert_sec_before.get()) then
                             FlashClientIcon();
                             PlaySoundAlertSpawn();
                         end

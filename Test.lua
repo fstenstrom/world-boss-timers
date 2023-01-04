@@ -70,13 +70,13 @@ local function CurrentShardID()
 end
 
 local function StartSim(name, dt_expire)
-    WBT.PutOrUpdateKillInfo(name, cur_shard_id, AdjustedDeathTime(name, dt_expire));
+    WBT.PutOrUpdateKillInfo(name, CurrentShardID(), AdjustedDeathTime(name, dt_expire));
 end
 
-local function PutOrUpdateKillInfo_Advanced(name, dt_expire, connected_realms_id, realm_type, optVersion)
-    local version = optVersion or KillInfo.CURRENT_VERSION;
+local function PutOrUpdateKillInfo_Advanced(name, dt_expire, connected_realms_id, realm_type, opt_version, opt_shard_id)
+    local version = opt_version or KillInfo.CURRENT_VERSION;
     local t_death = AdjustedDeathTime(name, dt_expire);
-    local shard_id = CurrentShardID();
+    local shard_id = opt_shard_id or CurrentShardID();
     local ki_id = KillInfo.CreateID(name, connected_realms_id, realm_type);
     local ki = WBT.db.global.kill_infos[ki_id];
     if ki then
@@ -84,7 +84,9 @@ local function PutOrUpdateKillInfo_Advanced(name, dt_expire, connected_realms_id
     else
         ki = KillInfo:New(name, t_death, shard_id);
     end
-    ki.connected_realms_id = connected_realms_id;
+    ki.connected_realms_id   = connected_realms_id;
+    ki.realm_name            = connected_realms_id;
+    ki.realm_name_normalized = connected_realms_id;
     ki.realm_type = realm_type;
     ki.version = version;
 
@@ -103,10 +105,16 @@ local function SimServerKill(name, dt_expire, server)
     PutOrUpdateKillInfo_Advanced(name, dt_expire, server or "Majsbreaker", Util.Warmode.DISABLED);
 end
 
+local function SimNoShardKill(name, dt_expire, server)
+    local shard_id = nil;
+    PutOrUpdateKillInfo_Advanced(name, dt_expire, "SHD", Util.Warmode.DISABLED, KillInfo.CURRENT_VERSION, shard_id);
+end
+
 local function SimKillSpecial(dt_expire)
     SimServerKill("Grellkin", dt_expire);
     SimWarmodeKill("Grellkin", dt_expire);
     SimOutdatedVersionKill("Grellkin", dt_expire);
+    SimNoShardKill("Grellkin", dt_expire);
 end
 
 local function SimKillEverything(dt_expire)

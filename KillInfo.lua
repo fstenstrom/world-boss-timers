@@ -288,11 +288,11 @@ function KillInfo:InTimeWindow(from, to)
     return from <= t_now and t_now <= to;
 end
 
-function KillInfo:RespawnTriggered(offset)
+function KillInfo:ShouldHaveRespawnAlertPlay(offset)
     local t_now = GetServerTime();
     local until_time_offset = self.until_time - offset;
     local trigger = self:InTimeWindow(until_time_offset, until_time_offset + 1)
-            and WBT.IsInZoneOfBoss(self.name)
+            and WBT.InZoneAndShardForTimer(self)
             and self:IsSafeToShare({})
             and not self.has_triggered_respawn;
     if trigger then
@@ -327,4 +327,13 @@ end
 
 function KillInfo:Expired()
     return self.until_time < GetServerTime();
+end
+
+function KillInfo:IsOnCurrentShard(check_realm_on_missing_shard)
+    local same_shard = self.shard_id and (self.shard_id == WBT.GetCurrentShardID());
+    local same_realm = tContains(Util.GetConnectedRealms(), self.realm_name_normalized);
+    local same_warmode = self.realm_type == Util.WarmodeStatus();
+    local no_shard_but_otherwise_same = (self.shard_id == nil or WBT.GetCurrentShardID() == nil)
+                                        and same_realm and same_warmode;
+    return same_shard or (check_realm_on_missing_shard and no_shard_but_otherwise_same);
 end
