@@ -581,7 +581,7 @@ local function StartShardDetectionHandler()
         local unit_type = strsplit("-", guid);
         if unit_type == "Creature" then
             g_current_shard_id = WBT.ParseShardID(guid);
-            Logger.Debug("[ShardDetection]: New shard ID detected: ", g_current_shard_id);
+            Logger.Debug("[ShardDetection]: New shard ID detected:", g_current_shard_id);
             self:UnregisterEvents();
         end
     end);
@@ -666,7 +666,7 @@ function WBT.AceAddon:InitChatParsing()
                         local ki_id = KillInfo.CreateID(name, shard_id);
                         local ignore_cyclic = true;
                         if not WBT.IsBoss(name) then
-                            Logger.Debug("[Parsing]: Failed to parse timer. Unknown boss name: ", name);
+                            Logger.Debug("[Parsing]: Failed to parse timer. Unknown boss name:", name);
                             return;
                         elseif IsDead(ki_id, ignore_cyclic) then
                             Logger.Debug("[Parsing]: Ignoring shared timer. Player already has fresh timer.");
