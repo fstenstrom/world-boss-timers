@@ -278,7 +278,7 @@ end
 function KillInfo:ShouldAutoAnnounce()
     return WBT.db.global.auto_announce
             and Util.SetContainsValue(self.announce_times, self.remaining_time)
-            and WBT.IsInZoneOfBoss(self.name)
+            and WBT.PlayerIsInBossPerimiter(self.name)
             and WBT.BossData.Get(self.name).auto_announce
             and self:IsSafeToShare({});
 end
@@ -288,11 +288,12 @@ function KillInfo:InTimeWindow(from, to)
     return from <= t_now and t_now <= to;
 end
 
-function KillInfo:ShouldHaveRespawnAlertPlay(offset)
+function KillInfo:ShouldMakeRespawnAlertPlay(offset)
     local t_now = GetServerTime();
     local until_time_offset = self.until_time - offset;
     local trigger = self:InTimeWindow(until_time_offset, until_time_offset + 1)
             and WBT.InZoneAndShardForTimer(self)
+            and WBT.PlayerIsInBossPerimiter(self.name)
             and self:IsSafeToShare({})
             and not self.has_triggered_respawn;
     if trigger then

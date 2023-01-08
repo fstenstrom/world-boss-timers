@@ -750,7 +750,7 @@ local function InitKillInfoManager()
                             -- TODO: Consider if here should be something else
                         end
 
-                        if kill_info:ShouldHaveRespawnAlertPlay(Options.spawn_alert_sec_before.get()) then
+                        if kill_info:ShouldMakeRespawnAlertPlay(Options.spawn_alert_sec_before.get()) then
                             FlashClientIcon();
                             PlaySoundAlertSpawn();
                         end
