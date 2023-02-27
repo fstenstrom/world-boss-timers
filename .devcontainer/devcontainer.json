@@ -1,0 +1,14 @@
+{
+    "name": "dev_wbt",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {}
+    },
+
+    "settings": {},
+
+    "extensions": [
+	],
+
+    "postCreateCommand": "echo Lua container for WBT development now set up."
+}
