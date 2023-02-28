@@ -26,6 +26,11 @@ WBT.Functions = {
     AnnounceTimerInChat = nil;
 };
 
+-- TODO: Fill out this table as necessery when testing more event handlers.
+WBT.event_handler_names = {};
+WBT.event_handler_names.REQUEST_PARSER = "wbt_request_parser";
+WBT.event_handler_names.SHARE_PARSER   = "wbt_share_parser";
+
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 
 -- Workaround to keep the nice WBT:Print function.
@@ -182,7 +187,7 @@ end
 function WBT.ParseShardID(unit_guid)
     local unit_type = strsplit("-", unit_guid);
     if unit_type == "Creature" then
-        return select(5, strsplit("-", unit_guid));
+        return tonumber(select(5, strsplit("-", unit_guid)));
     else
         return nil;
     end
@@ -237,19 +242,20 @@ function WBT.InBossZone()
     return false;
 end
 
--- Returns the KillInfos in the current zone and shard (connected realm,
--- warmode, etc.) that should be used for announcements, or an empty table if no
--- matching entry found.
+-- Returns all the KillInfos in the current zone and current shard or connected_realm+warmode.
+--
+-- An empty table is returned if no matching KillInfo is found.
+--
+-- KillInfos without a known shard (i.e. acquired via another player sharing them from an
+-- old version of WBT without shard data) are always included.
 function WBT.KillInfosInCurrentZoneAndShard()
     local res = {};
-    -- For zones with multiple bosses such as Kun-Lai and Mechagon,
-    -- calculate circle in coords around spawn location 
     for _, boss in pairs(WBT.BossesInCurrentZone()) do
         local ki_no_shard = g_kill_infos[KillInfo.CreateID(boss.name)];
         if ki_no_shard and not ki_no_shard.reset then
             table.insert(res, ki_no_shard);
         end
-        if g_current_shard_id then
+        if g_current_shard_id then  -- TODO: set this while testing
             local ki_shard = g_kill_infos[KillInfo.CreateID(boss.name, g_current_shard_id)];
             if ki_shard and not ki_shard.reset then
                 table.insert(res, ki_shard);
@@ -275,8 +281,9 @@ function WBT.PlayerIsInBossPerimiter(boss_name)
     return WBT.PlayerDistanceToBoss(boss_name) < BossData.Get(boss_name).perimiter.radius;
 end
 
--- Returns the first valid kill info found or nil if none found.
-function WBT.KillInfoAtCurrentPositionRealmWarmode()
+-- Returns ta KillInfo for the dead boss which the player is waiting for at the current
+-- position and shard, if any. Else nil.
+function WBT.GetPrimaryKillInfo()
     local found = {};
     for _, ki in pairs(WBT.KillInfosInCurrentZoneAndShard()) do
         if WBT.PlayerIsInBossPerimiter(ki.name) then
@@ -286,7 +293,12 @@ function WBT.KillInfoAtCurrentPositionRealmWarmode()
     if Util.TableLength(found) > 1 then
         Logger.Debug("More than one boss found at current position. Only using first.");
     end
-    return found[1];
+    for _, ki in pairs(found) do
+        if ki.shard_id ~= KillInfo.UNKNOWN_SHARD then
+            return ki
+        end
+    end
+    return found[1];  -- Unknown shard.
 end
 
 function WBT.InZoneAndShardForTimer(kill_info)
@@ -374,11 +386,11 @@ end
 local function CreatePayload(kill_info, send_data_for_parsing)
     local payload = "";
     if send_data_for_parsing then
-        local shard_id_suffix = "";
+        local shard_id_part = "";
         if kill_info:HasShardID() then
-            shard_id_suffix = "-" .. kill_info.shard_id;
+            shard_id_part = "-" .. kill_info.shard_id;
         end
-        payload = " (" .. SERVER_DEATH_TIME_PREFIX .. kill_info:GetServerDeathTime() .. shard_id_suffix .. ")";
+        payload = " (" .. SERVER_DEATH_TIME_PREFIX .. kill_info:GetServerDeathTime() .. shard_id_part .. ")";
     end
 
     return payload;
@@ -406,7 +418,7 @@ local function GetSafeSpawnAnnouncerWithCooldown()
     -- Create closure that uses t_last_announce as a persistent/static variable
     local t_last_announce = 0;
     function AnnounceSpawnTimeIfSafe()
-        local kill_info = WBT.KillInfoAtCurrentPositionRealmWarmode();
+        local kill_info = WBT.GetPrimaryKillInfo();
         local announced = false;
         local t_now = GetServerTime();
 
@@ -441,7 +453,7 @@ function WBT.PutOrUpdateKillInfo(name, shard_id, t_death)
     local ki_id = KillInfo.CreateID(name, shard_id);
     local ki = g_kill_infos[ki_id];
     if ki then
-        ki:SetNewDeath(name, t_death);
+        ki:SetNewDeath(t_death);
     else
         ki = KillInfo:New(name, t_death, shard_id);
     end
@@ -451,7 +463,7 @@ function WBT.PutOrUpdateKillInfo(name, shard_id, t_death)
     gui:Update();
 end
 
-local function InitDeathTrackerFrame()
+local function StartDeathTrackerFrame()
     if boss_death_frame ~= nil then
         return;
     end
@@ -491,7 +503,7 @@ local function PlaySoundAlertBossCombat(name)
     Util.PlaySoundAlert(soundfile);
 end
 
-local function InitCombatScannerFrame()
+local function StartCombatScannerFrame()
     if boss_combat_frame ~= nil then
         return
     end
@@ -613,15 +625,15 @@ local function StartVisibilityHandler()
     );
 end
 
-function WBT.AceAddon:InitChatParsing()
+local function StartChatParser()
 
     local function PlayerSentMessage(sender)
         -- Since \b and alike doesnt exist: use "frontier pattern": %f[%A]
         return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
     end
 
-    local function InitRequestParsing()
-        local request_parser = CreateFrame("Frame");
+    local function InitRequestParser()
+        local request_parser = CreateFrame("Frame", WBT.event_handler_names.REQUEST_PARSER);
         local answered_requesters = {};
         request_parser:RegisterEvent("CHAT_MSG_SAY");
         request_parser:SetScript("OnEvent",
@@ -632,8 +644,8 @@ function WBT.AceAddon:InitChatParsing()
                         and not PlayerSentMessage(sender) then
 
                     if WBT.InBossZone() then
-                        local kill_info = WBT.KillInfoAtCurrentPositionRealmWarmode();
-                        if kill_info and kill_info:IsSafeToShare({}) then
+                        local ki = WBT.GetPrimaryKillInfo();
+                        if ki and ki:IsSafeToShare({}) then
                             -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken by 8.2.5
                             -- TODO: Consider if this could trigger some optional sparkle
                             -- in the GUI instead
@@ -645,8 +657,8 @@ function WBT.AceAddon:InitChatParsing()
         );
     end
 
-    local function InitSharedTimersParsing()
-        local timer_parser = CreateFrame("Frame");
+    local function InitSharedTimersParser()
+        local timer_parser = CreateFrame("Frame", WBT.event_handler_names.SHARE_PARSER);
         timer_parser:RegisterEvent("CHAT_MSG_SAY");
         timer_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
@@ -656,20 +668,26 @@ function WBT.AceAddon:InitChatParsing()
                     elseif string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
                         -- NOTE: The name may contain dots and spaces, e.g. 'A. Harverster'.
                         local name, data = string.match(msg,
-                                "[^A-Z]*([A-Z][a-z%s\.]+)[^\(]*" ..  -- The name and any potential {rt8} from old versions.
-                                "%(" .. SERVER_DEATH_TIME_PREFIX .. "([%w-\-]+)" .. "%)");  -- The data/payload.
+                                "[^A-Z]*([A-Z][a-z%s\\.]+)[^\\(]*" ..  -- The name and any potential {rt8} from old versions.
+                                "%(" .. SERVER_DEATH_TIME_PREFIX .. "([%w-\\-]+)" .. "%)");  -- The data/payload.
                         if not data then
-                            Logger.Debug("[Parsing]: Failed to parse timer. Unknown format.");
+                            Logger.Debug("[Parser]: Failed to parse timer. Unknown format.");
                             return;
                         end
-                        local t_death, shard_id = strsplit("-", data);  -- Missing shard_id from old versions is OK.
+
+                        -- Missing shard_id (as a result of sharing from old versions of WBT) is OK. This will
+                        -- result in 'nil', which KillInfo must handle.
+                        local t_death, shard_id = strsplit("-", data);
+                        t_death  = tonumber(t_death)
+                        shard_id = tonumber(shard_id)
                         local ki_id = KillInfo.CreateID(name, shard_id);
+
                         local ignore_cyclic = true;
                         if not WBT.IsBoss(name) then
-                            Logger.Debug("[Parsing]: Failed to parse timer. Unknown boss name:", name);
+                            Logger.Debug("[Parser]: Failed to parse timer. Unknown boss name:", name);
                             return;
                         elseif IsDead(ki_id, ignore_cyclic) then
-                            Logger.Debug("[Parsing]: Ignoring shared timer. Player already has fresh timer.");
+                            Logger.Debug("[Parser]: Ignoring shared timer. Player already has fresh timer.");
                             return;
                         else
                             WBT.PutOrUpdateKillInfo(name, shard_id, t_death);
@@ -681,8 +699,8 @@ function WBT.AceAddon:InitChatParsing()
         );
     end
 
-    InitRequestParsing();
-    InitSharedTimersParsing();
+    InitRequestParser();
+    InitSharedTimersParser();
 end
 
 local function LoadSerializedKillInfos()
@@ -728,15 +746,14 @@ local function FilterValidKillInfosStep2()
     end
 end
 
-local function InitKillInfoManager()
-    g_kill_infos = WBT.db.global.kill_infos; -- Everything in g_kill_infos is written to db.
+local function StartKillInfoManager()
     LoadSerializedKillInfos();
     FilterValidKillInfosStep2();
 
-    kill_info_manager = CreateFrame("Frame");
-    kill_info_manager.since_update = 0;
+    WBT.kill_info_manager = CreateFrame("Frame");
+    WBT.kill_info_manager.since_update = 0;
     local t_update = 1;
-    kill_info_manager:SetScript("OnUpdate", function(self, elapsed)
+    WBT.kill_info_manager:SetScript("OnUpdate", function(self, elapsed)
             self.since_update = self.since_update + elapsed;
             if (self.since_update > t_update) then
                 for _, kill_info in pairs(g_kill_infos) do
@@ -775,13 +792,15 @@ function WBT.AceAddon:OnEnable()
     GUI.Init();
 
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", WBT.defaults);
-    LibStub("AceComm-3.0"):Embed(Com);
 
+    -- FIXME:
+    -- What is the Com code doing here if it's not used? I can't tell from the code here whether
+    -- it's actually disabled or not.
+    LibStub("AceComm-3.0"):Embed(Com);
     Com:Init(); -- Must init after db.
     if Com.ShouldRevertRequestMode() then
         Com.LeaveRequestMode();
     end
-
     -- Note that Com is currently not used, since it only works for
     -- connected realms...
     Com:RegisterComm(Com.PREF_SR, Com.OnCommReceivedSR);
@@ -803,21 +822,21 @@ function WBT.AceAddon:OnEnable()
 
     gui = GUI:New();
 
-    StartShardDetectionHandler();
-
-    InitDeathTrackerFrame();
-    InitCombatScannerFrame();
+    -- Alias to make code more readable. Note that everything in this var is written to db.
+    g_kill_infos = WBT.db.global.kill_infos;
 
     UpdateCyclicStates();
 
-    InitKillInfoManager();
-
+    StartShardDetectionHandler();
+    StartDeathTrackerFrame();
+    StartCombatScannerFrame();
+    StartKillInfoManager();
     StartVisibilityHandler();
+    StartChatParser();
 
     self:RegisterChatCommand("wbt", Options.SlashHandler);
     self:RegisterChatCommand("worldbosstimers", Options.SlashHandler);
 
-    self:InitChatParsing();
 
     RegisterEvents(); -- TODO: Update when this and unreg is called!
     -- UnregisterEvents();
@@ -868,7 +887,7 @@ end
 function Dev.PrintAllKillInfos()
     Logger.Debug("Printing all KI:s");
     for id, ki in pairs(g_kill_infos) do
-        Logger.Debug(id)
+        print(id);
         ki:Print("  ");
     end
 end
@@ -876,7 +895,9 @@ end
 -- Useful to stop getting lua errors so the stack trace can be examined without
 -- getting refreshed all the time.
 function Dev.StopGUI()
-    kill_info_manager:SetScript("OnUpdate", nil);
+    WBT.kill_info_manager:SetScript("OnUpdate", nil);
 end
 
 --@end-do-not-package@
+
+return WBT;

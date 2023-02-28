@@ -324,6 +324,7 @@ function BossData.IsSaved(name)
     return BossData.Get(name).is_saved_fcn();
 end
 
+-- FIXME: This looks strange.
 for name, data in pairs(tracked_bosses) do
     data.name_colored = data.color .. data.name .. Util.COLOR_DEFAULT;
 end

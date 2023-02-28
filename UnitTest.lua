@@ -50,6 +50,10 @@ function Frame:RegisterEvent(event)
     self.events[event] = true;
 end
 
+function Frame:UnregisterEvent(event)
+    self.events[event] = nil;
+end
+
 function Frame:SetScript(triggerKind, eventHandler)
     self.trigger_kind = triggerKind;
     self.event_handler = eventHandler;
@@ -154,6 +158,17 @@ function GetUnitName(unit)
     return "Notplayer";
 end
 
+function UnitExists(unit)
+    return unit == "mouseover";
+end
+
+function UnitGUID(unit)
+    if unit == "mouseover" then
+        return "Creature-field2-field3-field4-" .. tostring(g_game.world.shard_id)
+    end
+    error("NYI")
+end
+
 function GetAutoCompleteRealms()
     return g_game.player.connected_realms;
 end
@@ -236,24 +251,35 @@ function TestStrSplit()
     assert(c == "c22", c);
 end
 
-local function CreateLegacyShareMsg(t_since_death)
+local function CreateShareMsg(t_since_death, shard_id)
     local t = g_game.servertime - t_since_death;
-    return "{rt1}Oondasta{rt1}: 6m 52s (WorldBossTimers:" .. tostring(t) .. ")";
+    local shard_id_part
+    if shard_id then
+        shard_id_part = "-" .. tostring(shard_id)
+    else
+        shard_id_part = ""  -- Legacy. Can't happen any longer.
+    end
+    return "{rt1}Oondasta{rt1}: 6m 52s (WorldBossTimers:" .. tostring(t) .. shard_id_part .. ")";
 end
 
-local function CreateShareMsg(t_since_death)
-    local t = g_game.servertime - t_since_death;
-    return "{rt1}Oondasta{rt1}: 6m 52s (WorldBossTimers:" .. tostring(t) .. "-44)";
+local function FireDetectShard()
+    EventManager:FireEvent("UPDATE_MOUSEOVER_UNIT", "mouseover");
 end
 
 function TestSharingWithoutShardId()
-    g_test_settings.wbt_print = true;
+    g_test_settings.wbt_print = false;
     EventManager:Reset();
     local WBT = LoadWBT();
     WBT.AceAddon:OnEnable();
 
+    -- Detect current shard:
+    local test_shard_id = 44;
+    g_game.world.shard_id = test_shard_id;
+    FireDetectShard()
+
+    -- Get shared a timer without shard_id
     local event = "CHAT_MSG_SAY";
-    local msg = CreateLegacyShareMsg(9);
+    local msg = CreateShareMsg(9, nil);
     local sender = "Shareson";
     EventManager:FireEvent(event, msg, sender);
     local ki = WBT.KillInfoAtCurrentPositionRealmWarmode();
@@ -262,7 +288,7 @@ function TestSharingWithoutShardId()
     -- Get new KillInfo with shard ID. The new KillInfo should now be prioritized.
     -- Regardless of if the player's current shard id is known or not.
     local event = "CHAT_MSG_SAY";
-    local msg = CreateShareMsg(8);
+    local msg = CreateShareMsg(8, test_shard_id);
     local sender = "Sharesontwo";
     EventManager:FireEvent(event, msg, sender);
     local ki = WBT.KillInfoAtCurrentPositionRealmWarmode();

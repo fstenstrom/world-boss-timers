@@ -16,12 +16,14 @@ local Options = WBT.Options;
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-KillInfo.CURRENT_VERSION = "v1.10";
+KillInfo.CURRENT_VERSION = "v1.11";
+KillInfo.UNKNOWN_SHARD = -1;
 
 local RANDOM_DELIM = "-";
 
 local ID_DELIM        = ";";
 local ID_PART_UNKNOWN = "_";
+
 
 function KillInfo.CompareTo(t, a, b)
     -- "if I'm comparing 'a' and 'b', return true when 'a' should come first"
@@ -74,8 +76,11 @@ end
 function KillInfo.CreateID(name, shard_id, connected_realms_id, realm_type, map_id)
     -- Unique ID used as key in the global table of tracked KillInfos and GUI labels.
 
+    if shard_id == nil or shard_id == KillInfo.UNKNOWN_SHARD then
+        shard_id = ID_PART_UNKNOWN;
+    end
+
     local connected_realms_id = connected_realms_id or KillInfo.CreateConnectedRealmsID();
-    local shard_id   = shard_id   or ID_PART_UNKNOWN;
     local realm_type = realm_type or Util.WarmodeStatus();
     local map_id     = map_id     or WBT.GetCurrentMapId();
 
@@ -97,8 +102,7 @@ function KillInfo:IsValidVersion()
     return self.version and self.version == KillInfo.CURRENT_VERSION;
 end
 
-function KillInfo:SetInitialValues(name)
-    self.name                  = name;
+function KillInfo:SetInitialValues()
     self.version               = KillInfo.CURRENT_VERSION;
     self.cyclic                = false;
     self.reset                 = false;
@@ -107,9 +111,16 @@ function KillInfo:SetInitialValues(name)
     self.connected_realms_id   = KillInfo.CreateConnectedRealmsID();
     self.realm_type            = Util.WarmodeStatus();
     self.map_id                = WBT.GetCurrentMapId();
-    self.db                    = WBT.BossData.Get(self.name);
     self.announce_times        = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
     self.has_triggered_respawn = false;
+end
+
+-- NOTE:
+-- This function is a reminder that the design is to update KillInfo.CURRENT_VERSION (and thereby clear
+-- all user KillInfos), rather than try to upgrade existing ones. The reason is that it makes the code simpler,
+-- and should not impact users too much if it only happens once in a while.
+function KillInfo:Upgrade()
+    -- Don't implement this function.
 end
 
 function KillInfo:Print(indent)
@@ -120,14 +131,16 @@ function KillInfo:Print(indent)
     print(indent .. "realm_name: "            .. self.realm_name);
     print(indent .. "realm_name_normalized: " .. self.realm_name_normalized);
     print(indent .. "connected_realms_id: "   .. self.connected_realms_id);
-    print(indent .. "shard_id: "              .. (self.shard_id or "nil"));
+    print(indent .. "shard_id: "              .. self.shard_id);
     print(indent .. "realm_type: "            .. self.realm_type);
     print(indent .. "map_id: "                .. self.map_id);
     print(indent .. "has_triggered_respawn: " .. tostring(self.has_triggered_respawn));
 end
 
-function KillInfo:SetNewDeath(name, t_death)
-    self:SetInitialValues(name);
+function KillInfo:SetNewDeath(t_death)
+    -- FIXME: It doesn't make sense to this function from here. I think it's
+    -- a remnant from the time when the addon tried to upgrade KillInfos.
+    self:SetInitialValues();
 
     -- NOTE: self.t_death is later updated when the kill_info has expired.
     -- self.until_time is (currently) never updated though.
@@ -144,9 +157,11 @@ function KillInfo:New(name, t_death, shard_id)
     setmetatable(ki, self);
     self.__index = self;
 
-    ki:SetNewDeath(name, t_death);
+    ki.name = name;
+    ki.db = WBT.BossData.Get(name);
+    ki.shard_id = shard_id or KillInfo.UNKNOWN_SHARD;
 
-    ki.shard_id = shard_id;
+    ki:SetNewDeath(t_death);
 
     return ki;
 end
@@ -162,37 +177,27 @@ function KillInfo:HasRandomSpawnTime(name)
     return self.db.min_respawn ~= self.db.max_respawn;
 end
 
--- The data for the kill can be incorrect. This might happen
--- when a player records a kill and then appear on another
--- server shard.
--- If this happens, we don't want the data to propagate
--- to other players.
 function KillInfo:IsSafeToShare(error_msgs)
 
-    -- It's possible to have one char with Warmode, and one
-    -- without on the same server.
-    local realm_type = Util.WarmodeStatus();
-
     if not self:IsValidVersion() then
-        table.insert(error_msgs, "The timer was created with an old version of WBT and is now outdated.");
+        table.insert(error_msgs, "Timer was created with an old version of WBT and is now outdated.");
     end
     if self.cyclic then
         table.insert(error_msgs, "Timer has expired.");
     end
-    if self.shard_id then
+    if self.shard_id == KillInfo.UNKNOWN_SHARD then
+        -- It's impossible to tell where it comes from. Player may have received it when server-jumping or
+        -- what not. To avoid complexity, just don't allow sharing it.
+        table.insert(error_msgs, "Timer doesn't have a shard ID. (This means that it was shared to you by a "
+                              .. "player with an old version of WBT.)");  -- WBT v.1.9 or less.
+    else
         local cur_shard_id = WBT.GetCurrentShardID();
         if not cur_shard_id then
-            table.insert(error_msgs, "Current shard ID is unknown. It will automatically be detected when mouse-overing any NPC.");  -- Except pets...
+            table.insert(error_msgs, "Current shard ID is unknown. It will automatically be detected when "
+                                  .. "mousing over an NPC.");
         elseif self.shard_id ~= cur_shard_id then
-            table.insert(error_msgs, "Kill was made on shard ID " .. self.shard_id .. ", but you are on " .. cur_shard_id .. ".");
-        end
-    else
-        -- Should only happen for timer received from someone with an old version of WBT.
-        if self.realm_type ~= realm_type then
-            table.insert(error_msgs, "Kill was made on a " .. self.realm_type .. " realm, but you are now on a " .. realm_type .. " realm.");
-        end
-        if not tContains(Util.GetConnectedRealms(), self.realm_name_normalized) then
-            table.insert(error_msgs, "Kill was made on " .. self.realm_name .. ", but you are now on unconnected realm " .. GetRealmName() .. ".");
+            table.insert(error_msgs, "Kill was made on shard ID " .. self.shard_id ..
+                                  .. ", but you are on " .. cur_shard_id .. ".");
         end
     end
 

@@ -80,7 +80,7 @@ local function PutOrUpdateKillInfo_Advanced(name, dt_expire, connected_realms_id
     local ki_id = KillInfo.CreateID(name, connected_realms_id, realm_type);
     local ki = WBT.db.global.kill_infos[ki_id];
     if ki then
-        ki:SetNewDeath(name, t_death);
+        ki:SetNewDeath(t_death);
     else
         ki = KillInfo:New(name, t_death, shard_id);
     end
@@ -123,6 +123,13 @@ local function SimKillEverything(dt_expire)
     end
     SimKillSpecial(dt_expire);
 end
+
+-- Starts timers 300 seconds before they expire. This gives time to /reload and still keep
+-- timers before expiration.
+function Test.StartTimers300()
+    SimKillEverything(300);
+end
+dsim300 = Test.StartTimers300; -- Lazy command for running from command line without access to macros.
 
 -- Starts timers 25 seconds before they expire. This gives time to check that
 -- alerts/sharing is performed.
