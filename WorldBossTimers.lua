@@ -253,12 +253,12 @@ function WBT.KillInfosInCurrentZoneAndShard()
     local res = {};
     for _, boss in pairs(WBT.BossesInCurrentZone()) do
         local ki_no_shard = g_kill_infos[KillInfo.CreateID(boss.name)];
-        if ki_no_shard and not ki_no_shard.reset then
+        if ki_no_shard then
             table.insert(res, ki_no_shard);
         end
         if g_current_shard_id then  -- TODO: set this while testing
             local ki_shard = g_kill_infos[KillInfo.CreateID(boss.name, g_current_shard_id)];
-            if ki_shard and not ki_shard.reset then
+            if ki_shard then
                 table.insert(res, ki_shard);
             end
         end
@@ -303,8 +303,7 @@ function WBT.GetPrimaryKillInfo()
 end
 
 function WBT.InZoneAndShardForTimer(kill_info)
-    local check_realm_on_missing_shard = true;
-    return WBT.IsInZoneOfBoss(kill_info.name) and kill_info:IsOnCurrentShard(check_realm_on_missing_shard);
+    return WBT.IsInZoneOfBoss(kill_info.name) and kill_info:IsOnCurrentShard();
 end
 
 function WBT.GetSpawnTimeOutput(kill_info)
@@ -363,8 +362,8 @@ function WBT.ResetBoss(ki_id)
     local kill_info = g_kill_infos[ki_id];
 
     if IsControlKeyDown() and (IsShiftKeyDown() or kill_info.cyclic) then
-        kill_info:Reset();
-        gui:Update();
+        g_kill_infos[ki_id] = nil;
+        gui:Rebuild();
         local name = KillInfo.ParseID(ki_id).boss_name;
         Logger.Info(GetColoredBossName(name) .. " has been reset.");
     else
@@ -423,6 +422,10 @@ local function GetSafeSpawnAnnouncerWithCooldown()
         local announced = false;
         local t_now = GetServerTime();
 
+        if WBT.GetCurrentShardID() == nil then
+            Logger.Info("Can't share timers when the shard ID is unknown. Mouse over an NPC to detect it.");
+            return announced;
+        end
         if not kill_info then
             Logger.Info("No timer found for current location and shard ID.");
             return announced;
@@ -559,11 +562,10 @@ end
 
 function WBT.ResetKillInfo()
     WBT:Print("Resetting all timers.");
-    for _, kill_info in pairs(g_kill_infos) do
-        kill_info:Reset();
+    for k, _ in pairs(g_kill_infos) do
+        g_kill_infos[k] = nil;
     end
-
-    gui:Update();
+    gui:Rebuild();
 end
 
 local function StartShardDetectionHandler()
@@ -735,7 +737,7 @@ local function FilterValidKillInfosStep2()
     -- Find invalid.
     local invalid = {};
     for id, ki in pairs(g_kill_infos) do
-        if not ki:IsValidVersion() or ki.reset then
+        if not ki:IsValidVersion() then
             table.insert(invalid, id);
         end
     end
@@ -757,25 +759,21 @@ local function StartKillInfoManager()
                 for _, kill_info in pairs(g_kill_infos) do
                     kill_info:Update();
 
-                    if kill_info.reset then
-                        -- Do nothing.
-                    else
-                        if kill_info:ShouldAutoAnnounce() then
-                            -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken in 8.2.5
-                            -- TODO: Consider if here should be something else
-                        end
+                    if kill_info:ShouldAutoAnnounce() then
+                        -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken in 8.2.5
+                        -- TODO: Consider if here should be something else
+                    end
 
-                        if kill_info:ShouldMakeRespawnAlertPlay(Options.spawn_alert_sec_before.get()) then
-                            FlashClientIcon();
-                            PlaySoundAlertSpawn();
-                        end
+                    if kill_info:ShouldMakeRespawnAlertPlay(Options.spawn_alert_sec_before.get()) then
+                        FlashClientIcon();
+                        PlaySoundAlertSpawn();
+                    end
 
-                        if kill_info:Expired() and Options.cyclic.get() then
-                            local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
-                            kill_info.t_death = t_death_new
-                            self.until_time = t_spawn;
-                            kill_info.cyclic = true;
-                        end
+                    if kill_info:Expired() and Options.cyclic.get() then
+                        local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
+                        kill_info.t_death = t_death_new
+                        self.until_time = t_spawn;
+                        kill_info.cyclic = true;
                     end
                 end
 

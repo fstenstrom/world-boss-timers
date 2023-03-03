@@ -134,7 +134,7 @@ function GUI.LabelWidth(width)
     return width - 15;
 end
 
-function GUI:CreateNewLabel(guid)
+function GUI:CreateNewLabel(guid, kill_info)
     local gui = self;
     local label = GUI.AceGUI:Create("InteractiveLabel");
     label:SetWidth(GUI.LabelWidth(self.width));
@@ -146,6 +146,7 @@ function GUI:CreateNewLabel(guid)
             gui:Update();
         end);
     label.userdata.added = false;
+    label.userdata.time_next_spawn = kill_info:GetSpawnTimeSec();
     self.labels[guid] = label;
     return label;
 end
@@ -196,14 +197,12 @@ function GUI:Rebuild()
         return; -- GUI hasn't been built, so nothing to rebuild.
     end
 
-    for guid, kill_info in pairs(WBT.db.global.kill_infos) do
-        local label = self.labels[guid];
-        if label == nil or getmetatable(kill_info) ~= WBT.KillInfo then
-            -- Do nothing.
-        else
+    for guid, label in pairs(self.labels) do
+        if not WBT.db.global.kill_infos[guid] then
             self:RemoveLabel(guid, label);
         end
     end
+
     self:Update();
 end
 
@@ -241,7 +240,7 @@ function GUI:UpdateContent()
     -- The reason for a rebuild instead of sorting is that the labels are bound to internal AceGUI objects
     -- and I don't want to try to sort them.
     for guid, kill_info in Util.spairs(WBT.db.global.kill_infos, WBT.KillInfo.CompareTo) do
-        local label = self.labels[guid] or self:CreateNewLabel(guid);
+        local label = self.labels[guid] or self:CreateNewLabel(guid, kill_info);
         if getmetatable(kill_info) ~= WBT.KillInfo then
             -- Do nothing.
         elseif WBT.IsDead(guid)

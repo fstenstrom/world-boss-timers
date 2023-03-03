@@ -111,6 +111,12 @@ local function SimNoShardKill(name, dt_expire, server)
     PutOrUpdateKillInfo_Advanced(name, dt_expire, "SHD", Util.Warmode.DISABLED, KillInfo.CURRENT_VERSION, shard_id);
 end
 
+local function SimNoShardKillRustfeather()
+    PutOrUpdateKillInfo_Advanced("Rustfeather", 25, "SHD", Util.Warmode.DISABLED,
+            KillInfo.CURRENT_VERSION, KillInfo.UNKNOWN_SHARD);
+end
+dnoshard = SimNoShardKillRustfeather;
+
 local function SimKillSpecial(dt_expire)
     SimServerKill("Grellkin", dt_expire);
     SimWarmodeKill("Grellkin", dt_expire);

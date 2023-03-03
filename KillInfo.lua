@@ -33,12 +33,6 @@ function KillInfo.CompareTo(t, a, b)
     k1:Update();
     k2:Update();
 
-    if k1.reset then
-        return false;
-    elseif k2.reset then
-        return true;
-    end
-
     if k1:Expired() and not k2:Expired() then
         return false;
     elseif not k1:Expired() and k2:Expired() then
@@ -105,7 +99,6 @@ end
 function KillInfo:SetInitialValues()
     self.version               = KillInfo.CURRENT_VERSION;
     self.cyclic                = false;
-    self.reset                 = false;
     self.realm_name            = GetRealmName(); -- Only use for printing!
     self.realm_name_normalized = GetNormalizedRealmName();
     self.connected_realms_id   = KillInfo.CreateConnectedRealmsID();
@@ -127,7 +120,6 @@ function KillInfo:Print(indent)
     print(indent .. "name: "                  .. self.name);
     print(indent .. "version: "               .. self.version);
     print(indent .. "cyclic: "                .. tostring(self.cyclic));
-    print(indent .. "reset: "                 .. tostring(self.reset));
     print(indent .. "realm_name: "            .. self.realm_name);
     print(indent .. "realm_name_normalized: " .. self.realm_name_normalized);
     print(indent .. "connected_realms_id: "   .. self.connected_realms_id);
@@ -146,7 +138,6 @@ function KillInfo:SetNewDeath(t_death)
     -- self.until_time is (currently) never updated though.
     self.t_death = t_death;
     self.until_time = self.t_death + self.db.max_respawn;
-    self.reset = false;
 
     return self.until_time < GetServerTime();
 end
@@ -259,9 +250,6 @@ end
 
 function KillInfo:IsDead(ignore_cyclic)
     local ignore_cyclic = ignore_cyclic == true; -- Sending in nil shall result in false
-    if self.reset or not self:IsValidVersion() then
-        return false;
-    end
     if self.cyclic then
         if ignore_cyclic or not Options.cyclic.get() then
             return false;
@@ -309,9 +297,6 @@ function KillInfo:ShouldMakeRespawnAlertPlay(offset)
 end
 
 function KillInfo:Update()
-    if self.reset then
-        return;
-    end
     self.remaining_time = self.until_time - GetServerTime();
 end
 
@@ -327,19 +312,10 @@ function KillInfo:EstimationNextSpawn()
     return t_death_new, t_spawn;
 end
 
-function KillInfo:Reset()
-    self.reset = true;
-end
-
 function KillInfo:Expired()
     return self.until_time < GetServerTime();
 end
 
-function KillInfo:IsOnCurrentShard(check_realm_on_missing_shard)
-    local same_shard = self.shard_id and (self.shard_id == WBT.GetCurrentShardID());
-    local same_realm = tContains(Util.GetConnectedRealms(), self.realm_name_normalized);
-    local same_warmode = self.realm_type == Util.WarmodeStatus();
-    local no_shard_but_otherwise_same = (self.shard_id == nil or WBT.GetCurrentShardID() == nil)
-                                        and same_realm and same_warmode;
-    return same_shard or (check_realm_on_missing_shard and no_shard_but_otherwise_same);
+function KillInfo:IsOnCurrentShard()
+    return self.shard_id and (self.shard_id == WBT.GetCurrentShardID());
 end
