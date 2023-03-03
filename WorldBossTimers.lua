@@ -704,7 +704,7 @@ local function StartChatParser()
     InitSharedTimersParser();
 end
 
-local function LoadSerializedKillInfos()
+local function DeserializeKillInfos()
     for name, serialized in pairs(WBT.db.global.kill_infos) do
         g_kill_infos[name] = KillInfo:Deserialize(serialized);
     end
@@ -748,9 +748,6 @@ local function FilterValidKillInfosStep2()
 end
 
 local function StartKillInfoManager()
-    LoadSerializedKillInfos();
-    FilterValidKillInfosStep2();
-
     WBT.kill_info_manager = CreateFrame("Frame");
     WBT.kill_info_manager.since_update = 0;
     local t_update = 1;
@@ -810,8 +807,6 @@ function WBT.AceAddon:OnEnable()
 
     WBT.Functions.AnnounceTimerInChat = GetSafeSpawnAnnouncerWithCooldown();
 
-    FilterValidKillInfosStep1();
-
     GUI.SetupAceGUI();
 
     local AceConfig = LibStub("AceConfig-3.0");
@@ -824,8 +819,11 @@ function WBT.AceAddon:OnEnable()
 
     gui = GUI:New();
 
-    -- Alias to make code more readable. Note that everything in this var is written to db.
-    g_kill_infos = WBT.db.global.kill_infos;
+    -- Initialize g_kill_infos:
+    g_kill_infos = WBT.db.global.kill_infos;  -- Alias to make code more readable.
+    FilterValidKillInfosStep1();
+    DeserializeKillInfos();
+    FilterValidKillInfosStep2();
 
     UpdateCyclicStates();
 
