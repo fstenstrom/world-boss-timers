@@ -196,7 +196,7 @@ function KillInfo:IsSafeToShare(error_msgs)
             table.insert(error_msgs, "Current shard ID is unknown. It will automatically be detected when "
                                   .. "mousing over an NPC.");
         elseif self.shard_id ~= cur_shard_id then
-            table.insert(error_msgs, "Kill was made on shard ID " .. self.shard_id ..
+            table.insert(error_msgs, "Kill was made on shard ID " .. self.shard_id
                                   .. ", but you are on " .. cur_shard_id .. ".");
         end
     end

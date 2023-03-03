@@ -1,3 +1,5 @@
+local TestUtil = require("TestUtil");
+
 -- Test doubles and tests.
 
 g_test_settings = {
@@ -107,6 +109,12 @@ function LibStub(addonName)
     end
     function ls:RegisterOptionsTable(addonName, optionsTable, ...)
         return;
+    end
+    function ls:Embed(comClass)
+        function RegisterComm(...)
+            return;
+        end
+        comClass.RegisterComm = RegisterComm;
     end
     return ls;
 end
@@ -251,23 +259,13 @@ function TestStrSplit()
     assert(c == "c22", c);
 end
 
-local function CreateShareMsg(t_since_death, shard_id)
-    local t = g_game.servertime - t_since_death;
-    local shard_id_part
-    if shard_id then
-        shard_id_part = "-" .. tostring(shard_id)
-    else
-        shard_id_part = ""  -- Legacy. Can't happen any longer.
-    end
-    return "{rt1}Oondasta{rt1}: 6m 52s (WorldBossTimers:" .. tostring(t) .. shard_id_part .. ")";
-end
-
 local function FireDetectShard()
     EventManager:FireEvent("UPDATE_MOUSEOVER_UNIT", "mouseover");
 end
 
-function TestSharingWithoutShardId()
+local function TestSharingWithoutShardId()
     g_test_settings.wbt_print = false;
+    local bossname = "Oondasta";
     EventManager:Reset();
     local WBT = LoadWBT();
     WBT.AceAddon:OnEnable();
@@ -275,23 +273,23 @@ function TestSharingWithoutShardId()
     -- Detect current shard:
     local test_shard_id = 44;
     g_game.world.shard_id = test_shard_id;
-    FireDetectShard()
+    FireDetectShard();
 
     -- Get shared a timer without shard_id
     local event = "CHAT_MSG_SAY";
-    local msg = CreateShareMsg(9, nil);
+    local msg = TestUtil.CreateShareMsg(bossname, g_game.servertime, 9, nil);
     local sender = "Shareson";
     EventManager:FireEvent(event, msg, sender);
-    local ki = WBT.KillInfoAtCurrentPositionRealmWarmode();
+    local ki = WBT.GetPrimaryKillInfo();
     assert(ki.shard_id == WBT.KillInfo.UNKNOWN_SHARD, ki.shard_id)
 
     -- Get new KillInfo with shard ID. The new KillInfo should now be prioritized.
     -- Regardless of if the player's current shard id is known or not.
     local event = "CHAT_MSG_SAY";
-    local msg = CreateShareMsg(8, test_shard_id);
+    local msg = TestUtil.CreateShareMsg(bossname, g_game.servertime, 8, test_shard_id);
     local sender = "Sharesontwo";
     EventManager:FireEvent(event, msg, sender);
-    local ki = WBT.KillInfoAtCurrentPositionRealmWarmode();
+    local ki = WBT.GetPrimaryKillInfo();
     assert(ki.shard_id == 44, ki.shard_id)
 end
 

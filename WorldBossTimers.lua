@@ -187,7 +187,8 @@ end
 function WBT.ParseShardID(unit_guid)
     local unit_type = strsplit("-", unit_guid);
     if unit_type == "Creature" then
-        return tonumber(select(5, strsplit("-", unit_guid)));
+        local shard_id_str = select(5, strsplit("-", unit_guid));
+        return tonumber(shard_id_str);
     else
         return nil;
     end
@@ -796,6 +797,7 @@ function WBT.AceAddon:OnEnable()
     -- FIXME:
     -- What is the Com code doing here if it's not used? I can't tell from the code here whether
     -- it's actually disabled or not.
+    --
     LibStub("AceComm-3.0"):Embed(Com);
     Com:Init(); -- Must init after db.
     if Com.ShouldRevertRequestMode() then

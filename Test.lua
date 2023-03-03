@@ -44,6 +44,7 @@ WBT.Test = {};
 local BossData = WBT.BossData;
 local KillInfo = WBT.KillInfo;
 local Util     = WBT.Util;
+local TestUtil = WBT.TestUtil;
 local Test     = WBT.Test;
 
 
@@ -152,3 +153,9 @@ function Test.StartTimersRandomServer()
         SimServerKill("Grellkin", RandomServerName())
     end
 end
+
+function Test.ShareLegacyTimer(shard_id_or_nil)
+    local msg = TestUtil.CreateShareMsg("Grellkin", GetServerTime(), 9, shard_id_or_nil)
+    SendChatMessage(msg, "SAY");
+end
+dshare = Test.ShareLegacyTimer;
