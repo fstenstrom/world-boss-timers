@@ -1,3 +1,4 @@
+local Util     = require("Util");
 local TestUtil = require("TestUtil");
 
 -- Test doubles and tests.
@@ -293,9 +294,38 @@ local function TestSharingWithoutShardId()
     assert(ki.shard_id == 44, ki.shard_id)
 end
 
+local function TestShare(bossname, expectSuccess)
+    EventManager:Reset();
+    local WBT = LoadWBT();
+    WBT.AceAddon:OnEnable();
+
+    -- Detect current shard:
+    g_game.world.shard_id = 44;
+    FireDetectShard();
+
+    -- Assert no timer:
+    assert(Util.TableIsEmpty(WBT.db.global.kill_infos), "Incorrect setup.");
+
+    -- Share the timer:
+    local event = "CHAT_MSG_SAY";
+    local msg = TestUtil.CreateShareMsg(bossname, g_game.servertime, 9, g_game.world.shard_id);
+    local sender = "Shareson";
+    EventManager:FireEvent(event, msg, sender);
+
+    -- Assert parsed:
+    local nTimers = Util.TableLength(WBT.db.global.kill_infos);
+    local nTimersExp = expectSuccess and 1 or 0;
+    assert(nTimers == nTimersExp, "Incorrect number of timers: " .. nTimers);
+end
+
 function main()
     TestStrSplit();
     TestSharingWithoutShardId();
+    TestShare("Oondasta",     true);
+    TestShare("Sha of Anger", true);
+    TestShare("A. Harvester", true);
+    TestShare("NotBoss",      false);
+    TestShare("Sha of Rage",  false);
 end
 
 main()

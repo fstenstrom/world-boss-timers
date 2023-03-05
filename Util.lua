@@ -6,7 +6,10 @@
 local _, WBT = ...;
 
 local Util = {};
-WBT.Util = Util;
+
+if type(WBT) == "table" then
+    WBT.Util = Util;
+end
 
 Util.COLOR_DEFAULT    = "|cffffffff";
 Util.COLOR_RED        = "|cffff0000";
@@ -235,3 +238,5 @@ function Util.GetConnectedRealms()
 
     return realms;
 end
+
+return Util;
