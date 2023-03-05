@@ -10,13 +10,11 @@
 
 # Release tests:
 1. Perform all other tests.
-2. Kill Rukhmar twice.
-    a. 1st time: Check that you get timer.
-    b. 2nd time: Check that you get alerts and that she spawns as expected.
 
 # Before push to master tests:
-1. For any changed module, perform relevant tests.
-2. Manually check that happy path and most edge cases work. If necessary also write down a test for it here.
+1. Unit tests must pass: UnitTests.lua
+2. For any changed module, perform relevant tests.
+3. Manually check that happy path and most edge cases work. If necessary also write down a test for it here.
 
 #--------------------------------------------------------------------------------
 
