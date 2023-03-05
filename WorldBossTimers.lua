@@ -132,9 +132,9 @@ function Logger.Info(...)
     Logger.Log(Logger.LogLevels.Info, ...);
 end
 
-local gui = {};
 local boss_death_frame;
 local boss_combat_frame;
+local g_gui = {};
 local g_kill_infos = {};
 
 -- The shard id that the player currently is at. Intended only for highlighting
@@ -364,7 +364,7 @@ function WBT.ResetBoss(ki_id)
 
     if IsControlKeyDown() and (IsShiftKeyDown() or kill_info.cyclic) then
         g_kill_infos[ki_id] = nil;
-        gui:Rebuild();
+        g_gui:Rebuild();
         local name = KillInfo.ParseID(ki_id).boss_name;
         Logger.Info(GetColoredBossName(name) .. " has been reset.");
     else
@@ -428,7 +428,7 @@ local function GetSafeSpawnAnnouncerWithCooldown()
             return announced;
         end
         if not kill_info then
-            Logger.Info("No timer found for current location and shard ID.");
+            Logger.Info("No fresh timer found for current location and shard ID.");
             return announced;
         end
         if not ((t_last_announce + 1) <= t_now) then
@@ -465,7 +465,7 @@ function WBT.PutOrUpdateKillInfo(name, shard_id, t_death)
 
     g_kill_infos[ki_id] = ki;
 
-    gui:Update();
+    g_gui:Update();
 end
 
 local function StartDeathTrackerFrame()
@@ -488,7 +488,7 @@ local function StartDeathTrackerFrame()
                 local shard_id = WBT.ParseShardID(dest_unit_guid);
                 WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
                 RequestRaidInfo(); -- Updates which bosses are saved
-                gui:Update();
+                g_gui:Update();
             end
         end);
 end
@@ -566,7 +566,7 @@ function WBT.ResetKillInfo()
     for k, _ in pairs(g_kill_infos) do
         g_kill_infos[k] = nil;
     end
-    gui:Rebuild();
+    g_gui:Rebuild();
 end
 
 local function StartShardDetectionHandler()
@@ -597,7 +597,7 @@ local function StartShardDetectionHandler()
         local unit_type = strsplit("-", guid);
         if unit_type == "Creature" then
             g_current_shard_id = WBT.ParseShardID(guid);
-            GUI:UpdateWindowTitle();
+            g_gui:UpdateWindowTitle();
             Logger.Debug("[ShardDetection]: New shard ID detected:", g_current_shard_id);
             self:UnregisterEvents();
         end
@@ -609,7 +609,7 @@ local function StartShardDetectionHandler()
     f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
     f_restart:SetScript("OnEvent", function(...)
         g_current_shard_id = nil;
-        GUI:UpdateWindowTitle();
+        g_gui:UpdateWindowTitle();
         Logger.Debug("[ShardDetection]: Possibly shard change. Shard ID invalidated.");
 
         -- Wait a while before starting to detect the new shard. When phasing to a new shard it will still
@@ -626,7 +626,7 @@ local function StartVisibilityHandler()
     f:RegisterEvent("ZONE_CHANGED_NEW_AREA");
     f:SetScript("OnEvent",
         function(...)
-            gui:Update();
+            g_gui:Update();
         end
     );
 end
@@ -780,7 +780,7 @@ local function StartKillInfoManager()
                     end
                 end
 
-                gui:Update();
+                g_gui:Update();
 
                 self.since_update = 0;
             end
@@ -818,7 +818,7 @@ function WBT.AceAddon:OnEnable()
     WBT.AceConfigDialog = LibStub("AceConfigDialog-3.0");
     WBT.AceConfigDialog:AddToBlizOptions(WBT.addon_name, WBT.addon_name, nil);
 
-    gui = GUI:New();
+    g_gui = GUI:New();
 
     -- Initialize g_kill_infos:
     g_kill_infos = WBT.db.global.kill_infos;  -- Alias to make code more readable.
