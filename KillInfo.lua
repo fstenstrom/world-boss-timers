@@ -48,7 +48,7 @@ end
 
 -- Returns nil if the parsing fails.
 function KillInfo.ParseID(id)
-    local boss_name, shard_id, connected_realms_id, realm_type, map_id = strsplit(ID_DELIM, id);
+    local boss_name, shard_id, map_id = strsplit(ID_DELIM, id);
 
     if not boss_name then
         return nil;
@@ -57,32 +57,26 @@ function KillInfo.ParseID(id)
     return {
         boss_name = boss_name,
         shard_id = shard_id,
-        connected_realms_id = connected_realms_id,
-        realm_type = realm_type,
         map_id = map_id,
     };
 end
 
-function KillInfo.CreateConnectedRealmsID()
-    return table.concat(Util.GetConnectedRealms(), "_");
-end
-
-function KillInfo.CreateID(name, shard_id, connected_realms_id, realm_type, map_id)
+function KillInfo.CreateID(name, shard_id, map_id)
     -- Unique ID used as key in the global table of tracked KillInfos and GUI labels.
+    --
+    -- Note on map_id: It's necessary to make Zandalari Warbringers unique.
 
     if shard_id == nil or shard_id == KillInfo.UNKNOWN_SHARD then
         shard_id = ID_PART_UNKNOWN;
     end
 
-    local connected_realms_id = connected_realms_id or KillInfo.CreateConnectedRealmsID();
-    local realm_type = realm_type or Util.WarmodeStatus();
-    local map_id     = map_id     or WBT.GetCurrentMapId();
+    local map_id = map_id or WBT.GetCurrentMapId();
 
-    return table.concat({name, shard_id, connected_realms_id, realm_type, map_id}, ID_DELIM);
+    return table.concat({name, shard_id, map_id}, ID_DELIM);
 end
 
 function KillInfo:ID()
-    return self.CreateID(self.name, self.shard_id, self.connected_realms_id, self.shard_id, self.realm_type, self.map_id);
+    return self.CreateID(self.name, self.shard_id, self.map_id);
 end
 
 function KillInfo:HasShardID()
@@ -101,8 +95,6 @@ function KillInfo:SetInitialValues()
     self.cyclic                = false;
     self.realm_name            = GetRealmName(); -- Only use for printing!
     self.realm_name_normalized = GetNormalizedRealmName();
-    self.connected_realms_id   = KillInfo.CreateConnectedRealmsID();
-    self.realm_type            = Util.WarmodeStatus();
     self.map_id                = WBT.GetCurrentMapId();
     self.announce_times        = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
     self.has_triggered_respawn = false;
@@ -122,9 +114,7 @@ function KillInfo:Print(indent)
     print(indent .. "cyclic: "                .. tostring(self.cyclic));
     print(indent .. "realm_name: "            .. self.realm_name);
     print(indent .. "realm_name_normalized: " .. self.realm_name_normalized);
-    print(indent .. "connected_realms_id: "   .. self.connected_realms_id);
     print(indent .. "shard_id: "              .. self.shard_id);
-    print(indent .. "realm_type: "            .. self.realm_type);
     print(indent .. "map_id: "                .. self.map_id);
     print(indent .. "has_triggered_respawn: " .. tostring(self.has_triggered_respawn));
 end
@@ -176,7 +166,7 @@ function KillInfo:IsSafeToShare(error_msgs)
     if self.cyclic then
         table.insert(error_msgs, "Timer has expired.");
     end
-    if self.shard_id == KillInfo.UNKNOWN_SHARD then
+    if self:HasUnknownShard() then
         -- It's impossible to tell where it comes from. Player may have received it when server-jumping or
         -- what not. To avoid complexity, just don't allow sharing it.
         table.insert(error_msgs, "Timer doesn't have a shard ID. (This means that it was shared to you by a "
@@ -318,4 +308,8 @@ end
 
 function KillInfo:IsOnCurrentShard()
     return self.shard_id and (self.shard_id == WBT.GetCurrentShardID());
+end
+
+function KillInfo:HasUnknownShard()
+    return self.shard_id == KillInfo.UNKNOWN_SHARD;
 end

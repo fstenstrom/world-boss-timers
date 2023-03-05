@@ -1,3 +1,11 @@
+-- This file is intended for in-game testing. The file provides functions
+-- for quickly populating the addon instance with test data, which then
+-- can be used to manually verify mainly the behavior of the GUI, but also
+-- the system in its real environment.
+--
+-- When possible, tests should instead be automated in UnitTest.lua.
+
+
 --[[
 
 # Release tests:
@@ -74,54 +82,49 @@ local function StartSim(name, dt_expire)
     WBT.PutOrUpdateKillInfo(name, CurrentShardID(), AdjustedDeathTime(name, dt_expire));
 end
 
-local function PutOrUpdateKillInfo_Advanced(name, dt_expire, connected_realms_id, realm_type, opt_version, opt_shard_id)
+local function PutOrUpdateKillInfo_Advanced(name, dt_expire, realm_name, opt_version, opt_shard_id)
     local version = opt_version or KillInfo.CURRENT_VERSION;
     local t_death = AdjustedDeathTime(name, dt_expire);
     local shard_id = opt_shard_id or CurrentShardID();
-    local ki_id = KillInfo.CreateID(name, connected_realms_id, realm_type);
+    local ki_id = KillInfo.CreateID(name, shard_id);
     local ki = WBT.db.global.kill_infos[ki_id];
     if ki then
         ki:SetNewDeath(t_death);
     else
         ki = KillInfo:New(name, t_death, shard_id);
     end
-    ki.connected_realms_id   = connected_realms_id;
-    ki.realm_name            = connected_realms_id;
-    ki.realm_name_normalized = connected_realms_id;
-    ki.realm_type = realm_type;
+    ki.realm_name            = realm_name;
+    ki.realm_name_normalized = realm_name;
     ki.version = version;
 
     WBT.db.global.kill_infos[ki_id] = ki;
 end
 
 local function SimOutdatedVersionKill(name, dt_expire)
-    PutOrUpdateKillInfo_Advanced(name, dt_expire, "Firehammer", Util.Warmode.ENABLED, "v_unsupported");
-end
-
-local function SimWarmodeKill(name, dt_expire)
-    PutOrUpdateKillInfo_Advanced(name, dt_expire, "Doomhammer", Util.Warmode.ENABLED);
+    PutOrUpdateKillInfo_Advanced(name, dt_expire, "Firehammer", "v_unsupported");
 end
 
 local function SimServerKill(name, dt_expire, server)
-    PutOrUpdateKillInfo_Advanced(name, dt_expire, server or "Majsbreaker", Util.Warmode.DISABLED);
+    PutOrUpdateKillInfo_Advanced(name, dt_expire, server or "Majsbreaker");
 end
 
 local function SimNoShardKill(name, dt_expire, server)
     local shard_id = nil;
-    PutOrUpdateKillInfo_Advanced(name, dt_expire, "SHD", Util.Warmode.DISABLED, KillInfo.CURRENT_VERSION, shard_id);
+    PutOrUpdateKillInfo_Advanced(name, dt_expire, "SHD", KillInfo.CURRENT_VERSION, shard_id);
 end
 
 local function SimNoShardKillRustfeather()
-    PutOrUpdateKillInfo_Advanced("Rustfeather", 25, "SHD", Util.Warmode.DISABLED,
-            KillInfo.CURRENT_VERSION, KillInfo.UNKNOWN_SHARD);
+    PutOrUpdateKillInfo_Advanced("Rustfeather", 25, "SHD", KillInfo.CURRENT_VERSION, KillInfo.UNKNOWN_SHARD);
 end
 dnoshard = SimNoShardKillRustfeather;
 
 local function SimKillSpecial(dt_expire)
     SimServerKill("Grellkin", dt_expire);
-    SimWarmodeKill("Grellkin", dt_expire);
     SimOutdatedVersionKill("Grellkin", dt_expire);
     SimNoShardKill("Grellkin", dt_expire);
+    SimServerKill("Grellkin", dt_expire);
+    PutOrUpdateKillInfo_Advanced("Rustfeather", dt_expire, "Dbg", KillInfo.CURRENT_VERSION, 12);
+    PutOrUpdateKillInfo_Advanced("Rustfeather", dt_expire, "Dbg", KillInfo.CURRENT_VERSION, 1234);
 end
 
 local function SimKillEverything(dt_expire)

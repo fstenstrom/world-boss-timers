@@ -161,11 +161,12 @@ function Options.InitializeItems()
     Options.lock                   = ToggleItem:New("lock",                "GUI lock is now");
     Options.show_gui               = ToggleItem:New("show_gui",            nil);
     Options.sound                  = ToggleItem:New("sound_enabled",       "Sound is now");
-    Options.multi_realm            = ToggleItem:New("multi_realm",         "Multi-Realm/Warmode option is now");
+    Options.multi_realm            = ToggleItem:New("multi_realm",         "Show timers for other shards option is now");
     Options.show_boss_zone_only    = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
     Options.cyclic                 = ToggleItem:New("cyclic",              "Cyclic mode is now");
     Options.highlight              = ToggleItem:New("highlight",           "Highlighting of current zone is now");
     Options.show_saved             = ToggleItem:New("show_saved",          "Showing if saved on boss (on timer) is now");
+    Options.show_realm             = ToggleItem:New("show_realm",          "Showing realm on which timer was recorded is now");
     Options.dev_silent             = ToggleItem:New("dev_silent",          "Silent mode is now");
     Options.log_level              = SelectItem:New("log_level",             "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
     Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    WBT.defaults.global.spawn_alert_sound);
@@ -199,7 +200,7 @@ local function PrintHelp()
     WBT:Print("/wbt send"        .. " --> Toggle send timer data in auto announce");
     WBT:Print("/wbt sound"       .. " --> Toggle sound alerts");
     WBT:Print("/wbt cyclic"      .. " --> Toggle cyclic timers");
-    WBT:Print("/wbt multi"       .. " --> Toggle multi-realm/warmode timers");
+    WBT:Print("/wbt multi"       .. " --> Toggle timers for other shards");
     WBT:Print("/wbt zone"        .. " --> Toggle show GUI in boss zones only");
     WBT:Print("/wbt lock"        .. " --> Toggle locking of GUI");
     WBT:Print("/wbt log <level>" .. " --> Set log level for debug purposes");
@@ -351,19 +352,23 @@ function Options.InitializeOptionsTable()
             set = function(info, val) Options.cyclic:Toggle(); end,
             get = function(info) return Options.cyclic.get(); end,
         },
-        multi_realm = {
-            name = "Multi-realm + Warmode",
+        multi_realm = {  -- NOTE: Should be named multi_shard, but to keep user set option values, it was not renamed.
+            name = "Show timers for other shards",
             order = t_cnt:plusplus(),
-            desc = "Show timers that are not for your current Realm or Warmode",
+            desc = "Shows timers for other shards",
             type = "toggle",
             width = "full",
-            set = function(info, val) Options.multi_realm:Toggle(); end,
+            set =
+                function(info, val)
+                    Options.multi_realm:Toggle();
+                    GUI:UpdateWindowTitle();
+                end,
             get = function(info) return Options.multi_realm.get(); end,
         },
         highlight = {
             name = "Highlight boss in current zone",
             order = t_cnt:plusplus(),
-            desc = "The boss in your current zone will have a different color if your Realm + Warmode matches the timer:\n" ..
+            desc = "The boss in your current zone will have a different color if the current shard ID matches the timer:\n" ..
                     Util.ColoredString(Util.COLOR_LIGHTGREEN, "Green") .. " if timer not expired\n" ..
                     Util.ColoredString(Util.COLOR_YELLOW, "Yellow") .." if timer expired (with Cyclic mode)",
             type = "toggle",
@@ -381,6 +386,15 @@ function Options.InitializeOptionsTable()
             width = "full",
             set = function(info, val) Options.show_saved:Toggle(); end,
             get = function(info) return Options.show_saved.get(); end,
+        },
+        show_realm = {
+            name = "Show realm",
+            order = t_cnt:plusplus(),
+            desc = "Shows the first three characters of the realm on which the timer was recorded.",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.show_realm:Toggle(); end,
+            get = function(info) return Options.show_realm.get(); end,
         },
         log_level = {
             name = "Log level",

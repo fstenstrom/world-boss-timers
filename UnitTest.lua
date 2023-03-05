@@ -131,9 +131,10 @@ function GUI:New()
     self.__index = self;
     return o;
 end
-function GUI.SetupAceGUI() return; end
-function GUI.Init()        return; end
-function GUI:Update()      return; end
+function GUI.SetupAceGUI()       return; end
+function GUI.Init()              return; end
+function GUI:Update()            return; end
+function GUI:UpdateWindowTitle() return; end
 
 
 --------------------------------------------------------------------------------
@@ -150,7 +151,6 @@ local g_game = {
         -- Static
         name = "Chainorth",
         realmname = "Stormreaver",
-        connected_realms = {"Stormreaver", "Dragonmaw", "Vashj"},
         -- Dynamic
         map_id = 507,  -- Isle of Giants
         coords = {     -- Oondasta spawn point.
@@ -178,10 +178,6 @@ function UnitGUID(unit)
     error("NYI")
 end
 
-function GetAutoCompleteRealms()
-    return g_game.player.connected_realms;
-end
-
 function GetRealmName()
     return g_game.player.realm_name;
 end
@@ -193,11 +189,6 @@ end
 
 function GetServerTime()
     return g_game.servertime;
-end
-
-C_PvP = {};
-function C_PvP.IsWarModeDesired()
-    return false;
 end
 
 local Coord = {};
@@ -282,7 +273,7 @@ local function TestSharingWithoutShardId()
     local sender = "Shareson";
     EventManager:FireEvent(event, msg, sender);
     local ki = WBT.GetPrimaryKillInfo();
-    assert(ki.shard_id == WBT.KillInfo.UNKNOWN_SHARD, ki.shard_id)
+    assert(ki:HasUnknownShard(), ki.shard_id)
 
     -- Get new KillInfo with shard ID. The new KillInfo should now be prioritized.
     -- Regardless of if the player's current shard id is known or not.

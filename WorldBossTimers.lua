@@ -157,6 +157,7 @@ WBT.defaults = {
         cyclic = false,
         highlight = false,
         show_saved = false,
+        show_realm = false,
         dev_silent = false,
         log_level = "Info",
         spawn_alert_sound = Sound.SOUND_KEY_BATTLE_BEGINS,
@@ -226,11 +227,6 @@ function WBT.BossesInCurrentZone()
     return t;
 end
 
-function WBT.ThisServerAndWarmode(kill_info)
-    return kill_info.realm_type == Util.WarmodeStatus()
-            and kill_info.connected_realms_id == KillInfo.CreateConnectedRealmsID();
-end
-
 function WBT.InBossZone()
     local current_map_id = WBT.GetCurrentMapId();
 
@@ -243,7 +239,7 @@ function WBT.InBossZone()
     return false;
 end
 
--- Returns all the KillInfos in the current zone and current shard or connected_realm+warmode.
+-- Returns all the KillInfos on the current zone and current shard.
 --
 -- An empty table is returned if no matching KillInfo is found.
 --
@@ -295,8 +291,8 @@ function WBT.GetPrimaryKillInfo()
         Logger.Debug("More than one boss found at current position. Only using first.");
     end
     for _, ki in pairs(found) do
-        if ki.shard_id ~= KillInfo.UNKNOWN_SHARD then
-            return ki
+        if not ki:HasUnknownShard() then
+            return ki;
         end
     end
     return found[1];  -- Unknown shard.
@@ -306,7 +302,7 @@ function WBT.InZoneAndShardForTimer(kill_info)
     return WBT.IsInZoneOfBoss(kill_info.name) and kill_info:IsOnCurrentShard();
 end
 
-function WBT.GetSpawnTimeOutput(kill_info)
+function WBT.GetHighlightColor(kill_info)
     local highlight = Options.highlight.get() and WBT.InZoneAndShardForTimer(kill_info);
     local color;
     if kill_info.cyclic then
@@ -322,6 +318,11 @@ function WBT.GetSpawnTimeOutput(kill_info)
             color = Util.COLOR_DEFAULT;
         end
     end
+    return color;
+end
+
+function WBT.GetSpawnTimeOutput(kill_info)
+    local color = WBT.GetHighlightColor(kill_info);
 
     local text = kill_info:GetSpawnTimeAsText();
     text = Util.ColoredString(color, text);
@@ -596,6 +597,7 @@ local function StartShardDetectionHandler()
         local unit_type = strsplit("-", guid);
         if unit_type == "Creature" then
             g_current_shard_id = WBT.ParseShardID(guid);
+            GUI:UpdateWindowTitle();
             Logger.Debug("[ShardDetection]: New shard ID detected:", g_current_shard_id);
             self:UnregisterEvents();
         end
@@ -607,6 +609,7 @@ local function StartShardDetectionHandler()
     f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
     f_restart:SetScript("OnEvent", function(...)
         g_current_shard_id = nil;
+        GUI:UpdateWindowTitle();
         Logger.Debug("[ShardDetection]: Possibly shard change. Shard ID invalidated.");
 
         -- Wait a while before starting to detect the new shard. When phasing to a new shard it will still

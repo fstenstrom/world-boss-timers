@@ -124,6 +124,13 @@ function GUI:UpdateGUIVisibility()
 end
 
 function GUI:LockOrUnlock()
+    -- BUG:
+    -- If the window is locked, and then a user tries to move it, an error will be thrown
+    -- because "StartMoving" is not allowed to be called on non-movable frames.
+    -- However, there doesn't seem to exist any API that allows an AceGUI frame to be
+    -- locked.
+    -- The error should be harmless tho, unless a user shows lua errors, in which case it will
+    -- at worst be annoying.
     self.window.frame:SetMovable(not Options.lock.get());
 end
 
@@ -163,7 +170,9 @@ function GUI:UpdateHeight(n_entries)
 end
 
 function GUI:UpdateWidth()
-    local new_width = Options.multi_realm.get() and WIDTH_EXTENDED or WIDTH_DEFAULT;
+    local new_width = WIDTH_DEFAULT +
+            (Options.multi_realm.get() and 40 or 0) +
+            (Options.show_realm.get() and 20 or 0);
     if self.width == new_width then
         return;
     end
@@ -176,11 +185,27 @@ function GUI:UpdateWidth()
     end
 end
 
-function GUI.GetLabelText(kill_info, all_info)
+function GUI.CreateLabelText(kill_info, max_shard_id)
     local prefix = "";
-    if all_info then
-        prefix = Util.ColoredString(Util.COLOR_DARKGREEN, strsub(kill_info.realm_name_normalized, 0, 3)) .. ":"
-                .. Util.ColoredString(Util.WarmodeColor(kill_info.realm_type), strsub(kill_info.realm_type, 0, 1)) .. ":";
+    local color = WBT.GetHighlightColor(kill_info);
+    local prefix = "";
+    if Options.multi_realm.get() then
+        local shard;
+        local pad_char;
+        if kill_info:HasUnknownShard() then
+            shard = "?";
+            pad_char = "?";  -- Alignment wont' work because font isn't monospace. But it's an improvement.
+        else
+            shard = kill_info.shard_id;
+            pad_char = "0";
+        end
+        shard = string.rep(pad_char, string.len(max_shard_id) - string.len(shard)) .. shard;
+        shard = Util.ColoredString(color, shard);
+        prefix = prefix .. shard .. ":";
+    end
+    if Options.show_realm.get() then
+        local realm = Util.ColoredString(Util.COLOR_YELLOW, strsub(kill_info.realm_name_normalized, 0, 3));
+        prefix = prefix .. realm .. ":";
     end
     return prefix .. WBT.GetColoredBossName(kill_info.name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
 end
@@ -245,9 +270,8 @@ function GUI:UpdateContent()
             -- Do nothing.
         elseif WBT.IsDead(guid)
                 and (not(kill_info.cyclic) or Options.cyclic.get())
-                and (WBT.ThisServerAndWarmode(kill_info) or Options.multi_realm.get()) then
+                and (kill_info:IsOnCurrentShard() or Options.multi_realm.get()) then
             n_shown_labels = n_shown_labels + 1;
-            label:SetText(GUI.GetLabelText(kill_info, Options.multi_realm.get()));
 
             if not label.userdata.added then
                 self.window:AddChild(label);
@@ -265,6 +289,20 @@ function GUI:UpdateContent()
                 self:RemoveLabel(guid, label);
             end
         end
+    end
+
+    -- Find longest shard ID for padding.
+    local max_shard_id = 0;
+    for guid, label in pairs(self.labels) do
+        local shard_id = WBT.db.global.kill_infos[guid].shard_id;
+        if shard_id > max_shard_id then
+            max_shard_id = shard_id;
+        end
+    end
+
+    -- Set the label texts.
+    for guid, label in pairs(self.labels) do
+        label:SetText(GUI.CreateLabelText(WBT.db.global.kill_infos[guid], max_shard_id));
     end
 
     if needs_rebuild then
@@ -356,13 +394,25 @@ function GUI:NewBasicWindow()
     window:SetWidth(self.width);
     window:SetHeight(self.height);
 
-    window:SetTitle("WorldBossTimers");
     window:SetLayout("List");
     window:EnableResize(false);
 
     self.visible = false;
 
     return window;
+end
+
+function GUI:UpdateWindowTitle()
+    local prefix = "";
+    if Options.multi_realm:get() then
+        local shard_id = WBT.GetCurrentShardID();
+        if shard_id then
+            prefix = tostring(shard_id) .. " - ";
+        else
+            prefix = "??? - ";
+        end
+    end
+    self.window:SetTitle(prefix .. "WorldBossTimers")
 end
 
 -- "Decorator" of default closeOnClick, see AceGUIContainer-Window.lua.
@@ -384,6 +434,7 @@ function GUI:New()
     self.window = GUI:NewBasicWindow();
     self.window.closebutton:SetScript("OnClick", closeOnClick);
     WBT.G_window = self.window;
+    self:UpdateWindowTitle();
 
     self.btn_req = GUI.AceGUI:Create("Button");
     self.btn_req:SetRelativeWidth(BTN_REQ_REL_WIDTH);

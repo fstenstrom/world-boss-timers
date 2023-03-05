@@ -21,18 +21,6 @@ Util.COLOR_YELLOW     = "|cfff2e532";
 Util.COLOR_BLUE       = "|cff0394fc";
 Util.COLOR_PURPLE     = "|cffbf00ff";
 
-Util.Warmode = {
-    DISABLED = "Normal",
-    ENABLED = "Warmode",
-}
-
-function Util.WarmodeColor(realm_type)
-    local color = Util.COLOR_RED;
-    if realm_type == Util.Warmode.DISABLED then
-        color = Util.COLOR_YELLOW;
-    end
-    return color;
-end
 
 -- Lua 5.2 "import" from table.pack:
 function TablePack(...)
@@ -125,10 +113,6 @@ function Util.FormatTimeSeconds(seconds)
     else
         return secs .. "s";
     end
-end
-
-function Util.WarmodeStatus()
-    return C_PvP.IsWarModeDesired() and Util.Warmode.ENABLED or Util.Warmode.DISABLED;
 end
 
 function Util.PlaySoundAlert(soundfile)
@@ -226,17 +210,6 @@ function Util.MultiKeyTable:GetAllSubVals(k)
     end
 
     return subvals;
-end
-
--- Always includes the original main realm.
-function Util.GetConnectedRealms()
-    local realms = GetAutoCompleteRealms();
-    if next(realms) == nil then
-        -- Empty table -> not a connected realm.
-        realms = { GetNormalizedRealmName() };
-    end
-
-    return realms;
 end
 
 return Util;
