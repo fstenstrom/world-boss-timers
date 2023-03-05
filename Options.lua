@@ -76,6 +76,7 @@ function ToggleItem:Toggle()
     local new_state = not self.get();
     self.set(new_state);
     self:PrintFormattedStatus(new_state);
+    WBT.GUI:Update();
 end
 
 local SelectItem = {};
@@ -242,16 +243,12 @@ function Options.SlashHandler(input)
         end
     elseif arg1 == "cyclic" then
         Options.cyclic:Toggle();
-        WBT.GUI:Update();
     elseif arg1 == "multi" then
         Options.multi_realm:Toggle();
-        WBT.GUI:Update();
     elseif arg1 == "zone" then
         Options.show_boss_zone_only:Toggle();
-        WBT.GUI:Update();
     elseif arg1 == "lock" then
         Options.lock:Toggle();
-        WBT.GUI:Update();
     elseif arg1 == "gui-reset" then
         WBT.GUI:ResetPosition();
     elseif arg1 == "log" then

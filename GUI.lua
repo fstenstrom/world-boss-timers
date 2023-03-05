@@ -422,6 +422,9 @@ local function closeOnClick(this)
     WBT.db.global.hide_gui = true;
 end
 
+-- FIXME: Essentially this class is a singleton, but it's being accessed via
+-- something that looks like an instance (g_gui) at some places, and directly via
+-- the class (GUI) at other places.
 function GUI:New()
     if self.gui_container then
         self.gui_container:Release();
