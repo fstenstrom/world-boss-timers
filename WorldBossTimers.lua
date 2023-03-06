@@ -187,7 +187,7 @@ end
 
 function WBT.ParseShardID(unit_guid)
     local unit_type = strsplit("-", unit_guid);
-    if unit_type == "Creature" then
+    if unit_type == "Creature" or unit_type == "Vehicle" then
         local shard_id_str = select(5, strsplit("-", unit_guid));
         return tonumber(shard_id_str);
     else
@@ -597,7 +597,7 @@ local function StartShardDetectionHandler()
         end
         local guid = UnitGUID(unit);
         local unit_type = strsplit("-", guid);
-        if unit_type == "Creature" then
+        if unit_type == "Creature" or unit_type == "Vehicle" then
             g_current_shard_id = WBT.ParseShardID(guid);
             g_gui:UpdateWindowTitle();
             Logger.Debug("[ShardDetection]: New shard ID detected:", g_current_shard_id);
