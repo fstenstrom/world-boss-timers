@@ -209,6 +209,8 @@ function WBT.IsBoss(name)
     return Util.SetContainsKey(BossData.GetAll(), name);
 end
 
+-- Warning: This can different result, at least during addon loading / player enter world events.
+-- For example it returns the map ID for Kalimdor instead of Tanaris.
 function WBT.GetCurrentMapId()
     return C_Map.GetBestMapForUnit("player");
 end

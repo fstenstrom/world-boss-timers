@@ -72,17 +72,12 @@ local function ShowBossZoneOnlyAndOutsideZone()
 end
 
 function GUI:ShouldShow()
-    if (ShowBossZoneOnlyAndOutsideZone()) then
+    if ShowBossZoneOnlyAndOutsideZone() then
         return false;
     end
     local should_show =
             not self.visible
             and not WBT.db.global.hide_gui;
-
-    --@do-not-package@
-    -- print(WBT.InBossZone(), WBT.AnyDead(), self.visible, WBT.db.global.hide_gui);
-    -- print("Should show:", should_show);
-    --@end-do-not-package@
     
     return should_show;
 end
@@ -124,6 +119,10 @@ function GUI:UpdateGUIVisibility()
 end
 
 function GUI:LockOrUnlock()
+    if not self.window then
+        -- The window is freed when hidden.
+        return;
+    end
     -- BUG:
     -- If the window is locked, and then a user tries to move it, an error will be thrown
     -- because "StartMoving" is not allowed to be called on non-movable frames.
@@ -403,6 +402,10 @@ function GUI:NewBasicWindow()
 end
 
 function GUI:UpdateWindowTitle()
+    if not self.window then
+        -- The window is freed when hidden.
+        return;
+    end
     local prefix = "";
     if Options.multi_realm:get() then
         local shard_id = WBT.GetCurrentShardID();
@@ -436,7 +439,7 @@ function GUI:New()
     self.height = HEIGHT_DEFAULT;
     self.window = GUI:NewBasicWindow();
     self.window.closebutton:SetScript("OnClick", closeOnClick);
-    WBT.G_window = self.window;
+    WBT.G_window = self.window;  -- FIXME: Remove this variable.
     self:UpdateWindowTitle();
 
     self.btn_req = GUI.AceGUI:Create("Button");
