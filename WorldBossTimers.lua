@@ -141,6 +141,9 @@ local g_kill_infos = {};
 -- of timers in GUI.
 local g_current_shard_id;
 
+-- The last time the 
+local g_current_shard_id;
+
 local CHANNEL_ANNOUNCE = "SAY";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
 local CHAT_MESSAGE_TIMER_REQUEST = "Could you please share WorldBossTimers kill data?";
@@ -149,6 +152,7 @@ WBT.defaults = {
     global = {
         kill_infos = {},
         sound_type = Sound.SOUND_CLASSIC,
+        connected_realms_data = {},
         -- Options:
         lock = false,
         sound_enabled = true,
@@ -180,14 +184,55 @@ function WBT:PrintError(...)
     WBT:Print(text);
 end
 
+--------------------------------------------------------------------------------
+-- ConnectedRealmsData
+--------------------------------------------------------------------------------
+
+local ConnectedRealmsData = {};
+
+-- Data about the connected realms that needs to be saved to DB.
+function ConnectedRealmsData:New()
+    local o = {};
+    o.zone_to_shard_id_map = {};
+    return sd;
+end
+
+function WBT.GetRealmKey()
+    return table.concat(Util.GetConnectedRealms(), "_");
+end
+
+function WBT.GetZoneKey()
+    return tostring(WBT.GetCurrentMapId());
+end
+
+--------------------------------------------------------------------------------
+
+function WBT.IsUnknownShard(shard_id)
+    return shard_id == nil or shard_id == KillInfo.UNKNOWN_SHARD;
+end
+
+-- Getter for access via other modules.
 function WBT.GetCurrentShardID()
-    -- Getter for access via other modules.
     return g_current_shard_id or KillInfo.UNKNOWN_SHARD;
 end
 
-function WBT.IsUnknownShard(shard_id)
-    -- Getter for access via other modules.
-    return shard_id == nil or shard_id == KillInfo.UNKNOWN_SHARD;
+-- Returns the last known shard id for the current realm and zone.
+function WBT.GetSavedShardID()
+    local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
+    if crd == nil then
+        return KillInfo.UNKNOWN_SHARD;
+    end
+    local shard_id = crd.shard_ids[WBT.GetZoneKey()];
+    return shard_id or KillInfo.UNKNOWN_SHARD;
+end
+
+function WBT.PutSavedShardID(shard_id)
+    local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
+    if crd == nil then 
+        crd = ConnectedRealmsData:New();
+        WBT.db.global.connected_realms_data[WBT.GetRealmKey()] = crd;
+    end
+    crd.zone_to_shard_id_map[WBT.GetZoneKey()] = shard_id;
 end
 
 function WBT.ParseShardID(unit_guid)
@@ -774,7 +819,7 @@ local function StartKillInfoManager()
                         -- TODO: Consider if here should be something else
                     end
 
-                    if kill_info:ShouldMakeRespawnAlertPlay(Options.spawn_alert_sec_before.get()) then
+                    if kill_info:ShouldRespawnAlertPlayNow(Options.spawn_alert_sec_before.get()) then
                         FlashClientIcon();
                         PlaySoundAlertSpawn();
                     end

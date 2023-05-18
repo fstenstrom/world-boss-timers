@@ -271,7 +271,7 @@ function KillInfo:InTimeWindow(from, to)
     return from <= t_now and t_now <= to;
 end
 
-function KillInfo:ShouldMakeRespawnAlertPlay(offset)
+function KillInfo:ShouldRespawnAlertPlayNow(offset)
     local t_now = GetServerTime();
     local until_time_offset = self.until_time - offset;
     local trigger = self:InTimeWindow(until_time_offset, until_time_offset + 1)

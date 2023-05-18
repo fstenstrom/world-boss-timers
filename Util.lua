@@ -212,4 +212,15 @@ function Util.MultiKeyTable:GetAllSubVals(k)
     return subvals;
 end
 
+-- Always includes the original main realm.
+function Util.GetConnectedRealms()
+    local realms = GetAutoCompleteRealms();
+    if next(realms) == nil then
+        -- Empty table -> not a connected realm.
+        realms = { GetNormalizedRealmName() };
+    end
+
+    return realms;
+end
+
 return Util;
