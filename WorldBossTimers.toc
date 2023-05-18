@@ -1,4 +1,4 @@
-## Interface: 100005
+## Interface: 100100
 ## Title: WorldBossTimers
 ## Notes: Creates timers for world bosses
 ## Author: Soulstorm
