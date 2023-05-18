@@ -182,7 +182,12 @@ end
 
 function WBT.GetCurrentShardID()
     -- Getter for access via other modules.
-    return g_current_shard_id;
+    return g_current_shard_id or KillInfo.UNKNOWN_SHARD;
+end
+
+function WBT.IsUnknownShard(shard_id)
+    -- Getter for access via other modules.
+    return shard_id == nil or shard_id == KillInfo.UNKNOWN_SHARD;
 end
 
 function WBT.ParseShardID(unit_guid)
@@ -425,7 +430,7 @@ local function GetSafeSpawnAnnouncerWithCooldown()
         local announced = false;
         local t_now = GetServerTime();
 
-        if WBT.GetCurrentShardID() == nil then
+        if WBT.IsUnknownShard(WBT.GetCurrentShardID()) then
             Logger.Info("Can't share timers when the shard ID is unknown. Mouse over an NPC to detect it.");
             return announced;
         end
@@ -599,7 +604,7 @@ local function StartShardDetectionHandler()
         local unit_type = strsplit("-", guid);
         if unit_type == "Creature" or unit_type == "Vehicle" then
             g_current_shard_id = WBT.ParseShardID(guid);
-            g_gui:UpdateWindowTitle();
+            g_gui:Update();
             Logger.Debug("[ShardDetection]: New shard ID detected:", g_current_shard_id);
             self:UnregisterEvents();
         end
@@ -611,7 +616,7 @@ local function StartShardDetectionHandler()
     f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
     f_restart:SetScript("OnEvent", function(...)
         g_current_shard_id = nil;
-        g_gui:UpdateWindowTitle();
+        g_gui:Update();
         Logger.Debug("[ShardDetection]: Possibly shard change. Shard ID invalidated.");
 
         -- Wait a while before starting to detect the new shard. When phasing to a new shard it will still

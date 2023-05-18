@@ -69,11 +69,11 @@ local function AdjustedDeathTime(name, dt_expire)
 end
 
 local function CurrentShardID()
-    local cur_shard_id = WBT.GetCurrentShardID();
-    if not cur_shard_id then
-        print("WARNING: WBT test function running with shard_id=nil");
+    local shard_id = WBT.GetCurrentShardID();
+    if WBT.IsUnknownShard(shard_id) then
+        print("WARNING: WBT test function running with unknown shard_id");
     end
-    return cur_shard_id;
+    return shard_id;
 end
 
 local function StartSim(name, dt_expire)
@@ -166,3 +166,13 @@ function Test.ShareLegacyTimer(shard_id_or_nil)
     SendChatMessage(msg, "SAY");
 end
 dshare = Test.ShareLegacyTimer;
+
+function Test.ResetOpts()
+    for k, v in pairs(WBT.defaults.global) do
+        if k ~= "kill_infos" then
+            WBT.db.global[k] = v;
+        end
+    end
+    WBT.g_gui:Update();
+end
+resetopts = Test.ResetOpts

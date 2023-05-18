@@ -355,11 +355,7 @@ function Options.InitializeOptionsTable()
             desc = "Shows timers for other shards",
             type = "toggle",
             width = "full",
-            set =
-                function(info, val)
-                    Options.multi_realm:Toggle();
-                    GUI:UpdateWindowTitle();
-                end,
+            set = function(info, val) Options.multi_realm:Toggle(); end,
             get = function(info) return Options.multi_realm.get(); end,
         },
         highlight = {

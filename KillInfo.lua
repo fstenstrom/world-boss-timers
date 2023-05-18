@@ -172,13 +172,13 @@ function KillInfo:IsSafeToShare(error_msgs)
         table.insert(error_msgs, "Timer doesn't have a shard ID. (This means that it was shared to you by a "
                               .. "player with an old version of WBT.)");  -- WBT v.1.9 or less.
     else
-        local cur_shard_id = WBT.GetCurrentShardID();
-        if not cur_shard_id then
+        local shard_id = WBT.GetCurrentShardID();
+        if WBT.IsUnknownShard(shard_id) then
             table.insert(error_msgs, "Current shard ID is unknown. It will automatically be detected when "
                                   .. "mousing over an NPC.");
-        elseif self.shard_id ~= cur_shard_id then
+        elseif self.shard_id ~= shard_id then
             table.insert(error_msgs, "Kill was made on shard ID " .. self.shard_id
-                                  .. ", but you are on " .. cur_shard_id .. ".");
+                                  .. ", but you are on " .. shard_id .. ".");
         end
     end
 
@@ -307,7 +307,7 @@ function KillInfo:Expired()
 end
 
 function KillInfo:IsOnCurrentShard()
-    return self.shard_id and (self.shard_id == WBT.GetCurrentShardID());
+    return not self:HasUnknownShard() and (self.shard_id == WBT.GetCurrentShardID());
 end
 
 function KillInfo:HasUnknownShard()

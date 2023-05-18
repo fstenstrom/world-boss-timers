@@ -153,7 +153,6 @@ function GUI:CreateNewLabel(guid, kill_info)
         end);
     label.userdata.added = false;
     label.userdata.time_next_spawn = kill_info:GetSpawnTimeSec();
-    self.labels[guid] = label;
     return label;
 end
 
@@ -184,21 +183,41 @@ function GUI:UpdateWidth()
     end
 end
 
+-- Before this function can be used, labels must be created! I.e. there must be
+-- a mapping mapping to which KillInfos will be displayed.
+function GUI:FindMaxDisplayedShardId()
+    -- Find longest shard ID for padding.
+    local max_shard_id = 0;
+    for guid, label in pairs(self.labels) do
+        local shard_id = WBT.db.global.kill_infos[guid].shard_id;
+        if shard_id > max_shard_id then
+            max_shard_id = shard_id;
+        end
+    end
+    return max_shard_id;
+end
+
+function GUI.CreatePaddedShardIdString(shard_id, max_shard_id)
+    local shard_str;
+    local pad_char;
+    if WBT.IsUnknownShard(shard_id) then
+        shard_str = "?";
+        pad_char = "?";  -- Alignment won't work because font isn't monospace. But it's an improvement.
+    else
+        shard_str = shard_id;
+        pad_char = "0";
+    end
+    local pad_len = string.len(max_shard_id) - string.len(shard_str);
+    shard_str = string.rep(pad_char, pad_len) .. shard_str;
+    return shard_str;
+end
+
 function GUI.CreateLabelText(kill_info, max_shard_id)
     local prefix = "";
     local color = WBT.GetHighlightColor(kill_info);
     local prefix = "";
     if Options.multi_realm.get() then
-        local shard;
-        local pad_char;
-        if kill_info:HasUnknownShard() then
-            shard = "?";
-            pad_char = "?";  -- Alignment wont' work because font isn't monospace. But it's an improvement.
-        else
-            shard = kill_info.shard_id;
-            pad_char = "0";
-        end
-        shard = string.rep(pad_char, string.len(max_shard_id) - string.len(shard)) .. shard;
+        local shard = GUI.CreatePaddedShardIdString(kill_info.shard_id, max_shard_id)
         shard = Util.ColoredString(color, shard);
         prefix = prefix .. shard .. ":";
     end
@@ -255,7 +274,7 @@ end
 
 -- Builds and/or updates what labels as necessary.
 function GUI:UpdateContent()
-    local n_shown_labels = 0;
+    local nlabels = 0;
     local needs_rebuild = false;
 
     -- Note that labels are added in a certain order, which corresponds to the order they will
@@ -264,16 +283,18 @@ function GUI:UpdateContent()
     -- The reason for a rebuild instead of sorting is that the labels are bound to internal AceGUI objects
     -- and I don't want to try to sort them.
     for guid, kill_info in Util.spairs(WBT.db.global.kill_infos, WBT.KillInfo.CompareTo) do
-        local label = self.labels[guid] or self:CreateNewLabel(guid, kill_info);
-        if getmetatable(kill_info) ~= WBT.KillInfo then
-            -- Do nothing.
-        elseif WBT.IsDead(guid)
-                and (not(kill_info.cyclic) or Options.cyclic.get())
-                and (kill_info:IsOnCurrentShard() or Options.multi_realm.get()) then
-            n_shown_labels = n_shown_labels + 1;
 
+        -- FIXME: Don't create new labels unless necessary! Confusing and creates AceGUI objects!
+        local label = self.labels[guid] or self:CreateNewLabel(guid, kill_info);  
+
+        local show_label = WBT.IsDead(guid)
+                and (not(kill_info.cyclic) or Options.cyclic.get())
+                and (kill_info:IsOnCurrentShard() or Options.multi_realm.get())
+        if show_label then
+            nlabels = nlabels + 1;
             if not label.userdata.added then
                 self.window:AddChild(label);
+                self.labels[guid] = label;
                 label.userdata.added = true;
             else
                 if GUI.KillInfoHasFreshKill(kill_info, label) or GUI.CyclicKillInfoRestarted(kill_info, label) then
@@ -290,25 +311,19 @@ function GUI:UpdateContent()
         end
     end
 
-    -- Find longest shard ID for padding.
-    local max_shard_id = 0;
-    for guid, label in pairs(self.labels) do
-        local shard_id = WBT.db.global.kill_infos[guid].shard_id;
-        if shard_id > max_shard_id then
-            max_shard_id = shard_id;
-        end
-    end
-
-    -- Set the label texts.
-    for guid, label in pairs(self.labels) do
-        label:SetText(GUI.CreateLabelText(WBT.db.global.kill_infos[guid], max_shard_id));
-    end
-
     if needs_rebuild then
         self:Rebuild(); -- Warning: recursive call!
     else
-        self:UpdateHeight(n_shown_labels);
+        self:UpdateHeight(nlabels);
         self:UpdateWidth();
+
+        -- Set the label texts.
+        local max_shard_id = self:FindMaxDisplayedShardId();
+        for guid, label in pairs(self.labels) do
+            label:SetText(GUI.CreateLabelText(WBT.db.global.kill_infos[guid], max_shard_id));
+        end
+
+        self:UpdateWindowTitle();
     end
 end
 
@@ -408,11 +423,12 @@ function GUI:UpdateWindowTitle()
     end
     local prefix = "";
     if Options.multi_realm:get() then
-        local shard_id = WBT.GetCurrentShardID();
-        if shard_id then
-            prefix = tostring(shard_id) .. " - ";
-        else
+        if WBT.IsUnknownShard(WBT.GetCurrentShardID()) then
             prefix = "??? - ";
+        else
+            local cur_shard_id = WBT.GetCurrentShardID();
+            local max_shard_id = self:FindMaxDisplayedShardId();
+            prefix = GUI.CreatePaddedShardIdString(cur_shard_id, max_shard_id) .. " - ";
         end
     end
     self.window:SetTitle(prefix .. "WorldBossTimers")
@@ -440,7 +456,7 @@ function GUI:New()
     self.window = GUI:NewBasicWindow();
     self.window.closebutton:SetScript("OnClick", closeOnClick);
     WBT.G_window = self.window;  -- FIXME: Remove this variable.
-    self:UpdateWindowTitle();
+    self.window:SetTitle("WorldBossTimers");
 
     self.btn_req = GUI.AceGUI:Create("Button");
     self.btn_req:SetRelativeWidth(BTN_REQ_REL_WIDTH);
@@ -493,4 +509,3 @@ function GUI:PrintWindowFunctions()
     PrintAllFunctionsRec(self.window);
 end
 --@end-do-not-package@
-
