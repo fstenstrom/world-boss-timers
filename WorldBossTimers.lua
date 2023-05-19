@@ -36,6 +36,16 @@ WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 -- Workaround to keep the nice WBT:Print function.
 WBT.Print = function(self, text) WBT.AceAddon:Print(text) end
 
+
+-- Enum that describes why the GUI was requested to update.
+WBT.UpdateEvents = {};
+WBT.UpdateEvents.UNSPECIFIED    = 0;
+WBT.UpdateEvents.SHARD_DETECTED = 1;
+
+--------------------------------------------------------------------------------
+-- Logger
+--------------------------------------------------------------------------------
+
 -- Global logger. OK since WoW is single-threaded.
 WBT.Logger = {
     options_tbl = nil; -- Used to show options in GUI.
@@ -131,6 +141,8 @@ end
 function Logger.Info(...)
     Logger.Log(Logger.LogLevels.Info, ...);
 end
+
+--------------------------------------------------------------------------------
 
 local boss_death_frame;
 local boss_combat_frame;
@@ -640,8 +652,8 @@ local function StartShardDetectionHandler()
         if unit_type == "Creature" or unit_type == "Vehicle" then
             g_current_shard_id = WBT.ParseShardID(guid);
             WBT.PutSavedShardID(g_current_shard_id);
-            g_gui:Update();
             Logger.Debug("[ShardDetection]: New shard ID detected:", g_current_shard_id);
+            g_gui:Update(WBT.UpdateEvents.SHARD_DETECTED);
             self:UnregisterEvents();
         end
     end);

@@ -311,10 +311,15 @@ function GUI:UpdateContent()
                 end
             end
         else
+            -- Remove label:
             if label.userdata.added then
                 -- The label is apparently not automatically removed from the
                 -- self.window.children table, so it has to be done manually.
                 self:RemoveLabel(guid, label);
+                if self.update_event == WBT.UpdateEvents.SHARD_DETECTED then
+                    local boss_name = WBT.GetColoredBossName(WBT.db.global.kill_infos[guid].boss_name);
+                    WBT.Logger.Info("Timer for " .. boss_name .. " was hidden because it's not for the current shard.")
+                end
             end
         end
     end
@@ -335,7 +340,10 @@ function GUI:UpdateContent()
     end
 end
 
-function GUI:Update()
+-- @param event: Optional event specifier.
+function GUI:Update(event)
+    self.update_event = event or WBT.UpdateEvents.UNSPECIFIED;
+
     self:UpdateGUIVisibility();
 
     if not(self.visible) then
@@ -344,6 +352,8 @@ function GUI:Update()
 
     self:LockOrUnlock();
     self:UpdateContent();
+
+    self.update_event = WBT.UpdateEvents.UNSPECIFIED;
 end
 
 function GUI:UpdatePosition(gp)
@@ -456,6 +466,8 @@ function GUI:New()
     if self.gui_container then
         self.gui_container:Release();
     end
+
+    self.update_event = WBT.UpdateEvents.UNSPECIFIED;
 
     self.released = false;
 
