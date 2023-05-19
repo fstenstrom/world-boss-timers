@@ -151,6 +151,7 @@ local g_game = {
         -- Static
         name = "Chainorth",
         realmname = "Stormreaver",
+        connected_realms = {"Stormreaver", "Vashj"},
         -- Dynamic
         map_id = 507,  -- Isle of Giants
         coords = {     -- Oondasta spawn point.
@@ -180,6 +181,10 @@ end
 
 function GetRealmName()
     return g_game.player.realm_name;
+end
+
+function GetAutoCompleteRealms()
+    return g_game.player.connected_realms;
 end
 
 -- XXX: Not correct, but doesn't matter right now.
