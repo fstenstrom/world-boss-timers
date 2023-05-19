@@ -225,7 +225,7 @@ function GUI.CreateLabelText(kill_info, max_shard_id)
         local realm = Util.ColoredString(Util.COLOR_YELLOW, strsub(kill_info.realm_name_normalized, 0, 3));
         prefix = prefix .. realm .. ":";
     end
-    return prefix .. WBT.GetColoredBossName(kill_info.name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
+    return prefix .. WBT.GetColoredBossName(kill_info.boss_name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
 end
 
 function GUI:RemoveLabel(guid, label)
@@ -272,6 +272,16 @@ function GUI.CyclicKillInfoRestarted(kill_info, label)
     end
 end
 
+function GUI.ShouldShowKillInfo(kill_info)
+    if kill_info:IsExpired() and not Options.cyclic.get() then
+        return false;
+    end
+    local shard_ok = Options.assume_realm_keeps_shard.get()
+            and kill_info:IsOnSavedRealmShard()
+            or kill_info:IsOnCurrentShard();
+    return shard_ok or Options.multi_realm.get();
+end
+
 -- Builds and/or updates what labels as necessary.
 function GUI:UpdateContent()
     local nlabels = 0;
@@ -287,9 +297,7 @@ function GUI:UpdateContent()
         -- FIXME: Don't create new labels unless necessary! Confusing and creates AceGUI objects!
         local label = self.labels[guid] or self:CreateNewLabel(guid, kill_info);  
 
-        local show_label = WBT.IsDead(guid)
-                and (not(kill_info.cyclic) or Options.cyclic.get())
-                and (kill_info:IsOnCurrentShard() or Options.multi_realm.get())
+        local show_label = GUI.ShouldShowKillInfo(kill_info);
         if show_label then
             nlabels = nlabels + 1;
             if not label.userdata.added then

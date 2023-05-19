@@ -16,7 +16,7 @@ local Options = WBT.Options;
 local KillInfo = {};
 WBT.KillInfo = KillInfo;
 
-KillInfo.CURRENT_VERSION = "v1.11";
+KillInfo.CURRENT_VERSION = "v1.12";
 KillInfo.UNKNOWN_SHARD = -1;
 
 local RANDOM_DELIM = "-";
@@ -33,9 +33,9 @@ function KillInfo.CompareTo(t, a, b)
     k1:Update();
     k2:Update();
 
-    if k1:Expired() and not k2:Expired() then
+    if k1:IsExpired() and not k2:IsExpired() then
         return false;
-    elseif not k1:Expired() and k2:Expired() then
+    elseif not k1:IsExpired() and k2:IsExpired() then
         return true;
     end
 
@@ -61,7 +61,7 @@ function KillInfo.ParseID(id)
     };
 end
 
-function KillInfo.CreateID(name, shard_id, map_id)
+function KillInfo.CreateID(boss_name, shard_id, map_id)
     -- Unique ID used as key in the global table of tracked KillInfos and GUI labels.
     --
     -- Note on map_id: It's necessary to make Zandalari Warbringers unique.
@@ -72,11 +72,11 @@ function KillInfo.CreateID(name, shard_id, map_id)
 
     local map_id = map_id or WBT.GetCurrentMapId();
 
-    return table.concat({name, shard_id, map_id}, ID_DELIM);
+    return table.concat({boss_name, shard_id, map_id}, ID_DELIM);
 end
 
 function KillInfo:ID()
-    return self.CreateID(self.name, self.shard_id, self.map_id);
+    return self.CreateID(self.boss_name, self.shard_id, self.map_id);
 end
 
 function KillInfo:HasShardID()
@@ -92,7 +92,6 @@ end
 
 function KillInfo:SetInitialValues()
     self.version               = KillInfo.CURRENT_VERSION;
-    self.cyclic                = false;
     self.realm_name            = GetRealmName(); -- Only use for printing!
     self.realm_name_normalized = GetNormalizedRealmName();
     self.map_id                = WBT.GetCurrentMapId();
@@ -109,9 +108,8 @@ function KillInfo:Upgrade()
 end
 
 function KillInfo:Print(indent)
-    print(indent .. "name: "                  .. self.name);
+    print(indent .. "boss_name: "             .. self.boss_name);
     print(indent .. "version: "               .. self.version);
-    print(indent .. "cyclic: "                .. tostring(self.cyclic));
     print(indent .. "realm_name: "            .. self.realm_name);
     print(indent .. "realm_name_normalized: " .. self.realm_name_normalized);
     print(indent .. "shard_id: "              .. self.shard_id);
@@ -132,14 +130,14 @@ function KillInfo:SetNewDeath(t_death)
     return self.until_time < GetServerTime();
 end
 
-function KillInfo:New(name, t_death, shard_id)
+function KillInfo:New(boss_name, t_death, shard_id)
     local ki = {};
 
     setmetatable(ki, self);
     self.__index = self;
 
-    ki.name = name;
-    ki.db = WBT.BossData.Get(name);
+    ki.boss_name = boss_name;
+    ki.db = WBT.BossData.Get(boss_name);  -- FIXME: Convert to fcn, and fix calls to WBT.BossData.Get(self.boss_name)
     ki.shard_id = shard_id or KillInfo.UNKNOWN_SHARD;
 
     ki:SetNewDeath(t_death);
@@ -154,7 +152,7 @@ function KillInfo:Deserialize(serialized)
     return ki;
 end
 
-function KillInfo:HasRandomSpawnTime(name)
+function KillInfo:HasRandomSpawnTime()
     return self.db.min_respawn ~= self.db.max_respawn;
 end
 
@@ -163,7 +161,7 @@ function KillInfo:IsSafeToShare(error_msgs)
     if not self:IsValidVersion() then
         table.insert(error_msgs, "Timer was created with an old version of WBT and is now outdated.");
     end
-    if self.cyclic then
+    if self:IsExpired() then
         table.insert(error_msgs, "Timer has expired.");
     end
     if self:HasUnknownShard() then
@@ -204,7 +202,7 @@ function KillInfo:GetSpawnTimesSecRandom()
     return t_lower_bound, t_upper_bound;
 end
 
-function KillInfo:GetSpawnTimeSec(name)
+function KillInfo:GetSpawnTimeSec()
     if self:HasRandomSpawnTime() then
         local _, t_upper = self:GetSpawnTimesSecRandom();
         return t_upper;
@@ -238,31 +236,11 @@ function KillInfo:GetSpawnTimeAsText()
     end
 end
 
-function KillInfo:IsDead(ignore_cyclic)
-    local ignore_cyclic = ignore_cyclic == true; -- Sending in nil shall result in false
-    if self.cyclic then
-        if ignore_cyclic or not Options.cyclic.get() then
-            return false;
-        end
-        return true;
-    end
-    if self:HasRandomSpawnTime() then
-        local _, t_upper = self:GetSpawnTimesSecRandom();
-        return t_upper >= 0;
-    else
-        return self:GetSpawnTimeSec() >= 0;
-    end
-end
-
-function KillInfo:HasRespawned()
-    return not self:IsDead();
-end
-
 function KillInfo:ShouldAutoAnnounce()
     return WBT.db.global.auto_announce
             and Util.SetContainsValue(self.announce_times, self.remaining_time)
-            and WBT.PlayerIsInBossPerimiter(self.name)
-            and WBT.BossData.Get(self.name).auto_announce
+            and WBT.PlayerIsInBossPerimiter(self.boss_name)
+            and WBT.BossData.Get(self.boss_name).auto_announce
             and self:IsSafeToShare({});
 end
 
@@ -276,8 +254,9 @@ function KillInfo:ShouldRespawnAlertPlayNow(offset)
     local until_time_offset = self.until_time - offset;
     local trigger = self:InTimeWindow(until_time_offset, until_time_offset + 1)
             and WBT.InZoneAndShardForTimer(self)
-            and WBT.PlayerIsInBossPerimiter(self.name)
-            and self:IsSafeToShare({})
+            and WBT.PlayerIsInBossPerimiter(self.boss_name)
+            and self:IsValidVersion()
+            and not self:IsExpired()
             and not self.has_triggered_respawn;
     if trigger then
         self.has_triggered_respawn = true;
@@ -302,14 +281,35 @@ function KillInfo:EstimationNextSpawn()
     return t_death_new, t_spawn;
 end
 
-function KillInfo:Expired()
+function KillInfo:IsExpired()
     return self.until_time < GetServerTime();
-end
-
-function KillInfo:IsOnCurrentShard()
-    return not self:HasUnknownShard() and (self.shard_id == WBT.GetCurrentShardID());
 end
 
 function KillInfo:HasUnknownShard()
     return self.shard_id == KillInfo.UNKNOWN_SHARD;
+end
+
+function KillInfo:IsOnCurrentShard()
+    if self:HasUnknownShard() then
+        return false;
+    elseif Options.assume_realm_keeps_shard.get() and (self.shard_id == WBT.GetSavedShardID()) then
+        return true;
+    else
+        return self.shard_id == WBT.GetCurrentShardID();
+    end
+end
+
+-- Returns true if the KillInfo comes from the last known shard for the
+-- zone its boss belongs to.
+function KillInfo:IsOnSavedRealmShard()
+    if self:HasUnknownShard() then
+        return false;
+    end
+
+    local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
+    if crd == nil then
+        return false;
+    end
+    local zone_id = WBT.BossData.Get(self.boss_name).map_id;
+    return crd.shard_id_per_zone[zone_id] == self.shard_id;
 end
