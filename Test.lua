@@ -175,4 +175,61 @@ function Test.ResetOpts()
     end
     WBT.g_gui:Update();
 end
-resetopts = Test.ResetOpts
+resetopts = Test.ResetOpts;
+
+function Test.RestartShardDetection()
+    local f = WBT.EventHandlerFrames.shard_detection_restarter_frame;
+    local delay_old = f.delay;
+    f.delay = 0;
+    f:Handler();
+    f.delay = delay_old;
+end
+
+function Test.ToggleDevSilent()
+    WBT.Options.dev_silent:Toggle();
+end
+
+function Test.PrintShards()
+    print("Current:", WBT.GetCurrentShardID());
+    print("Saved:", WBT.GetSavedShardID(WBT.GetCurrentMapId()));
+end
+
+--------------------------------------------------------------------------------
+
+function Test:CreateButton(text, fcn)
+    local btn = self.AceGUI:Create("Button");
+    btn:SetText(text);
+    btn:SetCallback("OnClick", fcn);
+    return btn;
+end
+
+function Test:BuildTestGUI()
+    if self.AceGUI == nil then
+        self.AceGUI = LibStub("AceGUI-3.0");
+    end
+
+    self.grp = self.AceGUI:Create("SimpleGroup");
+    self.grp.frame:SetFrameStrata("LOW");
+    self.grp:SetLayout("Flow");
+    self.grp:SetWidth(120);
+    self.grp:AddChild(self:CreateButton("dsim4",  dsim4));
+    self.grp:AddChild(self:CreateButton("dsim25", dsim25));
+    self.grp:AddChild(self:CreateButton("Reset opts", resetopts));
+    self.grp:AddChild(self:CreateButton("Reset", WBT.ResetKillInfo));
+    self.grp:AddChild(self:CreateButton("Restart shard", Test.RestartShardDetection));
+    self.grp:AddChild(self:CreateButton("Show shards", Test.PrintShards));
+    self.grp:AddChild(self:CreateButton("Silent +-", Test.ToggleDevSilent));
+
+    self.grp:AddChild(self:CreateButton("Reload", ReloadUI));
+    
+    self.grp:ClearAllPoints();
+    self.grp:SetPoint("TopLeft", nil, 100, -200);
+
+    self.grp.frame:Show();
+end
+
+hooksecurefunc(WBT.AceAddon, "OnEnable", function(...)
+    if WBT.db.global.build_test_gui then
+        Test:BuildTestGUI();
+    end
+end);

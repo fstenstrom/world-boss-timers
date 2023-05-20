@@ -295,11 +295,12 @@ function Options.InitializeOptionsTable()
             name = -- Hint_1
                     "- Press the " .. Util.ColoredString(Util.COLOR_ORANGE, "Req.") .. " " ..
                     "button to request timers from other nearby WBT " ..
-                    "users. Since 8.2.5 this no longer causes automatic sharing. The other player must manually " ..
+                    "users. Since 8.2.5 there is no longer any automatic sharing, so other players must manually " ..
                     "share the timer by using the " .. Util.ColoredString(Util.COLOR_ORANGE, "Share") .. " button.\n" ..
                     -- Hint_2
-                    "- Click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") .. " " ..
-                    "to reset that (and only that) timer.",
+                    "- Control-click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") .. " to reset it.\n" ..
+                    -- Hint_3
+                    "- Control-shift-click any timer to reset it.",
             order = t_cnt:plusplus(),
             type = "description",
             fontSize = "medium",
@@ -425,7 +426,7 @@ function Options.InitializeOptionsTable()
         spawn_alert_sec_before = {
             name = "Alert sec before spawn",
             order = t_cnt:plusplus(),
-            desc = "How many seconds before boss spawns that alerts should happen",
+            desc = "How many seconds before boss spawn that alert will happen",
             type = "range",
             min = 0,
             max = 60*5,

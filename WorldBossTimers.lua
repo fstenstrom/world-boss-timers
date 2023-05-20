@@ -26,11 +26,6 @@ WBT.Functions = {
     AnnounceTimerInChat = nil;
 };
 
--- TODO: Fill out this table as necessery when testing more event handlers.
-WBT.event_handler_names = {};
-WBT.event_handler_names.REQUEST_PARSER = "wbt_request_parser";
-WBT.event_handler_names.SHARE_PARSER   = "wbt_share_parser";
-
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 
 -- Workaround to keep the nice WBT:Print function.
@@ -38,9 +33,10 @@ WBT.Print = function(self, text) WBT.AceAddon:Print(text) end
 
 
 -- Enum that describes why the GUI was requested to update.
-WBT.UpdateEvents = {};
-WBT.UpdateEvents.UNSPECIFIED    = 0;
-WBT.UpdateEvents.SHARD_DETECTED = 1;
+WBT.UpdateEvents = {
+    UNSPECIFIED    = 0,
+    SHARD_DETECTED = 1,
+}
 
 --------------------------------------------------------------------------------
 -- Logger
@@ -144,8 +140,18 @@ end
 
 --------------------------------------------------------------------------------
 
-local boss_death_frame;
-local boss_combat_frame;
+-- The frames that handle events. Used as an access point for testing.
+WBT.EventHandlerFrames = {
+    boss_death_frame                = nil,
+    boss_combat_frame               = nil,
+    request_parser                  = nil,
+    timer_parser                    = nil,
+    shard_detection_frame           = nil,
+    shard_detection_restarter_frame = nil,
+    gui_visibility_frame            = nil,
+}
+
+
 local g_gui = {};
 local g_kill_infos = {};
 
@@ -168,7 +174,7 @@ WBT.defaults = {
         multi_realm = false,
         show_boss_zone_only = false,
         cyclic = false,
-        highlight = false,
+        highlight = false,  -- TODO: Change to true
         show_saved = false,
         show_realm = false,
         dev_silent = false,
@@ -227,7 +233,7 @@ function WBT.GetSavedShardID(zone_id)
     if crd == nil then
         return KillInfo.UNKNOWN_SHARD;
     end
-    local shard_id = crd.shard_id_per_zone[tostring(zone_id)];
+    local shard_id = crd.shard_id_per_zone[zone_id];
     return shard_id or KillInfo.UNKNOWN_SHARD;
 end
 
@@ -411,13 +417,13 @@ end
 local GetColoredBossName = WBT.GetColoredBossName;
 
 local function RegisterEvents()
-    boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+    WBT.EventHandlerFrames.boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+    WBT.EventHandlerFrames.boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
 end
 
 local function UnregisterEvents()
-    boss_death_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+    WBT.EventHandlerFrames.boss_death_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+    WBT.EventHandlerFrames.boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
 end
 
 -- Intended to be called from clicking an interactive label.
@@ -523,11 +529,9 @@ function WBT.PutOrUpdateKillInfo(name, shard_id, t_death)
 end
 
 local function StartDeathTrackerFrame()
-    if boss_death_frame ~= nil then
-        return;
-    end
+    local boss_death_frame = CreateFrame("Frame", "WBT_BOSS_DEATH_FRAME");
+    WBT.EventHandlerFrames.boss_death_frame = boss_death_frame;
 
-    boss_death_frame = CreateFrame("Frame");
     boss_death_frame:SetScript("OnEvent", function(...)
             local _, eventType, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
 
@@ -563,11 +567,8 @@ local function PlaySoundAlertBossCombat(name)
 end
 
 local function StartCombatScannerFrame()
-    if boss_combat_frame ~= nil then
-        return
-    end
-
-    boss_combat_frame = CreateFrame("Frame");
+    local boss_combat_frame = CreateFrame("Frame", "WBT_BOSS_COMBAT_FRAME");
+    WBT.EventHandlerFrames.boss_combat_frame = boss_combat_frame;
 
     local time_out = 60*2; -- Old expansion world bosses SHOULD die in this time.
     boss_combat_frame.t_next = 0;
@@ -624,8 +625,8 @@ function WBT.ResetKillInfo()
 end
 
 local function StartShardDetectionHandler()
-
-    local f_detect_shard = CreateFrame("Frame");
+    WBT.EventHandlerFrames.shard_detection_frame = CreateFrame("Frame", "WBT_SHARD_DETECTION_FRAME");
+    local f_detect_shard = WBT.EventHandlerFrames.shard_detection_frame;
     function f_detect_shard:RegisterEvents()
         -- NOTE: This could be improved to also look in combat log, but
         -- doesn't really feel worth adding right now.
@@ -638,8 +639,7 @@ local function StartShardDetectionHandler()
     end
 
     -- Handler for detecting the current shard id.
-    f_detect_shard:RegisterEvents();
-    f_detect_shard:SetScript("OnEvent", function(self, event, ...)
+    function f_detect_shard:Handler(event, ...)
         local unit = "target";
         if event == "UPDATE_MOUSEOVER_UNIT" then
             unit = "mouseover";
@@ -656,13 +656,15 @@ local function StartShardDetectionHandler()
             g_gui:Update(WBT.UpdateEvents.SHARD_DETECTED);
             self:UnregisterEvents();
         end
-    end);
+    end
+    f_detect_shard:RegisterEvents();
+    f_detect_shard:SetScript("OnEvent", f_detect_shard.Handler);
 
     -- Handler for refreshing the shard id.
-    local f_restart = CreateFrame("Frame");
-    f_restart:RegisterEvent("ZONE_CHANGED_NEW_AREA");
-    f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
-    f_restart:SetScript("OnEvent", function(...)
+    local f_restart = CreateFrame("Frame", "WBT_SHARD_DETECTION_RESTARTER_FRAME");
+    WBT.EventHandlerFrames.shard_detection_restarter_frame = f_restart;
+    f_restart.delay = 3;  -- Having it as a var allows changing it while testing.
+    function f_restart:Handler(...)
         g_current_shard_id = nil;
         g_gui:Update();
         Logger.Debug("[ShardDetection]: Possibly shard change. Shard ID invalidated.");
@@ -670,14 +672,18 @@ local function StartShardDetectionHandler()
         -- Wait a while before starting to detect the new shard. When phasing to a new shard it will still
         -- take a while for mobs to despawn in the old shard. These will still give the (incorrect) old shard
         -- id.
-        C_Timer.After(3, function(...)  -- Phasing time seems to be like ~1 sec, so 3 sec should often be OK.
+        C_Timer.After(self.delay, function(...)  -- Phasing time seems to be like ~1 sec, so 3 sec should often be OK.
             f_detect_shard:RegisterEvents();
         end);
-    end);
+    end
+    f_restart:RegisterEvent("ZONE_CHANGED_NEW_AREA");
+    f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
+    f_restart:SetScript("OnEvent", f_restart.Handler);
 end
 
 local function StartVisibilityHandler()
-    local f = CreateFrame("Frame");
+    local f = CreateFrame("Frame", "WBT_GUI_VISIBILITY_FRAME");
+    WBT.EventHandlerFrames.gui_visibility_frame = f;
     f:RegisterEvent("ZONE_CHANGED_NEW_AREA");
     f:SetScript("OnEvent",
         function(...)
@@ -694,7 +700,8 @@ local function StartChatParser()
     end
 
     local function InitRequestParser()
-        local request_parser = CreateFrame("Frame", WBT.event_handler_names.REQUEST_PARSER);
+        local request_parser = CreateFrame("Frame", "WBT_REQUEST_PARSER_FRAME");
+        WBT.EventHandlerFrames.request_parser = request_parser;
         local answered_requesters = {};
         request_parser:RegisterEvent("CHAT_MSG_SAY");
         request_parser:SetScript("OnEvent",
@@ -719,7 +726,9 @@ local function StartChatParser()
     end
 
     local function InitSharedTimersParser()
-        local timer_parser = CreateFrame("Frame", WBT.event_handler_names.SHARE_PARSER);
+        local timer_parser = CreateFrame("Frame", "WBT_TIMER_PARSER_FRAME");
+        WBT.EventHandlerFrames.timer_parser = timer_parser;
+
         timer_parser:RegisterEvent("CHAT_MSG_SAY");
         timer_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
@@ -807,7 +816,7 @@ local function FilterValidKillInfosStep2()
 end
 
 local function StartKillInfoManager()
-    WBT.kill_info_manager = CreateFrame("Frame");
+    WBT.kill_info_manager = CreateFrame("Frame", "WBT_KILL_INFO_MANAGER_FRAME");
     WBT.kill_info_manager.since_update = 0;
     local t_update = 1;
     WBT.kill_info_manager:SetScript("OnUpdate", function(self, elapsed)

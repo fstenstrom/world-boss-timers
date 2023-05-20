@@ -292,7 +292,7 @@ end
 function KillInfo:IsOnCurrentShard()
     if self:HasUnknownShard() then
         return false;
-    elseif Options.assume_realm_keeps_shard.get() and (self.shard_id == WBT.GetSavedShardID()) then
+    elseif Options.assume_realm_keeps_shard.get() and (self.shard_id == WBT.GetSavedShardID(WBT.GetCurrentMapId())) then
         return true;
     else
         return self.shard_id == WBT.GetCurrentShardID();
@@ -306,10 +306,6 @@ function KillInfo:IsOnSavedRealmShard()
         return false;
     end
 
-    local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
-    if crd == nil then
-        return false;
-    end
     local zone_id = WBT.BossData.Get(self.boss_name).map_id;
-    return crd.shard_id_per_zone[zone_id] == self.shard_id;
+    return WBT.GetSavedShardID(zone_id) == self.shard_id;
 end
