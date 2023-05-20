@@ -416,16 +416,6 @@ function WBT.GetColoredBossName(name)
 end
 local GetColoredBossName = WBT.GetColoredBossName;
 
-local function RegisterEvents()
-    WBT.EventHandlerFrames.boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    WBT.EventHandlerFrames.boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-end
-
-local function UnregisterEvents()
-    WBT.EventHandlerFrames.boss_death_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    WBT.EventHandlerFrames.boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-end
-
 -- Intended to be called from clicking an interactive label.
 function WBT.ResetBoss(ki_id)
     local kill_info = g_kill_infos[ki_id];
@@ -532,6 +522,7 @@ local function StartDeathTrackerFrame()
     local boss_death_frame = CreateFrame("Frame", "WBT_BOSS_DEATH_FRAME");
     WBT.EventHandlerFrames.boss_death_frame = boss_death_frame;
 
+    boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
     boss_death_frame:SetScript("OnEvent", function(...)
             local _, eventType, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
 
@@ -592,6 +583,7 @@ local function StartCombatScannerFrame()
         end
     end
 
+    boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
     boss_combat_frame:SetScript("OnEvent", ScanWorldBossCombat);
 end
 
@@ -897,10 +889,6 @@ function WBT.AceAddon:OnEnable()
 
     self:RegisterChatCommand("wbt", Options.SlashHandler);
     self:RegisterChatCommand("worldbosstimers", Options.SlashHandler);
-
-
-    RegisterEvents(); -- TODO: Update when this and unreg is called!
-    -- UnregisterEvents();
 end
 
 function WBT.AceAddon:OnDisable()
