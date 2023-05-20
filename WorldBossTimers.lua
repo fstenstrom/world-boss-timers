@@ -174,7 +174,7 @@ WBT.defaults = {
         multi_realm = false,
         show_boss_zone_only = false,
         cyclic = false,
-        highlight = false,  -- TODO: Change to true
+        highlight = false,  -- XXX: Should be changed to true
         show_saved = false,
         show_realm = false,
         dev_silent = false,
@@ -188,16 +188,6 @@ WBT.defaults = {
         boss = {},
     },
 };
-
-function WBT:PrintError(...)
-    local text = "";
-    for n=1, select('#', ...) do
-      text = text .. " " .. select(n, ...);
-    end
-    text = Util.strtrim(text);
-    text = Util.ColoredString(Util.COLOR_RED, text);
-    WBT:Print(text);
-end
 
 --------------------------------------------------------------------------------
 -- ConnectedRealmsData
@@ -237,13 +227,17 @@ function WBT.GetSavedShardID(zone_id)
     return shard_id or KillInfo.UNKNOWN_SHARD;
 end
 
-function WBT.PutSavedShardID(shard_id)
+function WBT.PutSavedShardIDForZone(zone_id, shard_id)
     local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
     if crd == nil then 
         crd = ConnectedRealmsData:New();
         WBT.db.global.connected_realms_data[WBT.GetRealmKey()] = crd;
     end
-    crd.shard_id_per_zone[WBT.GetCurrentMapId()] = shard_id;
+    crd.shard_id_per_zone[zone_id] = shard_id;
+end
+
+function WBT.PutSavedShardID(shard_id)
+    WBT.PutSavedShardID(WBT.GetCurrentMapId(), shard_id)
 end
 
 function WBT.ParseShardID(unit_guid)
@@ -896,6 +890,20 @@ end
 
 --@do-not-package@
 
+--------------------------------------------------------------------------------
+-- Dev
+--------------------------------------------------------------------------------
+
+function Dev.PrintError(...)
+    local text = "";
+    for n=1, select('#', ...) do
+      text = text .. " " .. select(n, ...);
+    end
+    text = Util.strtrim(text);
+    text = Util.ColoredString(Util.COLOR_RED, text);
+    WBT:Print(text);
+end
+
 -- Run this when standing at boss location to get a dump of what needs to be put
 -- in BossData.
 function Dev.PrettyPrintLocation()
@@ -918,15 +926,15 @@ end
 -- BossData.
 function Dev.PrintPlayerDistanceToBoss(boss_name)
     if not boss_name then
-        WBT:PrintError("Invalid argument: nil");
+        Dev.PrintError("Invalid argument: nil");
         return;
     end
     if not WBT.IsBoss(boss_name) then
-        WBT:PrintError("Invalid argument. Not a boss: " .. boss_name);
+        Dev.PrintError("Invalid argument. Not a boss: " .. boss_name);
         return;
     end
     if not WBT.IsInZoneOfBoss(boss_name) then
-        WBT:PrintError("Not in correct zone for " .. boss_name);
+        Dev.PrintError("Not in correct zone for " .. boss_name);
         return;
     end
     print(WBT.PlayerDistanceToBoss(boss_name));
@@ -946,6 +954,8 @@ end
 function Dev.StopGUI()
     WBT.kill_info_manager:SetScript("OnUpdate", nil);
 end
+
+--------------------------------------------------------------------------------
 
 --@end-do-not-package@
 

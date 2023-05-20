@@ -151,7 +151,7 @@ function GUI:CreateNewLabel(guid, kill_info)
             end
             gui:Update();
         end);
-    label.userdata.added = false;
+    label.userdata.t_death = kill_info.t_death;
     label.userdata.time_next_spawn = kill_info:GetSpawnTimeSec();
     return label;
 end
@@ -228,22 +228,26 @@ function GUI.CreateLabelText(kill_info, max_shard_id)
     return prefix .. WBT.GetColoredBossName(kill_info.boss_name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
 end
 
-function GUI:RemoveLabel(guid, label)
+function GUI:AddNewLabel(guid, kill_info)
+    local label = self:CreateNewLabel(guid, kill_info);
+    self.labels[guid] = label;
+    self.window:AddChild(label);
+end
+
+function GUI:RemoveLabel(guid)
     -- This table is always a set, and can therefore be treated as such.
-    Util.RemoveFromSet(self.window.children, label);
-    label:Release();
+    Util.RemoveFromSet(self.window.children, self.labels[guid]);
+    self.labels[guid]:Release();
     self.labels[guid] = nil;
 end
 
 function GUI:Rebuild()
-    if not self.labels then
+    if self.labels == nil then
         return; -- GUI hasn't been built, so nothing to rebuild.
     end
 
-    for guid, label in pairs(self.labels) do
-        if not WBT.db.global.kill_infos[guid] then
-            self:RemoveLabel(guid, label);
-        end
+    for guid, _ in pairs(self.labels) do
+        self:RemoveLabel(guid);
     end
 
     self:Update();
@@ -293,18 +297,14 @@ function GUI:UpdateContent()
     -- The reason for a rebuild instead of sorting is that the labels are bound to internal AceGUI objects
     -- and I don't want to try to sort them.
     for guid, kill_info in Util.spairs(WBT.db.global.kill_infos, WBT.KillInfo.CompareTo) do
-
-        -- FIXME: Don't create new labels unless necessary! Confusing and creates AceGUI objects!
-        local label = self.labels[guid] or self:CreateNewLabel(guid, kill_info);  
-
+        local label = self.labels[guid];
         local show_label = GUI.ShouldShowKillInfo(kill_info);
         if show_label then
             nlabels = nlabels + 1;
-            if not label.userdata.added then
-                self.window:AddChild(label);
-                self.labels[guid] = label;
-                label.userdata.added = true;
+            if label == nil then
+                self:AddNewLabel(guid, kill_info)
             else
+                -- FIXME: Use self.update_event instead.
                 if GUI.KillInfoHasFreshKill(kill_info, label) or GUI.CyclicKillInfoRestarted(kill_info, label) then
                     -- The order of the labels needs to be updated, so rebuild.
                     needs_rebuild = true;
@@ -312,10 +312,13 @@ function GUI:UpdateContent()
             end
         else
             -- Remove label:
-            if label.userdata.added then
-                -- The label is apparently not automatically removed from the
-                -- self.window.children table, so it has to be done manually.
-                self:RemoveLabel(guid, label);
+            if label then
+                -- XXX:
+                -- Just removing the label seems to cause issues with other labels not showing
+                -- if they are added after this label is removed. (Probably something wrong with
+                -- the assumption on how the window children are stored.)
+                -- Workaround: Just rebuild.
+                needs_rebuild = true;
                 if self.update_event == WBT.UpdateEvents.SHARD_DETECTED then
                     local boss_name = WBT.GetColoredBossName(WBT.db.global.kill_infos[guid].boss_name);
                     WBT.Logger.Info("Timer for " .. boss_name .. " was hidden because it's not for the current shard.")

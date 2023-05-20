@@ -53,14 +53,10 @@ local Util     = WBT.Util;
 local TestUtil = WBT.TestUtil;
 local Test     = WBT.Test;
 
-
-local function RandomServerName()
-    local res = "";
-    for i = 1, 10 do
-        res = res .. string.char(math.random(97, 122));
-    end
-    return res;
-end
+local ShardIds = {
+    ISLE_OF_GIANTS_1 = 1,
+    ISLE_OF_GIANTS_2 = 2,
+}
 
 -- Returns a time point such that if this time point were set for a KillInfo, it
 -- would expire in dt_expire.
@@ -121,8 +117,8 @@ local function SimKillSpecial(dt_expire)
     SimOutdatedVersionKill("Grellkin", dt_expire);
     SimNoShardKill("Grellkin", dt_expire);
     SimServerKill("Grellkin", dt_expire);
-    PutOrUpdateKillInfo_Advanced("Rustfeather", dt_expire, "Dbg", KillInfo.CURRENT_VERSION, 12);
-    PutOrUpdateKillInfo_Advanced("Rustfeather", dt_expire, "Dbg", KillInfo.CURRENT_VERSION, 1234);
+    PutOrUpdateKillInfo_Advanced("Oondasta", dt_expire, "Dbg", KillInfo.CURRENT_VERSION, ShardIds.ISLE_OF_GIANTS_1);
+    PutOrUpdateKillInfo_Advanced("Oondasta", dt_expire, "Dbg", KillInfo.CURRENT_VERSION, ShardIds.ISLE_OF_GIANTS_2);
 end
 
 local function SimKillEverything(dt_expire)
@@ -130,6 +126,7 @@ local function SimKillEverything(dt_expire)
         StartSim(name, dt_expire);
     end
     SimKillSpecial(dt_expire);
+    WBT.GUI:Update();
 end
 
 -- Starts timers 300 seconds before they expire. This gives time to /reload and still keep
@@ -144,22 +141,14 @@ dsim300 = Test.StartTimers300; -- Lazy command for running from command line wit
 function Test.StartTimers25()
     SimKillEverything(25);
 end
-dsim25 = Test.StartTimers25; -- Lazy command for running from command line without access to macros.
+dsim25 = Test.StartTimers25;
 
 -- Starts timer 4 seconds before sharing. This allows to check what happens when
 -- timers expire.
 function Test.StartTimers4(n)
     SimKillEverything(4);
 end
-dsim4 = Test.StartTimers4; -- Lazy command for running from command line without access to macros.
-
--- Starts timers for random servers. It's very probable that this won't be on
--- the same server as the player.
-function Test.StartTimersRandomServer()
-    for i = 1, 5 do
-        SimServerKill("Grellkin", RandomServerName())
-    end
-end
+dsim4 = Test.StartTimers4;
 
 function Test.ShareLegacyTimer(shard_id_or_nil)
     local msg = TestUtil.CreateShareMsg("Grellkin", GetServerTime(), 9, shard_id_or_nil)
@@ -183,6 +172,16 @@ function Test.RestartShardDetection()
     f.delay = 0;
     f:Handler();
     f.delay = delay_old;
+end
+
+function Test.SetIsleOfGiantsSavedShardId_1()
+    WBT.PutSavedShardIDForZone(WBT.BossData.Get("Oondasta").map_id, ShardIds.ISLE_OF_GIANTS_1);
+    WBT.GUI:Update();
+end
+
+function Test.SetIsleOfGiantsSavedShardId_2()
+    WBT.PutSavedShardIDForZone(WBT.BossData.Get("Oondasta").map_id, ShardIds.ISLE_OF_GIANTS_2);
+    WBT.GUI:Update();
 end
 
 function Test.ToggleDevSilent()
@@ -212,14 +211,18 @@ function Test:BuildTestGUI()
     self.grp.frame:SetFrameStrata("LOW");
     self.grp:SetLayout("Flow");
     self.grp:SetWidth(120);
-    self.grp:AddChild(self:CreateButton("dsim4",  dsim4));
-    self.grp:AddChild(self:CreateButton("dsim25", dsim25));
-    self.grp:AddChild(self:CreateButton("Reset opts", resetopts));
-    self.grp:AddChild(self:CreateButton("Reset", WBT.ResetKillInfo));
-    self.grp:AddChild(self:CreateButton("Restart shard", Test.RestartShardDetection));
-    self.grp:AddChild(self:CreateButton("Show shards", Test.PrintShards));
-    self.grp:AddChild(self:CreateButton("Silent +-", Test.ToggleDevSilent));
+    self.grp:AddChild(self:CreateButton("dsim300",        dsim300));
+    self.grp:AddChild(self:CreateButton("dsim25",         dsim25));
+    self.grp:AddChild(self:CreateButton("dsim4",          dsim4));
+    self.grp:AddChild(self:CreateButton("Reset opts",     resetopts));
+    self.grp:AddChild(self:CreateButton("Reset",          WBT.ResetKillInfo));
+    self.grp:AddChild(self:CreateButton("Set isle id 1",  Test.SetIsleOfGiantsSavedShardId_1));
+    self.grp:AddChild(self:CreateButton("Set isle id 2",  Test.SetIsleOfGiantsSavedShardId_2));
+    self.grp:AddChild(self:CreateButton("Restart shard",  Test.RestartShardDetection));
+    self.grp:AddChild(self:CreateButton("Show shards",    Test.PrintShards));
+    self.grp:AddChild(self:CreateButton("Silent +-",      Test.ToggleDevSilent));
 
+    -- Keep at bottom:
     self.grp:AddChild(self:CreateButton("Reload", ReloadUI));
     
     self.grp:ClearAllPoints();
