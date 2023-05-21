@@ -217,22 +217,13 @@ local function PrintHelp()
     WBT.AceConfigDialog:Open(WBT.addon_name);
     local indent = "   ";
     WBT:Print("WorldBossTimers slash commands:");
-    WBT:Print("/wbt reset"       .. " --> Reset all kill info");
+    WBT:Print("/wbt reset"       .. " --> Reset all timers");
     WBT:Print("/wbt gui-reset"   .. " --> Reset the position of the GUI");
     WBT:Print("/wbt saved"       .. " --> Print your saved bosses");
-    WBT:Print("/wbt share"       .. " --> Announce timers for boss in zone");
     WBT:Print("/wbt show"        .. " --> Show the timers window");
     WBT:Print("/wbt hide"        .. " --> Hide the timers window");
     WBT:Print("/wbt gui-toggle"  .. " --> Toggle visibility of the timers window");
-    WBT:Print("/wbt send"        .. " --> Toggle send timer data in auto announce");
-    WBT:Print("/wbt sound"       .. " --> Toggle sound alerts");
-    WBT:Print("/wbt cyclic"      .. " --> Toggle cyclic timers");
-    WBT:Print("/wbt multi"       .. " --> Toggle timers for other shards");
-    WBT:Print("/wbt zone"        .. " --> Toggle show GUI in boss zones only");
-    WBT:Print("/wbt lock"        .. " --> Toggle locking of GUI");
     WBT:Print("/wbt log <level>" .. " --> Set log level for debug purposes");
---  WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'");
---  WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'");
 end
 
 function Options.SlashHandler(input)
