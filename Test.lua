@@ -61,7 +61,7 @@ local TestUtil = WBT.TestUtil;
 local Test     = WBT.Test;
 
 local ShardIds = {
-    NON_SAVED_ZONE   = 0,  -- No saved zone should haev this ID.
+    NON_SAVED_ZONE   = 0,  -- No saved zone should have this ID.
     ISLE_OF_GIANTS_1 = 1,
     ISLE_OF_GIANTS_2 = 2,
 }

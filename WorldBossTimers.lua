@@ -185,7 +185,6 @@ WBT.defaults = {
 --------------------------------------------------------------------------------
 -- ConnectedRealmsData
 --------------------------------------------------------------------------------
-
 local ConnectedRealmsData = {};
 
 -- Data about the connected realms that needs to be saved to DB.
@@ -198,7 +197,6 @@ end
 function WBT.GetRealmKey()
     return table.concat(Util.GetConnectedRealms(), "_");
 end
-
 --------------------------------------------------------------------------------
 
 function WBT.IsUnknownShard(shard_id)
@@ -253,7 +251,7 @@ function WBT.HasKillInfoExpired(ki_id)
 end
 
 function WBT.IsBoss(name)
-    return Util.SetContainsKey(BossData.GetAll(), name);
+    return Util.SetUtil.ContainsKey(BossData.GetAll(), name);
 end
 
 -- Warning: This can different result, at least during addon loading / player enter world events.
@@ -687,7 +685,7 @@ local function StartChatParser()
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY" 
                         and msg == CHAT_MESSAGE_TIMER_REQUEST
-                        and not Util.SetContainsKey(answered_requesters, sender)
+                        and not Util.SetUtil.ContainsKey(answered_requesters, sender)
                         and not PlayerSentMessage(sender) then
 
                     if WBT.InBossZone() then

@@ -238,7 +238,7 @@ end
 
 function KillInfo:ShouldAutoAnnounce()
     return WBT.db.global.auto_announce
-            and Util.SetContainsValue(self.announce_times, self.remaining_time)
+            and Util.SetUtil.ContainsValue(self.announce_times, self.remaining_time)
             and WBT.PlayerIsInBossPerimiter(self.boss_name)
             and WBT.BossData.Get(self.boss_name).auto_announce
             and self:IsSafeToShare({});

@@ -77,12 +77,18 @@ function Util.IsTable(obj)
     return type(obj) == "table";
 end
 
-function Util.SetContainsKey(set, key)
+--------------------------------------------------------------------------------
+-- SetUtil
+--------------------------------------------------------------------------------
+Util.SetUtil = {};
+local SetUtil = Util.SetUtil;
+
+function SetUtil.ContainsKey(set, key)
     return set[key] ~= nil;
 end
 
--- The WBT sets are small, so linear search is good enough.
-function Util.SetElementKey(set, value)
+function SetUtil.FindKey(set, value)
+    -- The WBT sets are small, so linear search is good enough.
     for k, v in pairs(set) do
         if v == value then
             return k;
@@ -91,9 +97,10 @@ function Util.SetElementKey(set, value)
     return nil;
 end
 
-function Util.SetContainsValue(set, value)
-    return Util.SetElementKey(set, value) and true;
+function SetUtil.ContainsValue(set, value)
+    return SetUtil.FindKey(set, value) and true;
 end
+--------------------------------------------------------------------------------
 
 function Util.FormatTimeSeconds(seconds)
     local mins = math.floor(seconds / 60);

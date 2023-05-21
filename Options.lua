@@ -236,7 +236,7 @@ function Options.SlashHandler(input)
         WBT.RequestKillData();
     elseif arg1 == "sound" then
         local sound_type_args = {Sound.SOUND_CLASSIC, Sound.SOUND_FANCY};
-        if Util.SetContainsValue(sound_type_args, arg2) then
+        if Util.SetUtil.ContainsValue(sound_type_args, arg2) then
             WBT.db.global.sound_type = arg2;
             WBT:Print("SoundType: " .. arg2);
         else
