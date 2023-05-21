@@ -174,7 +174,7 @@ WBT.defaults = {
         multi_realm = false,
         show_boss_zone_only = false,
         cyclic = false,
-        highlight = false,  -- XXX: Should be changed to true
+        highlight = false,
         show_saved = false,
         show_realm = false,
         dev_silent = false,
@@ -850,7 +850,7 @@ function WBT.AceAddon:OnEnable()
         Com.LeaveRequestMode();
     end
     -- Note that Com is currently not used, since it only works for
-    -- connected realms...
+    -- connected realms.
     Com:RegisterComm(Com.PREF_SR, Com.OnCommReceivedSR);
     Com:RegisterComm(Com.PREF_RR, Com.OnCommReceivedRR);
 

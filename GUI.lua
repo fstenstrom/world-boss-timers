@@ -349,7 +349,7 @@ function GUI:Update(event)
 
     self:UpdateGUIVisibility();
 
-    if not(self.visible) then
+    if not self.visible then
         return;
     end
 
