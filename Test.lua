@@ -194,6 +194,21 @@ function Test.PrintShards()
     print("Saved:", WBT.GetSavedShardID(WBT.GetCurrentMapId()));
 end
 
+function Test.IncreaseAllTimerAges(sec)
+    for _, ki in pairs(WBT.db.global.kill_infos) do
+        ki.t_death = ki.t_death - sec;
+    end
+    WBT.GUI:Update();
+end
+
+function Test.AgeTimersOneMin()
+    Test.IncreaseAllTimerAges(60);
+end
+
+function Test.AgeTimersTenMin()
+    Test.IncreaseAllTimerAges(10*60);
+end
+
 --------------------------------------------------------------------------------
 
 function Test:CreateButton(text, fcn)
@@ -215,6 +230,8 @@ function Test:BuildTestGUI()
     self.grp:AddChild(self:CreateButton("dsim300",        Test.StartTimers300));
     self.grp:AddChild(self:CreateButton("dsim25",         Test.StartTimers25));
     self.grp:AddChild(self:CreateButton("dsim4",          Test.StartTimers4));
+    self.grp:AddChild(self:CreateButton("Age 1",          Test.AgeTimersOneMin));
+    self.grp:AddChild(self:CreateButton("Age 10",         Test.AgeTimersTenMin));
     self.grp:AddChild(self:CreateButton("Reset",          WBT.ResetKillInfo));
     self.grp:AddChild(self:CreateButton("Set isle id 1",  Test.SetIsleOfGiantsSavedShardId_1));
     self.grp:AddChild(self:CreateButton("Set isle id 2",  Test.SetIsleOfGiantsSavedShardId_2));

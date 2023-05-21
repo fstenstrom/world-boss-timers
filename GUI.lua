@@ -152,7 +152,7 @@ function GUI:CreateNewLabel(guid, kill_info)
             gui:Update();
         end);
     label.userdata.t_death = kill_info.t_death;
-    label.userdata.time_next_spawn = kill_info:GetSpawnTimeSec();
+    label.userdata.time_next_spawn = kill_info:GetSecondsUntilLatestRespawn();
     return label;
 end
 
@@ -264,7 +264,7 @@ end
 -- True when the timer for a cyclic label restarted (i.e. made a lap).
 -- This includes the event that a kill info goes from non-expired to expired.
 function GUI.CyclicKillInfoRestarted(kill_info, label)
-    local t_next_spawn = kill_info:GetSpawnTimeSec();
+    local t_next_spawn = kill_info:GetSecondsUntilLatestRespawn();
     if label.userdata.time_next_spawn < t_next_spawn then
         label.userdata.time_next_spawn = t_next_spawn;
         return true;
