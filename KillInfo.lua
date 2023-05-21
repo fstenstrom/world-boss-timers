@@ -192,22 +192,25 @@ function KillInfo:GetLatestRespawnTimePoint()
     return self.t_death + self.db.max_respawn;
 end
 
-function KillInfo:GetSecondsUntilEarliestRespawn(opt_cyclic)
-    local t = self:GetEarliestRespawnTimePoint() - GetServerTime();
-    if opt_cyclic then
-        while t < 0 do
-            t = t + self.db.max_respawn;
-        end
+
+function KillInfo:GetNumCycles()
+    local t = self:GetLatestRespawnTimePoint() - GetServerTime();
+    local n = 0;
+    while t < 0 do
+        t = t + self.db.max_respawn;
+        n = n + 1;
     end
-    return t;
+    return n;
+end
+
+function KillInfo:GetSecondsUntilEarliestRespawn(opt_cyclic)
+    return self:GetSecondsUntilLatestRespawn(opt_cyclic) - (self.db.max_respawn - self.db.min_respawn);
 end
 
 function KillInfo:GetSecondsUntilLatestRespawn(opt_cyclic)
     local t = self:GetLatestRespawnTimePoint() - GetServerTime();
-    if opt_cyclic then
-        while t < 0 do
-            t = t + self.db.max_respawn;
-        end
+    if opt_cyclic and t < 0 then
+        t = t + (self:GetNumCycles() * self.db.max_respawn);
     end
     return t;
 end
@@ -222,7 +225,7 @@ function KillInfo:GetSpawnTimeAsText()
         local t_upper = self:GetSecondsUntilLatestRespawn(true);
         if t_lower == nil or t_upper == nil then
             return "--invalid1--";
-        elseif t_lower > t_upper then
+        elseif t_lower < 0 then
             return "0s" .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
         else
             return Util.FormatTimeSeconds(t_lower) .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
@@ -263,6 +266,16 @@ end
 
 function KillInfo:IsExpired()
     return self:GetSecondsUntilLatestRespawn() < 0;
+end
+
+function KillInfo:IsCyclicExpired()
+    if not Options.cyclic.get() then
+        return self:IsExpired();
+    elseif Options.num_cycles_to_show.get() == Options.NUM_CYCLES_TO_SHOW_MAX then
+        -- Special case. Allows timers to always be shown.
+        return false;
+    end
+    return Options.num_cycles_to_show.get() < self:GetNumCycles();
 end
 
 function KillInfo:HasUnknownShard()

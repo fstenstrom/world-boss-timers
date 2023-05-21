@@ -8,9 +8,7 @@ local Util = WBT.Util;
 local BossData = WBT.BossData;
 local Sound = WBT.Sound;
 
-local CYCLIC_HELP_TEXT = "This mode will repeat the boss timers if you miss the kill. A timer in " ..
-        Util.ColoredString(Util.COLOR_RED, "red text") ..
-        " indicates cyclic mode. By clicking a boss's name in the timer window you can reset it permanently.";
+Options.NUM_CYCLES_TO_SHOW_MAX = 5;
 
 ----- Setters and Getters for options -----
 
@@ -75,7 +73,8 @@ end
 function ToggleItem:Toggle()
     local new_state = not self.get();
     self.set(new_state);
-    self:PrintFormattedStatus(new_state);
+    -- FIXME: Commented out for now. Was intended for when called from CLI.
+--    self:PrintFormattedStatus(new_state);
     WBT.GUI:Update();
 end
 
@@ -166,7 +165,6 @@ function Options.InitializeItems()
     Options.sound                    = ToggleItem:New("sound_enabled",            "Sound is now");
     Options.assume_realm_keeps_shard = ToggleItem:New("assume_realm_keeps_shard", "Option to assume realms do not change shards is now");
     Options.multi_realm              = ToggleItem:New("multi_realm",              "Option to show timers for other shards is now");
-    Options.cyclic                   = ToggleItem:New("cyclic",                   "Cyclic mode is now");
     Options.highlight                = ToggleItem:New("highlight",                "Highlighting of current zone is now");
     Options.show_saved               = ToggleItem:New("show_saved",               "Showing if saved on boss (on timer) is now");
     Options.show_realm               = ToggleItem:New("show_realm",               "Showing realm on which timer was recorded is now");
@@ -174,13 +172,8 @@ function Options.InitializeItems()
     Options.log_level                = SelectItem:New("log_level",                "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
     Options.spawn_alert_sound        = SelectItem:New("spawn_alert_sound",        "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    WBT.defaults.global.spawn_alert_sound);
     Options.spawn_alert_sec_before   = RangeItem:New("spawn_alert_sec_before",    "Spawn alert sound sec before is now", WBT.defaults.global.spawn_alert_sec_before);
-
-     -- Wrapping in some help printing for cyclic mode.
-    local cyclic_set_temp = Options.cyclic.set;
-    Options.cyclic.set = function(state)
-        cyclic_set_temp(state);
-        WBT:Print(CYCLIC_HELP_TEXT);
-    end
+    Options.cyclic                   = ToggleItem:New("cyclic",                   "Cyclic mode is now");
+    Options.num_cycles_to_show       = RangeItem:New("num_cycles_to_show",        "Number of cycles that expired timers are shown is now", WBT.defaults.global.max_num_cycles);
 
     -- Wrapping in 'play sound file when selected'.
     local spawn_alert_sound_set_temp = Options.spawn_alert_sound.set;
@@ -300,26 +293,22 @@ function Options.InitializeOptionsTable()
       type = "group",
       childGroups = "select",
       args = {
-        sharing_explanation_header = {
-            name = Util.ColoredString(Util.COLOR_ORANGE, "Hints:"),
-            order = t_cnt:plusplus(),
-            type = "description",
-            fontSize = "large",
-            width = "full",
-        },
-        sharing_explanation_body = {
-            name = -- Hint_1
-                    "- Press the " .. Util.ColoredString(Util.COLOR_ORANGE, "Req.") .. " " ..
-                    "button to request timers from other nearby WBT " ..
-                    "users. Since 8.2.5 there is no longer any automatic sharing, so other players must manually " ..
-                    "share the timer by using the " .. Util.ColoredString(Util.COLOR_ORANGE, "Share") .. " button.\n" ..
+        hints = {
+            name =  -- Hint_1
+                    Util.ColoredString(Util.COLOR_ORANGE, "Hint: ") ..
+                    "Control-click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") .. " to reset it.\n" ..
                     -- Hint_2
-                    "- Control-click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") .. " to reset it.\n" ..
-                    -- Hint_3
-                    "- Control-shift-click any timer to reset it.",
+                    Util.ColoredString(Util.COLOR_ORANGE, "Hint: ") ..
+                    "Control-shift-click any timer to reset it.\n",
             order = t_cnt:plusplus(),
             type = "description",
             fontSize = "medium",
+            width = "full",
+        },
+        _add_distance_to_next_option = {
+            name = "",
+            order = t_cnt:plusplus(),
+            type = "description",
             width = "full",
         },
         show = {
@@ -366,15 +355,6 @@ function Options.InitializeOptionsTable()
             width = "full",
             set = function(info, val) Options.sound:Toggle(); end,
             get = function(info) return Options.sound.get(); end,
-        },
-        cyclic = {
-            name = "Cyclic (show expired)",
-            order = t_cnt:plusplus(),
-            desc = "If you missed a kill, the timer will wrap around and will now have a red color",
-            type = "toggle",
-            width = "full",
-            set = function(info, val) Options.cyclic:Toggle(); end,
-            get = function(info) return Options.cyclic.get(); end,
         },
         assume_realm_keeps_shard = {
             name = "Assume realms do not change shards",
@@ -425,6 +405,36 @@ function Options.InitializeOptionsTable()
             width = "full",
             set = function(info, val) Options.show_realm:Toggle(); end,
             get = function(info) return Options.show_realm.get(); end,
+        },
+        cyclic = {
+            name = "Cyclic (show expired)",
+            order = t_cnt:plusplus(),
+            desc = "If you missed a kill, the timer will wrap around and will now have a red color",
+            type = "toggle",
+            width = "normal",
+            set = function(info, val) Options.cyclic:Toggle(); end,
+            get = function(info) return Options.cyclic.get(); end,
+        },
+        num_cycles_to_show = {
+            name = "Number of cycles to show",
+            order = t_cnt:plusplus(),
+            desc = "If set to the max value, then expired timers will always be shown",
+            type = "range",
+            min = 0,
+            max = Options.NUM_CYCLES_TO_SHOW_MAX,
+            softMin = 0,
+            softMax = Options.NUM_CYCLES_TO_SHOW_MAX,
+            bigStep = 1,
+            isPercent = false,
+            width = "normal",
+            set = function(info, val) Options.num_cycles_to_show.set(val); end,
+            get = function(info) return Options.num_cycles_to_show.get(); end,
+        },
+        _fill_rest_of_line = {
+            name = "",
+            order = t_cnt:plusplus(),
+            type = "description",
+            width = "full",
         },
         log_level = {
             name = "Log level",
