@@ -81,8 +81,7 @@ function Util.SetContainsKey(set, key)
     return set[key] ~= nil;
 end
 
--- The sets contain very few values, so for now I won't implement
--- any better algorithms here.
+-- The WBT sets are small, so linear search is good enough.
 function Util.SetElementKey(set, value)
     for k, v in pairs(set) do
         if v == value then
@@ -94,15 +93,6 @@ end
 
 function Util.SetContainsValue(set, value)
     return Util.SetElementKey(set, value) and true;
-end
-
-function Util.RemoveFromSet(set, value)
-    local k = Util.SetElementKey(set, value);
-    if k then
-        table.remove(set, k, value);
-        return true;
-    end
-    return false;
 end
 
 function Util.FormatTimeSeconds(seconds)

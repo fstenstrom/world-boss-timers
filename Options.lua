@@ -426,7 +426,7 @@ function Options.InitializeOptionsTable()
         spawn_alert_sec_before = {
             name = "Alert sec before spawn",
             order = t_cnt:plusplus(),
-            desc = "How many seconds before boss spawn that alert will happen",
+            desc = "How many seconds before boss spawn the alert will happen",
             type = "range",
             min = 0,
             max = 60*5,

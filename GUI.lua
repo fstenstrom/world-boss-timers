@@ -234,20 +234,17 @@ function GUI:AddNewLabel(guid, kill_info)
     self.window:AddChild(label);
 end
 
-function GUI:RemoveLabel(guid)
-    -- This table is always a set, and can therefore be treated as such.
-    Util.RemoveFromSet(self.window.children, self.labels[guid]);
-    self.labels[guid]:Release();
-    self.labels[guid] = nil;
-end
-
 function GUI:Rebuild()
     if self.labels == nil then
         return; -- GUI hasn't been built, so nothing to rebuild.
     end
 
+    -- Clear all labels.
     for guid, _ in pairs(self.labels) do
-        self:RemoveLabel(guid);
+        -- NOTE: Don't try to remove specific children. That's too Ace internal.
+        table.remove(self.window.children);
+        self.labels[guid]:Release();
+        self.labels[guid] = nil;
     end
 
     self:Update();

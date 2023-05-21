@@ -61,6 +61,7 @@ local TestUtil = WBT.TestUtil;
 local Test     = WBT.Test;
 
 local ShardIds = {
+    NON_SAVED_ZONE   = 0,  -- No saved zone should haev this ID.
     ISLE_OF_GIANTS_1 = 1,
     ISLE_OF_GIANTS_2 = 2,
 }
@@ -79,14 +80,12 @@ local function CurrentShardID()
     return shard_id;
 end
 
-local function StartSim(name, dt_expire)
-    WBT.PutOrUpdateKillInfo(name, CurrentShardID(), AdjustedDeathTime(name, dt_expire));
-end
+local function PutOrUpdateKillInfo_Advanced(name, dt_expire, opt_realm_name, opt_version, opt_shard_id)
+    local boss_in_curr_zone = BossData.Get(name).map_id == WBT.GetCurrentMapId();
 
-local function PutOrUpdateKillInfo_Advanced(name, dt_expire, realm_name, opt_version, opt_shard_id)
     local version = opt_version or KillInfo.CURRENT_VERSION;
     local t_death = AdjustedDeathTime(name, dt_expire);
-    local shard_id = opt_shard_id or CurrentShardID();
+    local shard_id = opt_shard_id or (boss_in_curr_zone and CurrentShardID()) or ShardIds.NON_SAVED_ZONE;
     local ki_id = KillInfo.CreateID(name, shard_id);
     local ki = WBT.db.global.kill_infos[ki_id];
     if ki then
@@ -94,11 +93,17 @@ local function PutOrUpdateKillInfo_Advanced(name, dt_expire, realm_name, opt_ver
     else
         ki = KillInfo:New(name, t_death, shard_id);
     end
-    ki.realm_name            = realm_name;
-    ki.realm_name_normalized = realm_name;
+    if opt_realm_name then
+        ki.realm_name            = opt_realm_name;
+        ki.realm_name_normalized = opt_realm_name;
+    end
     ki.version = version;
 
     WBT.db.global.kill_infos[ki_id] = ki;
+end
+
+local function StartSim(name, dt_expire)
+    PutOrUpdateKillInfo_Advanced(name, dt_expire);
 end
 
 local function SimOutdatedVersionKill(name, dt_expire)
@@ -119,8 +124,8 @@ local function SimKillSpecial(dt_expire)
     SimOutdatedVersionKill("Grellkin", dt_expire);
     SimNoShardKill("Grellkin", dt_expire);
     SimServerKill("Grellkin", dt_expire);
-    PutOrUpdateKillInfo_Advanced("Oondasta", dt_expire, "Dbg", KillInfo.CURRENT_VERSION, ShardIds.ISLE_OF_GIANTS_1);
-    PutOrUpdateKillInfo_Advanced("Oondasta", dt_expire, "Dbg", KillInfo.CURRENT_VERSION, ShardIds.ISLE_OF_GIANTS_2);
+    PutOrUpdateKillInfo_Advanced("Oondasta", dt_expire,   "Dbg", KillInfo.CURRENT_VERSION, ShardIds.ISLE_OF_GIANTS_1);
+    PutOrUpdateKillInfo_Advanced("Oondasta", dt_expire+3, "Dbg", KillInfo.CURRENT_VERSION, ShardIds.ISLE_OF_GIANTS_2);
 end
 
 local function SimKillEverything(dt_expire)
@@ -211,13 +216,13 @@ function Test:BuildTestGUI()
     self.grp:AddChild(self:CreateButton("dsim300",        Test.StartTimers300));
     self.grp:AddChild(self:CreateButton("dsim25",         Test.StartTimers25));
     self.grp:AddChild(self:CreateButton("dsim4",          Test.StartTimers4));
-    self.grp:AddChild(self:CreateButton("Reset opts",     Test.ResetOpts));
     self.grp:AddChild(self:CreateButton("Reset",          WBT.ResetKillInfo));
     self.grp:AddChild(self:CreateButton("Set isle id 1",  Test.SetIsleOfGiantsSavedShardId_1));
     self.grp:AddChild(self:CreateButton("Set isle id 2",  Test.SetIsleOfGiantsSavedShardId_2));
     self.grp:AddChild(self:CreateButton("Restart shard",  Test.RestartShardDetection));
     self.grp:AddChild(self:CreateButton("Show shards",    Test.PrintShards));
     self.grp:AddChild(self:CreateButton("Silent +-",      Test.ToggleDevSilent));
+    self.grp:AddChild(self:CreateButton("Reset opts",     Test.ResetOpts));
 
     -- Keep at bottom:
     self.grp:AddChild(self:CreateButton("Reload", ReloadUI));
