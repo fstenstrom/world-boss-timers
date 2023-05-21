@@ -159,6 +159,7 @@ end
 function Options.InitializeItems()
     local logger_opts = WBT.Logger.options_tbl;
     local sound_opts =  Sound.sound_tbl;
+    Options.global_gui_position      = ToggleItem:New("global_gui_position",      nil);
     Options.lock                     = ToggleItem:New("lock",                     "GUI lock is now");
     Options.show_gui                 = ToggleItem:New("show_gui",                 nil);
     Options.sound                    = ToggleItem:New("sound_enabled",            "Sound is now");
@@ -173,17 +174,41 @@ function Options.InitializeItems()
     Options.log_level                = SelectItem:New("log_level",                "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
     Options.spawn_alert_sound        = SelectItem:New("spawn_alert_sound",        "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    WBT.defaults.global.spawn_alert_sound);
     Options.spawn_alert_sec_before   = RangeItem:New("spawn_alert_sec_before",    "Spawn alert sound sec before is now", WBT.defaults.global.spawn_alert_sec_before);
+
      -- Wrapping in some help printing for cyclic mode.
     local cyclic_set_temp = Options.cyclic.set;
-    Options.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
+    Options.cyclic.set = function(state)
+        cyclic_set_temp(state);
+        WBT:Print(CYCLIC_HELP_TEXT);
+    end
+
     -- Wrapping in 'play sound file when selected'.
     local spawn_alert_sound_set_temp = Options.spawn_alert_sound.set;
-    Options.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Options.spawn_alert_sound:Value()); end
+    Options.spawn_alert_sound.set = function(state)
+        spawn_alert_sound_set_temp(state);
+        Util.PlaySoundAlert(Options.spawn_alert_sound:Value());
+    end
+
     -- Overriding setter for log_level to use same method as from CLI:
-    Options.log_level.set = function(state) WBT.Logger.SetLogLevel(state); end
+    Options.log_level.set = function(state)
+        WBT.Logger.SetLogLevel(state);
+    end
+
+    -- Needs to update window position.
+    local global_gui_position_set_temp = Options.global_gui_position.set;
+    Options.global_gui_position.set = function(state)
+        WBT.GUI:SaveGUIPosition();
+        global_gui_position_set_temp(state);
+        WBT.GUI:InitPosition();
+    end
+
     -- Option show_gui is a bit complicated. Override overything:
-    Options.show_gui.set = function(state) ShowGUI(state); end                -- Makes the option more snappy.
-    Options.show_gui.get = function() return not WBT.db.global.hide_gui; end  -- I don't want to rename db variable, so just negate (hide -> show).
+    Options.show_gui.set = function(state)
+        ShowGUI(state);  -- Makes the option more snappy.
+    end
+    Options.show_gui.get = function()
+        return not WBT.db.global.hide_gui;  -- I don't want to rename db variable, so just negate (hide -> show).
+    end
 end
 
 ----- Slash commands -----
@@ -305,6 +330,15 @@ function Options.InitializeOptionsTable()
             type = "description",
             fontSize = "medium",
             width = "full",
+        },
+        global_gui_position = {
+            name = "Account-wide GUI position",
+            order = t_cnt:plusplus(),
+            desc = "When enabled the GUI position is the same for characters",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.global_gui_position:Toggle(); end,
+            get = function(info) return Options.global_gui_position.get(); end,
         },
         lock = {
             name = "Lock GUI",

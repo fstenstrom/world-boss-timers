@@ -356,13 +356,13 @@ function GUI:Update(event)
     self.update_event = WBT.UpdateEvents.UNSPECIFIED;
 end
 
-function GUI:UpdatePosition(gp)
+function GUI:SetPosition(gp)
     local relativeTo = nil;
     self.window:ClearAllPoints();
     self.window:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
 end
 
-local function GetDefaultPosition()
+local function GetDefaultGUIPosition()
     return {
         point = "Center",
         relativeToName = "UIParrent",
@@ -372,35 +372,45 @@ local function GetDefaultPosition()
     };
 end
 
-function GUI:InitPosition()
-    local gui_position = WBT.db.char.gui_position;
-    local gp;
-    if gui_position ~= nil then
-        gp = gui_position;
+local function GetGUIPosition()
+    local pos = Options.global_gui_position.get()
+            and WBT.db.global.gui_position
+            or WBT.db.char.gui_position;
+    if pos == nil then
+        return GetDefaultGUIPosition();
     else
-        gp = GetDefaultPosition();
+        return pos;
     end
-    self:UpdatePosition(gp);
 end
 
-function GUI:SaveGuiPoint()
-    local point, relativeTo, relativePoint, xOfs, yOfs = WBT.G_window:GetPoint();
-    WBT.db.char.gui_position = {
+function GUI:InitPosition()
+    local pos = GetGUIPosition();
+    self:SetPosition(pos);
+end
+
+function GUI:SaveGUIPosition()
+    local point, _, relativePoint, xOfs, yOfs = WBT.G_window:GetPoint();
+    local pos = {
         point = point,
         relativeToName = "UIParrent",
         relativePoint = relativePoint,
         xOfs = xOfs,
         yOfs = yOfs,
     };
+    if Options.global_gui_position.get() then
+        WBT.db.global.gui_position = pos;
+    else
+        WBT.db.char.gui_position = pos;
+    end
 end
 
-function GUI:RecordPositioning()
-    hooksecurefunc(self.window.frame, "StopMovingOrSizing", self.SaveGuiPoint);
+function GUI:SaveGUIPositionOnMove()
+    hooksecurefunc(self.window.frame, "StopMovingOrSizing", self.SaveGUIPosition);
 end
 
 function GUI:ResetPosition()
-    local gp = GetDefaultPosition();
-    self:UpdatePosition(gp);
+    local pos = GetDefaultGUIPosition();
+    self:SetPosition(pos);
 end
 
 function GUI.SetupAceGUI()
@@ -516,7 +526,7 @@ function GUI:New()
 
     self:CreateLabels();
     self:InitPosition();
-    self:RecordPositioning();
+    self:SaveGUIPositionOnMove();
 
     self:Show();                -- Just sets a well defined state of visibility...
     self:UpdateGUIVisibility(); -- ... that will be updated here.

@@ -163,6 +163,7 @@ WBT.defaults = {
         connected_realms_data = {},
         -- Options:
         lock = false,
+        global_gui_position = false,
         sound_enabled = true,
         assume_realm_keeps_shard = true,
         multi_realm = false,
