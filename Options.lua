@@ -159,13 +159,13 @@ end
 function Options.InitializeItems()
     local logger_opts = WBT.Logger.options_tbl;
     local sound_opts =  Sound.sound_tbl;
-    Options.global_gui_position      = ToggleItem:New("global_gui_position",      nil);
-    Options.lock                     = ToggleItem:New("lock",                     "GUI lock is now");
     Options.show_gui                 = ToggleItem:New("show_gui",                 nil);
+    Options.show_boss_zone_only      = ToggleItem:New("show_boss_zone_only",      "Only show GUI in boss zone mode is now");
+    Options.lock                     = ToggleItem:New("lock",                     "GUI lock is now");
+    Options.global_gui_position      = ToggleItem:New("global_gui_position",      nil);
     Options.sound                    = ToggleItem:New("sound_enabled",            "Sound is now");
     Options.assume_realm_keeps_shard = ToggleItem:New("assume_realm_keeps_shard", "Option to assume realms do not change shards is now");
     Options.multi_realm              = ToggleItem:New("multi_realm",              "Option to show timers for other shards is now");
-    Options.show_boss_zone_only      = ToggleItem:New("show_boss_zone_only",      "Only show GUI in boss zone mode is now");
     Options.cyclic                   = ToggleItem:New("cyclic",                   "Cyclic mode is now");
     Options.highlight                = ToggleItem:New("highlight",                "Highlighting of current zone is now");
     Options.show_saved               = ToggleItem:New("show_saved",               "Showing if saved on boss (on timer) is now");
@@ -331,24 +331,6 @@ function Options.InitializeOptionsTable()
             fontSize = "medium",
             width = "full",
         },
-        global_gui_position = {
-            name = "Account-wide GUI position",
-            order = t_cnt:plusplus(),
-            desc = "When enabled the GUI position is the same for characters",
-            type = "toggle",
-            width = "full",
-            set = function(info, val) Options.global_gui_position:Toggle(); end,
-            get = function(info) return Options.global_gui_position.get(); end,
-        },
-        lock = {
-            name = "Lock GUI",
-            order = t_cnt:plusplus(),
-            desc = "Toggle if the GUI should be locked or movable",
-            type = "toggle",
-            width = "full",
-            set = function(info, val) Options.lock:Toggle(); end,
-            get = function(info) return Options.lock.get() end,
-        },
         show = {
             name = "Show GUI",
             order = t_cnt:plusplus(),
@@ -366,6 +348,24 @@ function Options.InitializeOptionsTable()
             width = "full",
             set = function(info, val) Options.show_boss_zone_only:Toggle(); end,
             get = function(info) return Options.show_boss_zone_only.get(); end,
+        },
+        lock = {
+            name = "Lock GUI",
+            order = t_cnt:plusplus(),
+            desc = "Toggle if the GUI should be locked or movable",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.lock:Toggle(); end,
+            get = function(info) return Options.lock.get() end,
+        },
+        global_gui_position = {
+            name = "Account-wide GUI position",
+            order = t_cnt:plusplus(),
+            desc = "When enabled the GUI position is the same for characters",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.global_gui_position:Toggle(); end,
+            get = function(info) return Options.global_gui_position.get(); end,
         },
         sound = {
             name = "Sound",
