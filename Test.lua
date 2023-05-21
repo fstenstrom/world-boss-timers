@@ -11,11 +11,10 @@
 # Release tests:
 1. Perform all other tests.
 
-# Before push to master tests:
+# Before push to master:
 1. Unit tests must pass: UnitTests.lua
 2. For any changed module, perform relevant tests.
-3. Manually check that happy path and most edge cases work. If necessary also
-   write down a test for it here.
+3. Manually check that happy path and relevant edge cases work.
 
 #--------------------------------------------------------------------------------
 

@@ -16,5 +16,6 @@
         "IsShiftKeyDown",
         "DEFAULT_CHAT_FRAME"
     ],
-    "Lua.workspace.ignoreDir": [ "/libs", "/Com.lua" ]
+    "Lua.workspace.ignoreDir": [ "/libs", "/Com.lua" ],
+    "Lua.completion.enable": false
 }
