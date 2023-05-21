@@ -248,7 +248,7 @@ end
 function KillInfo:ShouldRespawnAlertPlayNow(offset)
     local t_before_respawn = self:GetLatestRespawnTimePoint() - offset;
 
-    local trigger = self:InTimeWindow(t_before_respawn, t_before_respawn + 1)
+    local trigger = self:InTimeWindow(t_before_respawn, t_before_respawn + 2)
             and WBT.InZoneAndShardForTimer(self)
             and WBT.PlayerIsInBossPerimiter(self.boss_name)
             and self:IsValidVersion()
