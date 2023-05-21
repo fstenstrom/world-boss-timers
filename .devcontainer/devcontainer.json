@@ -1,14 +1,19 @@
 {
-    "name": "dev_wbt",
+    "name": "wbt_dev",
     "build": {
         "dockerfile": "Dockerfile",
         "args": {}
     },
-
-    "settings": {},
-
-    "extensions": [
-	],
-
+    "customizations": {
+        "vscode": {
+            // NOTE: If git doesn't work, follow instructions:
+            // https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials
+            "settings": {},
+            "extensions": [
+				"actboy168.lua-debug",
+				"sumneko.lua"
+			]
+        }
+    },
     "postCreateCommand": "echo Lua container for WBT development now set up."
 }
