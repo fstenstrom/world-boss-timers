@@ -6,12 +6,6 @@
 local _, WBT = ...;
 WBT.addon_name = "WorldBossTimers";
 
---@do-not-package@
-wbt = WBT;
---@end-do-not-package@
-
-WBT.Dev = {};
-
 local KillInfo = WBT.KillInfo;
 local BossData = WBT.BossData;
 local Options  = WBT.Options;
@@ -19,7 +13,6 @@ local Sound    = WBT.Sound;
 local Util     = WBT.Util;
 local GUI      = WBT.GUI;
 local Com      = WBT.Com;
-local Dev      = WBT.Dev;
 
 -- Functions that will be created during startup.
 WBT.Functions = {
@@ -893,6 +886,11 @@ end
 --------------------------------------------------------------------------------
 -- Dev
 --------------------------------------------------------------------------------
+
+WBT = WBT;  -- Make global when developing
+
+WBT.Dev = {};
+local Dev = WBT.Dev;
 
 function Dev.PrintError(...)
     local text = "";

@@ -114,11 +114,6 @@ local function SimNoShardKill(name, dt_expire, server)
     PutOrUpdateKillInfo_Advanced(name, dt_expire, "SHD", KillInfo.CURRENT_VERSION, shard_id);
 end
 
-local function SimNoShardKillRustfeather()
-    PutOrUpdateKillInfo_Advanced("Rustfeather", 25, "SHD", KillInfo.CURRENT_VERSION, KillInfo.UNKNOWN_SHARD);
-end
-dnoshard = SimNoShardKillRustfeather;
-
 local function SimKillSpecial(dt_expire)
     SimServerKill("Grellkin", dt_expire);
     SimOutdatedVersionKill("Grellkin", dt_expire);
@@ -141,27 +136,23 @@ end
 function Test.StartTimers300()
     SimKillEverything(300);
 end
-dsim300 = Test.StartTimers300; -- Lazy command for running from command line without access to macros.
 
 -- Starts timers 25 seconds before they expire. This gives time to check that
 -- alerts/sharing is performed.
 function Test.StartTimers25()
     SimKillEverything(25);
 end
-dsim25 = Test.StartTimers25;
 
 -- Starts timer 4 seconds before sharing. This allows to check what happens when
 -- timers expire.
 function Test.StartTimers4(n)
     SimKillEverything(4);
 end
-dsim4 = Test.StartTimers4;
 
 function Test.ShareLegacyTimer(shard_id_or_nil)
     local msg = TestUtil.CreateShareMsg("Grellkin", GetServerTime(), 9, shard_id_or_nil)
     SendChatMessage(msg, "SAY");
 end
-dshare = Test.ShareLegacyTimer;
 
 function Test.ResetOpts()
     for k, v in pairs(WBT.defaults.global) do
@@ -171,7 +162,6 @@ function Test.ResetOpts()
     end
     WBT.g_gui:Update();
 end
-resetopts = Test.ResetOpts;
 
 function Test.RestartShardDetection()
     local f = WBT.EventHandlerFrames.shard_detection_restarter_frame;
@@ -218,10 +208,10 @@ function Test:BuildTestGUI()
     self.grp.frame:SetFrameStrata("LOW");
     self.grp:SetLayout("Flow");
     self.grp:SetWidth(120);
-    self.grp:AddChild(self:CreateButton("dsim300",        dsim300));
-    self.grp:AddChild(self:CreateButton("dsim25",         dsim25));
-    self.grp:AddChild(self:CreateButton("dsim4",          dsim4));
-    self.grp:AddChild(self:CreateButton("Reset opts",     resetopts));
+    self.grp:AddChild(self:CreateButton("dsim300",        Test.StartTimers300));
+    self.grp:AddChild(self:CreateButton("dsim25",         Test.StartTimers25));
+    self.grp:AddChild(self:CreateButton("dsim4",          Test.StartTimers4));
+    self.grp:AddChild(self:CreateButton("Reset opts",     Test.ResetOpts));
     self.grp:AddChild(self:CreateButton("Reset",          WBT.ResetKillInfo));
     self.grp:AddChild(self:CreateButton("Set isle id 1",  Test.SetIsleOfGiantsSavedShardId_1));
     self.grp:AddChild(self:CreateButton("Set isle id 2",  Test.SetIsleOfGiantsSavedShardId_2));

@@ -15,7 +15,7 @@ local EventManager = {};
 EventManager.frames = {};
 
 function EventManager:Reset()
-    frames = {};
+    self.frames = {};
 end
 
 function EventManager:FireEvent(event, ...)
@@ -101,9 +101,6 @@ function LibStub(addonName)
     end
     function ls:New(dbName, defaultDb)
         return defaultDb;
-    end
-    function ls:Embed(...)
-        return;
     end
     function ls:AddToBlizOptions(...)
         return;
@@ -215,7 +212,7 @@ function C_Timer.After(_, fcn)
     fcn();
 end
 
-function PlaySoundFile()   return; end
+function PlaySoundFile(_, _)   return; end
 function FlashClientIcon() return; end
 function RequestRaidInfo() return; end
 
@@ -272,7 +269,7 @@ end
 local WBT;  -- Convenient to put it in this scope, in order to write helper fcns.
 
 function TestStrSplit()
-    a, b, c = strsplit("-", "a-b1-c22");
+    local a, b, c = strsplit("-", "a-b1-c22");
     assert(a == "a",   a);
     assert(b == "b1",  b);
     assert(c == "c22", c);
@@ -470,7 +467,7 @@ local function TestSavedShardKillInfo(bossname, expectSuccess)
     assert(ki);  -- Found again
 end
 
-function main()
+local function main()
     TestStrSplit();
     TestSharingWithoutShardId();
     TestShare("Oondasta",     true);
