@@ -30,7 +30,7 @@
 2. After (1.):
       a. /reload and check that everything looks OK.
       b. Relog and check that everything looks OK.
-3. Spam all buttons exploratorily. Check that nothing breaks.
+3. Click all buttons exploratorily. Check that nothing breaks.
 
 # Backend tests
 1. Run StartTimers25. Check that GUI behaves as expected. 
