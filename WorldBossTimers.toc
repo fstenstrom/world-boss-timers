@@ -4,6 +4,7 @@
 ## Author: Soulstorm
 ## Version: v1.11
 ## SavedVariables: WorldBossTimersDB
+## IconTexture: 656169
 
 embeds.xml
 
