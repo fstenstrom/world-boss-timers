@@ -14,7 +14,8 @@
 # Before push to master tests:
 1. Unit tests must pass: UnitTests.lua
 2. For any changed module, perform relevant tests.
-3. Manually check that happy path and most edge cases work. If necessary also write down a test for it here.
+3. Manually check that happy path and most edge cases work. If necessary also
+   write down a test for it here.
 
 #--------------------------------------------------------------------------------
 
@@ -23,23 +24,29 @@
 2. Share timer with other player via button. Check that they receive it.
 
 # GUI tests:
-1. Go to non-boss zone and run StartTimers25. Check that GUI looks OK and that you don't get any alerts. Change options arbitrarily and check that GUI looks OK.
-    a. Repeat in boss zone. Check that you get alerts.
+1. Go to non-boss zone and run StartTimers25. Check that GUI looks OK and that
+   you don't get any alerts. Change options arbitrarily and check that GUI
+   looks OK.
+      a. Repeat in boss zone. Check that you get alerts.
 2. After (1.):
-    a. /reload and check that everything looks OK.
-    b. Relog and check that everything looks OK.
+      a. /reload and check that everything looks OK.
+      b. Relog and check that everything looks OK.
 3. Spam all buttons exploratorily. Check that nothing breaks.
 
 # Backend tests
 1. Run StartTimers25. Check that GUI behaves as expected. 
 
 # Logger tests
-1. Clear all timers. Enter the perimiter of some boss and try to share. Check that Info message looks OK.
-2. Run StartTimers4 and let it expire. Enter the perimiter of some boss and try to share. Check that Info message looks OK.
+1. Clear all timers. Enter the perimiter of some boss and try to share. Check
+   that Info message looks OK.
+2. Run StartTimers4 and let it expire. Enter the perimiter of some boss and try
+   to share. Check that Info message looks OK.
 
 # CLI tests
-1. Set log level to 'Nothing' via CLI. Check that GUI options shows correct value. Repeat Logger tests and verify that nothing is printed.
-2. Set log level to 'Info' via CLI. Repeat (1.) but now check that the logger tests actually pass.
+1. Set log level to 'Nothing' via CLI. Check that GUI options shows correct
+   value. Repeat Logger tests and verify that nothing is printed.
+2. Set log level to 'Info' via CLI. Repeat (1.) but now check that the logger
+   tests actually pass.
 
 ]]--
 
