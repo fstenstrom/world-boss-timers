@@ -218,7 +218,7 @@ local function PrintHelp()
     local indent = "   ";
     WBT:Print("WorldBossTimers slash commands:");
     WBT:Print("/wbt reset"       .. " --> Reset all timers");
-    WBT:Print("/wbt gui-reset"   .. " --> Reset the position of the GUI");
+    WBT:Print("/wbt gui-reset"   .. " --> Reset the position of the timers window");
     WBT:Print("/wbt saved"       .. " --> Print your saved bosses");
     WBT:Print("/wbt show"        .. " --> Show the timers window");
     WBT:Print("/wbt hide"        .. " --> Hide the timers window");
@@ -273,9 +273,9 @@ function Options.SlashHandler(input)
 --@do-not-package@
     elseif arg1 == "dev_silent" then
         Options.dev_silent:Toggle();
-    elseif arg1 == "dev_print_location" then
+    elseif arg1 == "dev_print_location" and WBT.Dev then
         WBT.Dev.PrettyPrintLocation();
-    elseif arg1 == "dev_print_distance" then
+    elseif arg1 == "dev_print_distance" and WBT.Dev then
         -- TODO: Doesn't work if boss name has space in it.
         WBT.Dev.PrintPlayerDistanceToBoss(arg2);
 --@end-do-not-package@
