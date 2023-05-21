@@ -159,12 +159,13 @@ end
 function Options.InitializeItems()
     local logger_opts = WBT.Logger.options_tbl;
     local sound_opts =  Sound.sound_tbl;
-    Options.lock                     = ToggleItem:New("lock",                     "GUI lock is now");
     Options.show_gui                 = ToggleItem:New("show_gui",                 nil);
+    Options.show_boss_zone_only      = ToggleItem:New("show_boss_zone_only",      "Only show GUI in boss zone mode is now");
+    Options.lock                     = ToggleItem:New("lock",                     "GUI lock is now");
+    Options.global_gui_position      = ToggleItem:New("global_gui_position",      nil);
     Options.sound                    = ToggleItem:New("sound_enabled",            "Sound is now");
     Options.assume_realm_keeps_shard = ToggleItem:New("assume_realm_keeps_shard", "Option to assume realms do not change shards is now");
     Options.multi_realm              = ToggleItem:New("multi_realm",              "Option to show timers for other shards is now");
-    Options.show_boss_zone_only      = ToggleItem:New("show_boss_zone_only",      "Only show GUI in boss zone mode is now");
     Options.cyclic                   = ToggleItem:New("cyclic",                   "Cyclic mode is now");
     Options.highlight                = ToggleItem:New("highlight",                "Highlighting of current zone is now");
     Options.show_saved               = ToggleItem:New("show_saved",               "Showing if saved on boss (on timer) is now");
@@ -173,17 +174,41 @@ function Options.InitializeItems()
     Options.log_level                = SelectItem:New("log_level",                "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
     Options.spawn_alert_sound        = SelectItem:New("spawn_alert_sound",        "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    WBT.defaults.global.spawn_alert_sound);
     Options.spawn_alert_sec_before   = RangeItem:New("spawn_alert_sec_before",    "Spawn alert sound sec before is now", WBT.defaults.global.spawn_alert_sec_before);
+
      -- Wrapping in some help printing for cyclic mode.
     local cyclic_set_temp = Options.cyclic.set;
-    Options.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
+    Options.cyclic.set = function(state)
+        cyclic_set_temp(state);
+        WBT:Print(CYCLIC_HELP_TEXT);
+    end
+
     -- Wrapping in 'play sound file when selected'.
     local spawn_alert_sound_set_temp = Options.spawn_alert_sound.set;
-    Options.spawn_alert_sound.set = function(state) spawn_alert_sound_set_temp(state); Util.PlaySoundAlert(Options.spawn_alert_sound:Value()); end
+    Options.spawn_alert_sound.set = function(state)
+        spawn_alert_sound_set_temp(state);
+        Util.PlaySoundAlert(Options.spawn_alert_sound:Value());
+    end
+
     -- Overriding setter for log_level to use same method as from CLI:
-    Options.log_level.set = function(state) WBT.Logger.SetLogLevel(state); end
+    Options.log_level.set = function(state)
+        WBT.Logger.SetLogLevel(state);
+    end
+
+    -- Needs to update window position.
+    local global_gui_position_set_temp = Options.global_gui_position.set;
+    Options.global_gui_position.set = function(state)
+        WBT.GUI:SaveGUIPosition();
+        global_gui_position_set_temp(state);
+        WBT.GUI:InitPosition();
+    end
+
     -- Option show_gui is a bit complicated. Override overything:
-    Options.show_gui.set = function(state) ShowGUI(state); end                -- Makes the option more snappy.
-    Options.show_gui.get = function() return not WBT.db.global.hide_gui; end  -- I don't want to rename db variable, so just negate (hide -> show).
+    Options.show_gui.set = function(state)
+        ShowGUI(state);  -- Makes the option more snappy.
+    end
+    Options.show_gui.get = function()
+        return not WBT.db.global.hide_gui;  -- I don't want to rename db variable, so just negate (hide -> show).
+    end
 end
 
 ----- Slash commands -----
@@ -192,22 +217,13 @@ local function PrintHelp()
     WBT.AceConfigDialog:Open(WBT.addon_name);
     local indent = "   ";
     WBT:Print("WorldBossTimers slash commands:");
-    WBT:Print("/wbt reset"       .. " --> Reset all kill info");
-    WBT:Print("/wbt gui-reset"   .. " --> Reset the position of the GUI");
+    WBT:Print("/wbt reset"       .. " --> Reset all timers");
+    WBT:Print("/wbt gui-reset"   .. " --> Reset the position of the timers window");
     WBT:Print("/wbt saved"       .. " --> Print your saved bosses");
-    WBT:Print("/wbt share"       .. " --> Announce timers for boss in zone");
     WBT:Print("/wbt show"        .. " --> Show the timers window");
     WBT:Print("/wbt hide"        .. " --> Hide the timers window");
     WBT:Print("/wbt gui-toggle"  .. " --> Toggle visibility of the timers window");
-    WBT:Print("/wbt send"        .. " --> Toggle send timer data in auto announce");
-    WBT:Print("/wbt sound"       .. " --> Toggle sound alerts");
-    WBT:Print("/wbt cyclic"      .. " --> Toggle cyclic timers");
-    WBT:Print("/wbt multi"       .. " --> Toggle timers for other shards");
-    WBT:Print("/wbt zone"        .. " --> Toggle show GUI in boss zones only");
-    WBT:Print("/wbt lock"        .. " --> Toggle locking of GUI");
     WBT:Print("/wbt log <level>" .. " --> Set log level for debug purposes");
---  WBT:Print("/wbt sound classic --> Sets sound to \'War Drums\'");
---  WBT:Print("/wbt sound fancy --> Sets sound to \'fancy mode\'");
 end
 
 function Options.SlashHandler(input)
@@ -257,9 +273,9 @@ function Options.SlashHandler(input)
 --@do-not-package@
     elseif arg1 == "dev_silent" then
         Options.dev_silent:Toggle();
-    elseif arg1 == "dev_print_location" then
+    elseif arg1 == "dev_print_location" and WBT.Dev then
         WBT.Dev.PrettyPrintLocation();
-    elseif arg1 == "dev_print_distance" then
+    elseif arg1 == "dev_print_distance" and WBT.Dev then
         -- TODO: Doesn't work if boss name has space in it.
         WBT.Dev.PrintPlayerDistanceToBoss(arg2);
 --@end-do-not-package@
@@ -306,15 +322,6 @@ function Options.InitializeOptionsTable()
             fontSize = "medium",
             width = "full",
         },
-        lock = {
-            name = "Lock GUI",
-            order = t_cnt:plusplus(),
-            desc = "Toggle if the GUI should be locked or movable",
-            type = "toggle",
-            width = "full",
-            set = function(info, val) Options.lock:Toggle(); end,
-            get = function(info) return Options.lock.get() end,
-        },
         show = {
             name = "Show GUI",
             order = t_cnt:plusplus(),
@@ -332,6 +339,24 @@ function Options.InitializeOptionsTable()
             width = "full",
             set = function(info, val) Options.show_boss_zone_only:Toggle(); end,
             get = function(info) return Options.show_boss_zone_only.get(); end,
+        },
+        lock = {
+            name = "Lock GUI",
+            order = t_cnt:plusplus(),
+            desc = "Toggle if the GUI should be locked or movable",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.lock:Toggle(); end,
+            get = function(info) return Options.lock.get() end,
+        },
+        global_gui_position = {
+            name = "Account-wide GUI position",
+            order = t_cnt:plusplus(),
+            desc = "When enabled the GUI position is the same for characters",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.global_gui_position:Toggle(); end,
+            get = function(info) return Options.global_gui_position.get(); end,
         },
         sound = {
             name = "Sound",
