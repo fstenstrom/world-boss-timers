@@ -164,6 +164,7 @@ WBT.defaults = {
         -- Options:
         lock = false,
         sound_enabled = true,
+        assume_realm_keeps_shard = true,
         multi_realm = false,
         show_boss_zone_only = false,
         cyclic = false,
