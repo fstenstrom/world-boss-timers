@@ -237,7 +237,7 @@ function WBT.PutSavedShardIDForZone(zone_id, shard_id)
 end
 
 function WBT.PutSavedShardID(shard_id)
-    WBT.PutSavedShardID(WBT.GetCurrentMapId(), shard_id)
+    WBT.PutSavedShardIDForZone(WBT.GetCurrentMapId(), shard_id)
 end
 
 function WBT.ParseShardID(unit_guid)
