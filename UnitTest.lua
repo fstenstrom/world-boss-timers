@@ -15,7 +15,7 @@ local EventManager = {};
 EventManager.frames = {};
 
 function EventManager:Reset()
-    frames = {};
+    self.frames = {};
 end
 
 function EventManager:FireEvent(event, ...)
@@ -102,9 +102,6 @@ function LibStub(addonName)
     function ls:New(dbName, defaultDb)
         return defaultDb;
     end
-    function ls:Embed(...)
-        return;
-    end
     function ls:AddToBlizOptions(...)
         return;
     end
@@ -135,6 +132,7 @@ function GUI.SetupAceGUI()       return; end
 function GUI.Init()              return; end
 function GUI:Update()            return; end
 function GUI:UpdateWindowTitle() return; end
+function GUI:Rebuild()           return; end
 
 
 --------------------------------------------------------------------------------
@@ -151,6 +149,7 @@ local g_game = {
         -- Static
         name = "Chainorth",
         realmname = "Stormreaver",
+        connected_realms = {"Stormreaver", "Vashj"},
         -- Dynamic
         map_id = 507,  -- Isle of Giants
         coords = {     -- Oondasta spawn point.
@@ -182,6 +181,10 @@ function GetRealmName()
     return g_game.player.realm_name;
 end
 
+function GetAutoCompleteRealms()
+    return g_game.player.connected_realms;
+end
+
 -- XXX: Not correct, but doesn't matter right now.
 function GetNormalizedRealmName()
     return g_game.player.realm_name;
@@ -204,6 +207,25 @@ function C_Map.GetBestMapForUnit(_)
     return g_game.player.map_id;
 end
 
+C_Timer = {};
+function C_Timer.After(_, fcn)
+    fcn();
+end
+
+function PlaySoundFile(_, _)   return; end
+function FlashClientIcon() return; end
+function RequestRaidInfo() return; end
+
+
+-- Change this fields before firing an event that uses combat event info.
+local CombatEventInfo = {
+    eventType = "",
+    dest_unit_guid = "";
+}
+function CombatLogGetCurrentEventInfo()
+    local _ = nil;
+    return _, CombatEventInfo.eventType, _, _, _, _, _, CombatEventInfo.dest_unit_guid, _;
+end
 --------------------------------------------------------------------------------
 -- WoW lua API
 --------------------------------------------------------------------------------
@@ -244,22 +266,40 @@ end
 -- Tests
 --------------------------------------------------------------------------------
 
+local WBT;  -- Convenient to put it in this scope, in order to write helper fcns.
+
 function TestStrSplit()
-    a, b, c = strsplit("-", "a-b1-c22");
+    local a, b, c = strsplit("-", "a-b1-c22");
     assert(a == "a",   a);
     assert(b == "b1",  b);
     assert(c == "c22", c);
+end
+
+local function BuildGUID(boss_name)
+    local npc_id = tostring(WBT.BossData.Get(boss_name).ids[1]);
+    local shard_id = tostring(g_game.world.shard_id);
+    return "Creature-2-3-4-"..shard_id.."-"..npc_id;
 end
 
 local function FireDetectShard()
     EventManager:FireEvent("UPDATE_MOUSEOVER_UNIT", "mouseover");
 end
 
+local function FireRestartShardDetection()
+    EventManager:FireEvent("ZONE_CHANGED_NEW_AREA");
+end
+
+local function FireLocalBossDeath()
+    CombatEventInfo.eventType = "UNIT_DIED";
+    CombatEventInfo.dest_unit_guid = BuildGUID(WBT.BossesInCurrentZone()[1].name);
+    EventManager:FireEvent("COMBAT_LOG_EVENT_UNFILTERED");
+end
+
 local function TestSharingWithoutShardId()
     g_test_settings.wbt_print = false;
     local bossname = "Oondasta";
     EventManager:Reset();
-    local WBT = LoadWBT();
+    WBT = LoadWBT();
     WBT.AceAddon:OnEnable();
 
     -- Detect current shard:
@@ -287,7 +327,7 @@ end
 
 local function TestShare(bossname, expectSuccess)
     EventManager:Reset();
-    local WBT = LoadWBT();
+    WBT = LoadWBT();
     WBT.AceAddon:OnEnable();
 
     -- Detect current shard:
@@ -309,7 +349,124 @@ local function TestShare(bossname, expectSuccess)
     assert(nTimers == nTimersExp, "Incorrect number of timers: " .. nTimers);
 end
 
-function main()
+local function TestSavedShard()
+    EventManager:Reset();
+    WBT = LoadWBT();
+    local KillInfo = WBT.KillInfo;
+    WBT.AceAddon:OnEnable();
+
+    -- Initially saved shard should be unknown:
+    assert(WBT.GetCurrentShardID()                    == KillInfo.UNKNOWN_SHARD);
+    assert(WBT.GetSavedShardID(WBT.GetCurrentMapId()) == KillInfo.UNKNOWN_SHARD);
+
+    -- Detect initial shard:
+    g_game.world.shard_id = 44;
+    FireDetectShard();
+    assert(WBT.GetCurrentShardID()                    == g_game.world.shard_id);
+    assert(WBT.GetSavedShardID(WBT.GetCurrentMapId()) == g_game.world.shard_id);
+
+    -- Reset current shard:
+    FireRestartShardDetection();
+    assert(WBT.GetCurrentShardID()                    == KillInfo.UNKNOWN_SHARD);
+    assert(WBT.GetSavedShardID(WBT.GetCurrentMapId()) == g_game.world.shard_id);
+
+    -- Find same shard again:
+    FireDetectShard();
+    assert(WBT.GetCurrentShardID()                    == g_game.world.shard_id);
+    assert(WBT.GetSavedShardID(WBT.GetCurrentMapId()) == g_game.world.shard_id);
+
+    -- Reset again:
+    FireRestartShardDetection();
+    assert(WBT.GetCurrentShardID()                    == KillInfo.UNKNOWN_SHARD);
+    assert(WBT.GetSavedShardID(WBT.GetCurrentMapId()) == g_game.world.shard_id);
+
+    -- Find new shard:
+    g_game.world.shard_id = 55;
+    FireDetectShard();
+    assert(WBT.GetCurrentShardID()                    == g_game.world.shard_id);
+    assert(WBT.GetSavedShardID(WBT.GetCurrentMapId()) == g_game.world.shard_id);
+
+    -- Reset once again:
+    FireRestartShardDetection();
+    assert(WBT.GetCurrentShardID()                    == KillInfo.UNKNOWN_SHARD);
+    assert(WBT.GetSavedShardID(WBT.GetCurrentMapId()) == g_game.world.shard_id);
+end
+
+local function TestSavedShardKillInfo()
+    EventManager:Reset();
+    WBT = LoadWBT();
+    local Options = WBT.Options;
+    WBT.AceAddon:OnEnable();
+    local ki;
+
+    -- Detect shard and kill boss:
+    g_game.world.shard_id = 44;
+    FireDetectShard();
+    FireLocalBossDeath();
+
+    Options.assume_realm_keeps_shard.set(true);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki);
+    Options.assume_realm_keeps_shard.set(false);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki);
+
+    -- Reset current shard:
+    FireRestartShardDetection();
+
+    Options.assume_realm_keeps_shard.set(true);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki);
+    Options.assume_realm_keeps_shard.set(false);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki == nil);  -- Now nil
+
+    -- Find same shard again:
+    FireDetectShard();
+
+    Options.assume_realm_keeps_shard.set(true);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki);
+    Options.assume_realm_keeps_shard.set(false);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki);  -- Found again
+
+    -- Find new shard:
+    g_game.world.shard_id = 55;
+    FireRestartShardDetection();
+    FireDetectShard();
+
+    Options.assume_realm_keeps_shard.set(true);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki == nil);  -- Now also nil!
+    Options.assume_realm_keeps_shard.set(false);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki == nil);  -- Nil again
+
+    -- Reset the new shard:
+    FireRestartShardDetection();
+
+    Options.assume_realm_keeps_shard.set(true);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki == nil);  -- Still nil
+    Options.assume_realm_keeps_shard.set(false);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki == nil);  -- Still nil
+
+    -- Find old shard again:
+    g_game.world.shard_id = 44;
+    FireRestartShardDetection();
+    FireDetectShard();
+
+    Options.assume_realm_keeps_shard.set(true);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki);  -- Found again
+    Options.assume_realm_keeps_shard.set(false);
+    ki = WBT.GetPrimaryKillInfo();
+    assert(ki);  -- Found again
+end
+
+local function main()
     TestStrSplit();
     TestSharingWithoutShardId();
     TestShare("Oondasta",     true);
@@ -317,6 +474,8 @@ function main()
     TestShare("A. Harvester", true);
     TestShare("NotBoss",      false);
     TestShare("Sha of Rage",  false);
+    TestSavedShard();
+    TestSavedShardKillInfo();
 end
 
 main()

@@ -77,13 +77,18 @@ function Util.IsTable(obj)
     return type(obj) == "table";
 end
 
-function Util.SetContainsKey(set, key)
+--------------------------------------------------------------------------------
+-- SetUtil
+--------------------------------------------------------------------------------
+Util.SetUtil = {};
+local SetUtil = Util.SetUtil;
+
+function SetUtil.ContainsKey(set, key)
     return set[key] ~= nil;
 end
 
--- The sets contain very few values, so for now I won't implement
--- any better algorithms here.
-function Util.SetElementKey(set, value)
+function SetUtil.FindKey(set, value)
+    -- The WBT sets are small, so linear search is good enough.
     for k, v in pairs(set) do
         if v == value then
             return k;
@@ -92,18 +97,10 @@ function Util.SetElementKey(set, value)
     return nil;
 end
 
-function Util.SetContainsValue(set, value)
-    return Util.SetElementKey(set, value) and true;
+function SetUtil.ContainsValue(set, value)
+    return SetUtil.FindKey(set, value) and true;
 end
-
-function Util.RemoveFromSet(set, value)
-    local k = Util.SetElementKey(set, value);
-    if k then
-        table.remove(set, k, value);
-        return true;
-    end
-    return false;
-end
+--------------------------------------------------------------------------------
 
 function Util.FormatTimeSeconds(seconds)
     local mins = math.floor(seconds / 60);
@@ -210,6 +207,17 @@ function Util.MultiKeyTable:GetAllSubVals(k)
     end
 
     return subvals;
+end
+
+-- Always includes the original main realm.
+function Util.GetConnectedRealms()
+    local realms = GetAutoCompleteRealms();
+    if next(realms) == nil then
+        -- Empty table -> not a connected realm.
+        realms = { GetNormalizedRealmName() };
+    end
+
+    return realms;
 end
 
 return Util;

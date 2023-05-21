@@ -138,8 +138,7 @@ end
 function Com.OnCommReceivedRR(prefix, message, distribution, sender)
     local name, t_death = Com.ParseKillMessage(message);
     local guid = KillInfo.CreateGUID(name);
-    local ignore_cyclic = true;
-    if WBT.IsBoss(name) and not WBT.IsDead(guid, ignore_cyclic) then
+    if WBT.IsBoss(name) and not WBT.HasKillInfoExpired(guid) then
         WBT.PutOrUpdateKillInfo(name, t_death);
         WBT:Print("Received " .. WBT.GetColoredBossName(name) .. " timer from: " .. sender);
     end

@@ -6,12 +6,6 @@
 local _, WBT = ...;
 WBT.addon_name = "WorldBossTimers";
 
---@do-not-package@
-wbt = WBT;
---@end-do-not-package@
-
-WBT.Dev = {};
-
 local KillInfo = WBT.KillInfo;
 local BossData = WBT.BossData;
 local Options  = WBT.Options;
@@ -19,22 +13,27 @@ local Sound    = WBT.Sound;
 local Util     = WBT.Util;
 local GUI      = WBT.GUI;
 local Com      = WBT.Com;
-local Dev      = WBT.Dev;
 
 -- Functions that will be created during startup.
 WBT.Functions = {
     AnnounceTimerInChat = nil;
 };
 
--- TODO: Fill out this table as necessery when testing more event handlers.
-WBT.event_handler_names = {};
-WBT.event_handler_names.REQUEST_PARSER = "wbt_request_parser";
-WBT.event_handler_names.SHARE_PARSER   = "wbt_share_parser";
-
 WBT.AceAddon = LibStub("AceAddon-3.0"):NewAddon("WBT", "AceConsole-3.0");
 
 -- Workaround to keep the nice WBT:Print function.
 WBT.Print = function(self, text) WBT.AceAddon:Print(text) end
+
+
+-- Enum that describes why the GUI was requested to update.
+WBT.UpdateEvents = {
+    UNSPECIFIED    = 0,
+    SHARD_DETECTED = 1,
+}
+
+--------------------------------------------------------------------------------
+-- Logger
+--------------------------------------------------------------------------------
 
 -- Global logger. OK since WoW is single-threaded.
 WBT.Logger = {
@@ -132,8 +131,20 @@ function Logger.Info(...)
     Logger.Log(Logger.LogLevels.Info, ...);
 end
 
-local boss_death_frame;
-local boss_combat_frame;
+--------------------------------------------------------------------------------
+
+-- The frames that handle events. Used as an access point for testing.
+WBT.EventHandlerFrames = {
+    boss_death_frame                = nil,
+    boss_combat_frame               = nil,
+    request_parser                  = nil,
+    timer_parser                    = nil,
+    shard_detection_frame           = nil,
+    shard_detection_restarter_frame = nil,
+    gui_visibility_frame            = nil,
+}
+
+
 local g_gui = {};
 local g_kill_infos = {};
 
@@ -149,9 +160,11 @@ WBT.defaults = {
     global = {
         kill_infos = {},
         sound_type = Sound.SOUND_CLASSIC,
+        connected_realms_data = {},
         -- Options:
         lock = false,
         sound_enabled = true,
+        assume_realm_keeps_shard = true,
         multi_realm = false,
         show_boss_zone_only = false,
         cyclic = false,
@@ -170,19 +183,53 @@ WBT.defaults = {
     },
 };
 
-function WBT:PrintError(...)
-    local text = "";
-    for n=1, select('#', ...) do
-      text = text .. " " .. select(n, ...);
-    end
-    text = Util.strtrim(text);
-    text = Util.ColoredString(Util.COLOR_RED, text);
-    WBT:Print(text);
+--------------------------------------------------------------------------------
+-- ConnectedRealmsData
+--------------------------------------------------------------------------------
+local ConnectedRealmsData = {};
+
+-- Data about the connected realms that needs to be saved to DB.
+function ConnectedRealmsData:New()
+    local crd = {};
+    crd.shard_id_per_zone = {};
+    return crd;
 end
 
+function WBT.GetRealmKey()
+    return table.concat(Util.GetConnectedRealms(), "_");
+end
+--------------------------------------------------------------------------------
+
+function WBT.IsUnknownShard(shard_id)
+    return shard_id == nil or shard_id == KillInfo.UNKNOWN_SHARD;
+end
+
+-- Getter for access via other modules.
 function WBT.GetCurrentShardID()
-    -- Getter for access via other modules.
-    return g_current_shard_id;
+    return g_current_shard_id or KillInfo.UNKNOWN_SHARD;
+end
+
+-- Returns the last known shard id for the current realm and the given zone.
+function WBT.GetSavedShardID(zone_id)
+    local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
+    if crd == nil then
+        return KillInfo.UNKNOWN_SHARD;
+    end
+    local shard_id = crd.shard_id_per_zone[zone_id];
+    return shard_id or KillInfo.UNKNOWN_SHARD;
+end
+
+function WBT.PutSavedShardIDForZone(zone_id, shard_id)
+    local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
+    if crd == nil then 
+        crd = ConnectedRealmsData:New();
+        WBT.db.global.connected_realms_data[WBT.GetRealmKey()] = crd;
+    end
+    crd.shard_id_per_zone[zone_id] = shard_id;
+end
+
+function WBT.PutSavedShardID(shard_id)
+    WBT.PutSavedShardIDForZone(WBT.GetCurrentMapId(), shard_id)
 end
 
 function WBT.ParseShardID(unit_guid)
@@ -195,18 +242,17 @@ function WBT.ParseShardID(unit_guid)
     end
 end
 
-function WBT.IsDead(ki_id, ignore_cyclic)
+function WBT.HasKillInfoExpired(ki_id)
     local ki = g_kill_infos[ki_id];
     if ki and ki:IsValidVersion() then
-        return ki:IsDead(ignore_cyclic);
+        return ki:IsExpired();
     end
 
     return false;
 end
-local IsDead = WBT.IsDead;
 
 function WBT.IsBoss(name)
-    return Util.SetContainsKey(BossData.GetAll(), name);
+    return Util.SetUtil.ContainsKey(BossData.GetAll(), name);
 end
 
 -- Warning: This can different result, at least during addon loading / player enter world events.
@@ -250,12 +296,18 @@ end
 function WBT.KillInfosInCurrentZoneAndShard()
     local res = {};
     for _, boss in pairs(WBT.BossesInCurrentZone()) do
+        -- Add KillInfo without shard, i.e. old-version-WBT:
         local ki_no_shard = g_kill_infos[KillInfo.CreateID(boss.name)];
         if ki_no_shard then
             table.insert(res, ki_no_shard);
         end
-        if g_current_shard_id then  -- TODO: set this while testing
-            local ki_shard = g_kill_infos[KillInfo.CreateID(boss.name, g_current_shard_id)];
+
+        -- Add KillInfo for current shard (or assumed current shard):
+        local curr_shard_id = Options.assume_realm_keeps_shard.get()
+                and WBT.GetSavedShardID(WBT.GetCurrentMapId())
+                or g_current_shard_id;
+        if not WBT.IsUnknownShard(curr_shard_id) then
+            local ki_shard = g_kill_infos[KillInfo.CreateID(boss.name, curr_shard_id)];
             if ki_shard then
                 table.insert(res, ki_shard);
             end
@@ -285,7 +337,7 @@ end
 function WBT.GetPrimaryKillInfo()
     local found = {};
     for _, ki in pairs(WBT.KillInfosInCurrentZoneAndShard()) do
-        if WBT.PlayerIsInBossPerimiter(ki.name) then
+        if WBT.PlayerIsInBossPerimiter(ki.boss_name) then
             table.insert(found, ki);
         end
     end
@@ -301,13 +353,13 @@ function WBT.GetPrimaryKillInfo()
 end
 
 function WBT.InZoneAndShardForTimer(kill_info)
-    return WBT.IsInZoneOfBoss(kill_info.name) and kill_info:IsOnCurrentShard();
+    return WBT.IsInZoneOfBoss(kill_info.boss_name) and kill_info:IsOnCurrentShard();
 end
 
 function WBT.GetHighlightColor(kill_info)
     local highlight = Options.highlight.get() and WBT.InZoneAndShardForTimer(kill_info);
     local color;
-    if kill_info.cyclic then
+    if kill_info:IsExpired() then
         if highlight then
             color = Util.COLOR_YELLOW;
         else
@@ -329,7 +381,7 @@ function WBT.GetSpawnTimeOutput(kill_info)
     local text = kill_info:GetSpawnTimeAsText();
     text = Util.ColoredString(color, text);
 
-    if Options.show_saved.get() and BossData.IsSaved(kill_info.name) then
+    if Options.show_saved.get() and BossData.IsSaved(kill_info.boss_name) then
         text = text .. " " .. Util.ColoredString(Util.ReverseColor(color), "X");
     end
 
@@ -350,21 +402,11 @@ function WBT.GetColoredBossName(name)
 end
 local GetColoredBossName = WBT.GetColoredBossName;
 
-local function RegisterEvents()
-    boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-end
-
-local function UnregisterEvents()
-    boss_death_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    boss_combat_frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-end
-
 -- Intended to be called from clicking an interactive label.
 function WBT.ResetBoss(ki_id)
     local kill_info = g_kill_infos[ki_id];
 
-    if IsControlKeyDown() and (IsShiftKeyDown() or kill_info.cyclic) then
+    if IsControlKeyDown() and (IsShiftKeyDown() or kill_info:IsExpired()) then
         g_kill_infos[ki_id] = nil;
         g_gui:Rebuild();
         local name = KillInfo.ParseID(ki_id).boss_name;
@@ -373,14 +415,6 @@ function WBT.ResetBoss(ki_id)
         local cyclic = Util.ColoredString(Util.COLOR_RED, "cyclic");
         WBT:Print("Ctrl-clicking a timer that is " .. cyclic .. " will reset it."
               .. " Ctrl-shift-clicking will reset any timer. For more info about " .. cyclic .. " mode: /wbt cyclic");
-    end
-end
-
-local function UpdateCyclicStates()
-    for _, kill_info in pairs(g_kill_infos) do
-        if kill_info:Expired() then
-            kill_info.cyclic = true;
-        end
     end
 end
 
@@ -402,7 +436,7 @@ end
 local function CreateAnnounceMessage(kill_info, send_data_for_parsing)
     local spawn_time = kill_info:GetSpawnTimeAsText();
     local payload = CreatePayload(kill_info, send_data_for_parsing);
-    local msg = kill_info.name .. ": " .. spawn_time .. payload;
+    local msg = kill_info.boss_name .. ": " .. spawn_time .. payload;
     return msg;
 end
 
@@ -421,15 +455,15 @@ local function GetSafeSpawnAnnouncerWithCooldown()
     -- Create closure that uses t_last_announce as a persistent/static variable
     local t_last_announce = 0;
     function AnnounceSpawnTimeIfSafe()
-        local kill_info = WBT.GetPrimaryKillInfo();
+        local ki = WBT.GetPrimaryKillInfo();
         local announced = false;
         local t_now = GetServerTime();
 
-        if WBT.GetCurrentShardID() == nil then
+        if WBT.IsUnknownShard(WBT.GetCurrentShardID()) then
             Logger.Info("Can't share timers when the shard ID is unknown. Mouse over an NPC to detect it.");
             return announced;
         end
-        if not kill_info then
+        if not ki then
             Logger.Info("No fresh timer found for current location and shard ID.");
             return announced;
         end
@@ -439,12 +473,12 @@ local function GetSafeSpawnAnnouncerWithCooldown()
         end
 
         local errors = {};
-        if kill_info:IsSafeToShare(errors) then
-            WBT.AnnounceSpawnTime(kill_info, true);
+        if ki:IsSafeToShare(errors) then
+            WBT.AnnounceSpawnTime(ki, true);
             t_last_announce = t_now;
             announced = true;
         else
-            Logger.Info("Cannot share timer for " .. GetColoredBossName(kill_info.name) .. ":");
+            Logger.Info("Cannot share timer for " .. GetColoredBossName(ki.boss_name) .. ":");
             Logger.Info(errors);
             return announced;
         end
@@ -471,11 +505,10 @@ function WBT.PutOrUpdateKillInfo(name, shard_id, t_death)
 end
 
 local function StartDeathTrackerFrame()
-    if boss_death_frame ~= nil then
-        return;
-    end
+    local boss_death_frame = CreateFrame("Frame", "WBT_BOSS_DEATH_FRAME");
+    WBT.EventHandlerFrames.boss_death_frame = boss_death_frame;
 
-    boss_death_frame = CreateFrame("Frame");
+    boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
     boss_death_frame:SetScript("OnEvent", function(...)
             local _, eventType, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
 
@@ -511,11 +544,8 @@ local function PlaySoundAlertBossCombat(name)
 end
 
 local function StartCombatScannerFrame()
-    if boss_combat_frame ~= nil then
-        return
-    end
-
-    boss_combat_frame = CreateFrame("Frame");
+    local boss_combat_frame = CreateFrame("Frame", "WBT_BOSS_COMBAT_FRAME");
+    WBT.EventHandlerFrames.boss_combat_frame = boss_combat_frame;
 
     local time_out = 60*2; -- Old expansion world bosses SHOULD die in this time.
     boss_combat_frame.t_next = 0;
@@ -539,6 +569,7 @@ local function StartCombatScannerFrame()
         end
     end
 
+    boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
     boss_combat_frame:SetScript("OnEvent", ScanWorldBossCombat);
 end
 
@@ -572,8 +603,8 @@ function WBT.ResetKillInfo()
 end
 
 local function StartShardDetectionHandler()
-
-    local f_detect_shard = CreateFrame("Frame");
+    WBT.EventHandlerFrames.shard_detection_frame = CreateFrame("Frame", "WBT_SHARD_DETECTION_FRAME");
+    local f_detect_shard = WBT.EventHandlerFrames.shard_detection_frame;
     function f_detect_shard:RegisterEvents()
         -- NOTE: This could be improved to also look in combat log, but
         -- doesn't really feel worth adding right now.
@@ -586,8 +617,7 @@ local function StartShardDetectionHandler()
     end
 
     -- Handler for detecting the current shard id.
-    f_detect_shard:RegisterEvents();
-    f_detect_shard:SetScript("OnEvent", function(self, event, ...)
+    function f_detect_shard:Handler(event, ...)
         local unit = "target";
         if event == "UPDATE_MOUSEOVER_UNIT" then
             unit = "mouseover";
@@ -599,32 +629,39 @@ local function StartShardDetectionHandler()
         local unit_type = strsplit("-", guid);
         if unit_type == "Creature" or unit_type == "Vehicle" then
             g_current_shard_id = WBT.ParseShardID(guid);
-            g_gui:UpdateWindowTitle();
+            WBT.PutSavedShardID(g_current_shard_id);
             Logger.Debug("[ShardDetection]: New shard ID detected:", g_current_shard_id);
+            g_gui:Update(WBT.UpdateEvents.SHARD_DETECTED);
             self:UnregisterEvents();
         end
-    end);
+    end
+    f_detect_shard:RegisterEvents();
+    f_detect_shard:SetScript("OnEvent", f_detect_shard.Handler);
 
     -- Handler for refreshing the shard id.
-    local f_restart = CreateFrame("Frame");
-    f_restart:RegisterEvent("ZONE_CHANGED_NEW_AREA");
-    f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
-    f_restart:SetScript("OnEvent", function(...)
+    local f_restart = CreateFrame("Frame", "WBT_SHARD_DETECTION_RESTARTER_FRAME");
+    WBT.EventHandlerFrames.shard_detection_restarter_frame = f_restart;
+    f_restart.delay = 3;  -- Having it as a var allows changing it while testing.
+    function f_restart:Handler(...)
         g_current_shard_id = nil;
-        g_gui:UpdateWindowTitle();
+        g_gui:Update();
         Logger.Debug("[ShardDetection]: Possibly shard change. Shard ID invalidated.");
 
         -- Wait a while before starting to detect the new shard. When phasing to a new shard it will still
         -- take a while for mobs to despawn in the old shard. These will still give the (incorrect) old shard
         -- id.
-        C_Timer.After(3, function(...)  -- Phasing time seems to be like ~1 sec, so 3 sec should often be OK.
+        C_Timer.After(self.delay, function(...)  -- Phasing time seems to be like ~1 sec, so 3 sec should often be OK.
             f_detect_shard:RegisterEvents();
         end);
-    end);
+    end
+    f_restart:RegisterEvent("ZONE_CHANGED_NEW_AREA");
+    f_restart:RegisterEvent("SCENARIO_UPDATE");  -- Seems to fire when you swap shard due to joining a group.
+    f_restart:SetScript("OnEvent", f_restart.Handler);
 end
 
 local function StartVisibilityHandler()
-    local f = CreateFrame("Frame");
+    local f = CreateFrame("Frame", "WBT_GUI_VISIBILITY_FRAME");
+    WBT.EventHandlerFrames.gui_visibility_frame = f;
     f:RegisterEvent("ZONE_CHANGED_NEW_AREA");
     f:SetScript("OnEvent",
         function(...)
@@ -641,14 +678,15 @@ local function StartChatParser()
     end
 
     local function InitRequestParser()
-        local request_parser = CreateFrame("Frame", WBT.event_handler_names.REQUEST_PARSER);
+        local request_parser = CreateFrame("Frame", "WBT_REQUEST_PARSER_FRAME");
+        WBT.EventHandlerFrames.request_parser = request_parser;
         local answered_requesters = {};
         request_parser:RegisterEvent("CHAT_MSG_SAY");
         request_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
                 if event == "CHAT_MSG_SAY" 
                         and msg == CHAT_MESSAGE_TIMER_REQUEST
-                        and not Util.SetContainsKey(answered_requesters, sender)
+                        and not Util.SetUtil.ContainsKey(answered_requesters, sender)
                         and not PlayerSentMessage(sender) then
 
                     if WBT.InBossZone() then
@@ -666,7 +704,9 @@ local function StartChatParser()
     end
 
     local function InitSharedTimersParser()
-        local timer_parser = CreateFrame("Frame", WBT.event_handler_names.SHARE_PARSER);
+        local timer_parser = CreateFrame("Frame", "WBT_TIMER_PARSER_FRAME");
+        WBT.EventHandlerFrames.timer_parser = timer_parser;
+
         timer_parser:RegisterEvent("CHAT_MSG_SAY");
         timer_parser:SetScript("OnEvent",
             function(self, event, msg, sender)
@@ -690,11 +730,10 @@ local function StartChatParser()
                         shard_id = tonumber(shard_id)
                         local ki_id = KillInfo.CreateID(name, shard_id);
 
-                        local ignore_cyclic = true;
                         if not WBT.IsBoss(name) then
                             Logger.Debug("[Parser]: Failed to parse timer. Unknown boss name:", name);
                             return;
-                        elseif IsDead(ki_id, ignore_cyclic) then
+                        elseif WBT.HasKillInfoExpired(ki_id) then
                             Logger.Debug("[Parser]: Ignoring shared timer. Player already has fresh timer.");
                             return;
                         else
@@ -755,7 +794,7 @@ local function FilterValidKillInfosStep2()
 end
 
 local function StartKillInfoManager()
-    WBT.kill_info_manager = CreateFrame("Frame");
+    WBT.kill_info_manager = CreateFrame("Frame", "WBT_KILL_INFO_MANAGER_FRAME");
     WBT.kill_info_manager.since_update = 0;
     local t_update = 1;
     WBT.kill_info_manager:SetScript("OnUpdate", function(self, elapsed)
@@ -769,16 +808,15 @@ local function StartKillInfoManager()
                         -- TODO: Consider if here should be something else
                     end
 
-                    if kill_info:ShouldMakeRespawnAlertPlay(Options.spawn_alert_sec_before.get()) then
+                    if kill_info:ShouldRespawnAlertPlayNow(Options.spawn_alert_sec_before.get()) then
                         FlashClientIcon();
                         PlaySoundAlertSpawn();
                     end
 
-                    if kill_info:Expired() and Options.cyclic.get() then
+                    if kill_info:IsExpired() and Options.cyclic.get() then
                         local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
                         kill_info.t_death = t_death_new
                         self.until_time = t_spawn;
-                        kill_info.cyclic = true;
                     end
                 end
 
@@ -804,7 +842,7 @@ function WBT.AceAddon:OnEnable()
         Com.LeaveRequestMode();
     end
     -- Note that Com is currently not used, since it only works for
-    -- connected realms...
+    -- connected realms.
     Com:RegisterComm(Com.PREF_SR, Com.OnCommReceivedSR);
     Com:RegisterComm(Com.PREF_RR, Com.OnCommReceivedRR);
 
@@ -828,8 +866,6 @@ function WBT.AceAddon:OnEnable()
     DeserializeKillInfos();
     FilterValidKillInfosStep2();
 
-    UpdateCyclicStates();
-
     StartShardDetectionHandler();
     StartDeathTrackerFrame();
     StartCombatScannerFrame();
@@ -839,16 +875,31 @@ function WBT.AceAddon:OnEnable()
 
     self:RegisterChatCommand("wbt", Options.SlashHandler);
     self:RegisterChatCommand("worldbosstimers", Options.SlashHandler);
-
-
-    RegisterEvents(); -- TODO: Update when this and unreg is called!
-    -- UnregisterEvents();
 end
 
 function WBT.AceAddon:OnDisable()
 end
 
 --@do-not-package@
+
+--------------------------------------------------------------------------------
+-- Dev
+--------------------------------------------------------------------------------
+
+WBT = WBT;  -- Make global when developing
+
+WBT.Dev = {};
+local Dev = WBT.Dev;
+
+function Dev.PrintError(...)
+    local text = "";
+    for n=1, select('#', ...) do
+      text = text .. " " .. select(n, ...);
+    end
+    text = Util.strtrim(text);
+    text = Util.ColoredString(Util.COLOR_RED, text);
+    WBT:Print(text);
+end
 
 -- Run this when standing at boss location to get a dump of what needs to be put
 -- in BossData.
@@ -872,15 +923,15 @@ end
 -- BossData.
 function Dev.PrintPlayerDistanceToBoss(boss_name)
     if not boss_name then
-        WBT:PrintError("Invalid argument: nil");
+        Dev.PrintError("Invalid argument: nil");
         return;
     end
     if not WBT.IsBoss(boss_name) then
-        WBT:PrintError("Invalid argument. Not a boss: " .. boss_name);
+        Dev.PrintError("Invalid argument. Not a boss: " .. boss_name);
         return;
     end
     if not WBT.IsInZoneOfBoss(boss_name) then
-        WBT:PrintError("Not in correct zone for " .. boss_name);
+        Dev.PrintError("Not in correct zone for " .. boss_name);
         return;
     end
     print(WBT.PlayerDistanceToBoss(boss_name));
@@ -900,6 +951,8 @@ end
 function Dev.StopGUI()
     WBT.kill_info_manager:SetScript("OnUpdate", nil);
 end
+
+--------------------------------------------------------------------------------
 
 --@end-do-not-package@
 

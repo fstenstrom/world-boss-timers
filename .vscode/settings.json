@@ -1,0 +1,21 @@
+{
+    "Lua.diagnostics.disable": [ "need-check-nil" ],
+    "Lua.diagnostics.ignoredFiles": "Disable",
+    "Lua.diagnostics.globals": [
+        "g_test_settings",
+        "strsplit",
+        "GetNumSavedWorldBosses",
+        "GetSavedWorldBossInfo",
+        "C_QuestLog",
+        "strsub",
+        "hooksecurefunc",
+        "PlaySound",
+        "SendChatMessage",
+        "ReloadUI",
+        "IsControlKeyDown",
+        "IsShiftKeyDown",
+        "DEFAULT_CHAT_FRAME"
+    ],
+    "Lua.workspace.ignoreDir": [ "/libs", "/Com.lua" ],
+    "Lua.completion.enable": false
+}

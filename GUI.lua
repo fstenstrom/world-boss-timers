@@ -151,9 +151,8 @@ function GUI:CreateNewLabel(guid, kill_info)
             end
             gui:Update();
         end);
-    label.userdata.added = false;
+    label.userdata.t_death = kill_info.t_death;
     label.userdata.time_next_spawn = kill_info:GetSpawnTimeSec();
-    self.labels[guid] = label;
     return label;
 end
 
@@ -184,21 +183,41 @@ function GUI:UpdateWidth()
     end
 end
 
+-- Before this function can be used, labels must be created! I.e. there must be
+-- a mapping mapping to which KillInfos will be displayed.
+function GUI:FindMaxDisplayedShardId()
+    -- Find longest shard ID for padding.
+    local max_shard_id = 0;
+    for guid, label in pairs(self.labels) do
+        local shard_id = WBT.db.global.kill_infos[guid].shard_id;
+        if shard_id > max_shard_id then
+            max_shard_id = shard_id;
+        end
+    end
+    return max_shard_id;
+end
+
+function GUI.CreatePaddedShardIdString(shard_id, max_shard_id)
+    local shard_str;
+    local pad_char;
+    if WBT.IsUnknownShard(shard_id) then
+        shard_str = "?";
+        pad_char = "?";  -- Alignment won't work because font isn't monospace. But it's an improvement.
+    else
+        shard_str = shard_id;
+        pad_char = "0";
+    end
+    local pad_len = string.len(max_shard_id) - string.len(shard_str);
+    shard_str = string.rep(pad_char, pad_len) .. shard_str;
+    return shard_str;
+end
+
 function GUI.CreateLabelText(kill_info, max_shard_id)
     local prefix = "";
     local color = WBT.GetHighlightColor(kill_info);
     local prefix = "";
     if Options.multi_realm.get() then
-        local shard;
-        local pad_char;
-        if kill_info:HasUnknownShard() then
-            shard = "?";
-            pad_char = "?";  -- Alignment wont' work because font isn't monospace. But it's an improvement.
-        else
-            shard = kill_info.shard_id;
-            pad_char = "0";
-        end
-        shard = string.rep(pad_char, string.len(max_shard_id) - string.len(shard)) .. shard;
+        local shard = GUI.CreatePaddedShardIdString(kill_info.shard_id, max_shard_id)
         shard = Util.ColoredString(color, shard);
         prefix = prefix .. shard .. ":";
     end
@@ -206,25 +225,26 @@ function GUI.CreateLabelText(kill_info, max_shard_id)
         local realm = Util.ColoredString(Util.COLOR_YELLOW, strsub(kill_info.realm_name_normalized, 0, 3));
         prefix = prefix .. realm .. ":";
     end
-    return prefix .. WBT.GetColoredBossName(kill_info.name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
+    return prefix .. WBT.GetColoredBossName(kill_info.boss_name) .. ": " .. WBT.GetSpawnTimeOutput(kill_info);
 end
 
-function GUI:RemoveLabel(guid, label)
-    -- This table is always a set, and can therefore be treated as such.
-    Util.RemoveFromSet(self.window.children, label);
-    label:Release();
-    self.labels[guid] = nil;
+function GUI:AddNewLabel(guid, kill_info)
+    local label = self:CreateNewLabel(guid, kill_info);
+    self.labels[guid] = label;
+    self.window:AddChild(label);
 end
 
 function GUI:Rebuild()
-    if not self.labels then
+    if self.labels == nil then
         return; -- GUI hasn't been built, so nothing to rebuild.
     end
 
-    for guid, label in pairs(self.labels) do
-        if not WBT.db.global.kill_infos[guid] then
-            self:RemoveLabel(guid, label);
-        end
+    -- Clear all labels.
+    for guid, _ in pairs(self.labels) do
+        -- NOTE: Don't try to remove specific children. That's too Ace internal.
+        table.remove(self.window.children);
+        self.labels[guid]:Release();
+        self.labels[guid] = nil;
     end
 
     self:Update();
@@ -253,9 +273,19 @@ function GUI.CyclicKillInfoRestarted(kill_info, label)
     end
 end
 
+function GUI.ShouldShowKillInfo(kill_info)
+    if kill_info:IsExpired() and not Options.cyclic.get() then
+        return false;
+    end
+    local shard_ok = Options.assume_realm_keeps_shard.get()
+            and kill_info:IsOnSavedRealmShard()
+            or kill_info:IsOnCurrentShard();
+    return shard_ok or Options.multi_realm.get();
+end
+
 -- Builds and/or updates what labels as necessary.
 function GUI:UpdateContent()
-    local n_shown_labels = 0;
+    local nlabels = 0;
     local needs_rebuild = false;
 
     -- Note that labels are added in a certain order, which corresponds to the order they will
@@ -264,63 +294,66 @@ function GUI:UpdateContent()
     -- The reason for a rebuild instead of sorting is that the labels are bound to internal AceGUI objects
     -- and I don't want to try to sort them.
     for guid, kill_info in Util.spairs(WBT.db.global.kill_infos, WBT.KillInfo.CompareTo) do
-        local label = self.labels[guid] or self:CreateNewLabel(guid, kill_info);
-        if getmetatable(kill_info) ~= WBT.KillInfo then
-            -- Do nothing.
-        elseif WBT.IsDead(guid)
-                and (not(kill_info.cyclic) or Options.cyclic.get())
-                and (kill_info:IsOnCurrentShard() or Options.multi_realm.get()) then
-            n_shown_labels = n_shown_labels + 1;
-
-            if not label.userdata.added then
-                self.window:AddChild(label);
-                label.userdata.added = true;
+        local label = self.labels[guid];
+        local show_label = GUI.ShouldShowKillInfo(kill_info);
+        if show_label then
+            nlabels = nlabels + 1;
+            if label == nil then
+                self:AddNewLabel(guid, kill_info)
             else
+                -- FIXME: Use self.update_event instead.
                 if GUI.KillInfoHasFreshKill(kill_info, label) or GUI.CyclicKillInfoRestarted(kill_info, label) then
                     -- The order of the labels needs to be updated, so rebuild.
                     needs_rebuild = true;
                 end
             end
         else
-            if label.userdata.added then
-                -- The label is apparently not automatically removed from the
-                -- self.window.children table, so it has to be done manually.
-                self:RemoveLabel(guid, label);
+            -- Remove label:
+            if label then
+                -- XXX:
+                -- Just removing the label seems to cause issues with other labels not showing
+                -- if they are added after this label is removed. (Probably something wrong with
+                -- the assumption on how the window children are stored.)
+                -- Workaround: Just rebuild.
+                needs_rebuild = true;
+                if self.update_event == WBT.UpdateEvents.SHARD_DETECTED then
+                    local boss_name = WBT.GetColoredBossName(WBT.db.global.kill_infos[guid].boss_name);
+                    WBT.Logger.Info("Timer for " .. boss_name .. " was hidden because it's not for the current shard.")
+                end
             end
         end
-    end
-
-    -- Find longest shard ID for padding.
-    local max_shard_id = 0;
-    for guid, label in pairs(self.labels) do
-        local shard_id = WBT.db.global.kill_infos[guid].shard_id;
-        if shard_id > max_shard_id then
-            max_shard_id = shard_id;
-        end
-    end
-
-    -- Set the label texts.
-    for guid, label in pairs(self.labels) do
-        label:SetText(GUI.CreateLabelText(WBT.db.global.kill_infos[guid], max_shard_id));
     end
 
     if needs_rebuild then
         self:Rebuild(); -- Warning: recursive call!
     else
-        self:UpdateHeight(n_shown_labels);
+        self:UpdateHeight(nlabels);
         self:UpdateWidth();
+
+        -- Set the label texts.
+        local max_shard_id = self:FindMaxDisplayedShardId();
+        for guid, label in pairs(self.labels) do
+            label:SetText(GUI.CreateLabelText(WBT.db.global.kill_infos[guid], max_shard_id));
+        end
+
+        self:UpdateWindowTitle();
     end
 end
 
-function GUI:Update()
+-- @param event: Optional event specifier.
+function GUI:Update(event)
+    self.update_event = event or WBT.UpdateEvents.UNSPECIFIED;
+
     self:UpdateGUIVisibility();
 
-    if not(self.visible) then
+    if not self.visible then
         return;
     end
 
     self:LockOrUnlock();
     self:UpdateContent();
+
+    self.update_event = WBT.UpdateEvents.UNSPECIFIED;
 end
 
 function GUI:UpdatePosition(gp)
@@ -408,11 +441,12 @@ function GUI:UpdateWindowTitle()
     end
     local prefix = "";
     if Options.multi_realm:get() then
-        local shard_id = WBT.GetCurrentShardID();
-        if shard_id then
-            prefix = tostring(shard_id) .. " - ";
-        else
+        if WBT.IsUnknownShard(WBT.GetCurrentShardID()) then
             prefix = "??? - ";
+        else
+            local cur_shard_id = WBT.GetCurrentShardID();
+            local max_shard_id = self:FindMaxDisplayedShardId();
+            prefix = GUI.CreatePaddedShardIdString(cur_shard_id, max_shard_id) .. " - ";
         end
     end
     self.window:SetTitle(prefix .. "WorldBossTimers")
@@ -433,6 +467,8 @@ function GUI:New()
         self.gui_container:Release();
     end
 
+    self.update_event = WBT.UpdateEvents.UNSPECIFIED;
+
     self.released = false;
 
     self.width = WIDTH_DEFAULT;
@@ -440,7 +476,7 @@ function GUI:New()
     self.window = GUI:NewBasicWindow();
     self.window.closebutton:SetScript("OnClick", closeOnClick);
     WBT.G_window = self.window;  -- FIXME: Remove this variable.
-    self:UpdateWindowTitle();
+    self.window:SetTitle("WorldBossTimers");
 
     self.btn_req = GUI.AceGUI:Create("Button");
     self.btn_req:SetRelativeWidth(BTN_REQ_REL_WIDTH);
@@ -493,4 +529,3 @@ function GUI:PrintWindowFunctions()
     PrintAllFunctionsRec(self.window);
 end
 --@end-do-not-package@
-

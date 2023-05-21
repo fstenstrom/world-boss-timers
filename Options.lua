@@ -159,19 +159,20 @@ end
 function Options.InitializeItems()
     local logger_opts = WBT.Logger.options_tbl;
     local sound_opts =  Sound.sound_tbl;
-    Options.lock                   = ToggleItem:New("lock",                "GUI lock is now");
-    Options.show_gui               = ToggleItem:New("show_gui",            nil);
-    Options.sound                  = ToggleItem:New("sound_enabled",       "Sound is now");
-    Options.multi_realm            = ToggleItem:New("multi_realm",         "Show timers for other shards option is now");
-    Options.show_boss_zone_only    = ToggleItem:New("show_boss_zone_only", "Only show GUI in boss zone mode is now");
-    Options.cyclic                 = ToggleItem:New("cyclic",              "Cyclic mode is now");
-    Options.highlight              = ToggleItem:New("highlight",           "Highlighting of current zone is now");
-    Options.show_saved             = ToggleItem:New("show_saved",          "Showing if saved on boss (on timer) is now");
-    Options.show_realm             = ToggleItem:New("show_realm",          "Showing realm on which timer was recorded is now");
-    Options.dev_silent             = ToggleItem:New("dev_silent",          "Silent mode is now");
-    Options.log_level              = SelectItem:New("log_level",             "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
-    Options.spawn_alert_sound      = SelectItem:New("spawn_alert_sound",     "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    WBT.defaults.global.spawn_alert_sound);
-    Options.spawn_alert_sec_before = RangeItem:New("spawn_alert_sec_before", "Spawn alert sound sec before is now", WBT.defaults.global.spawn_alert_sec_before);
+    Options.lock                     = ToggleItem:New("lock",                     "GUI lock is now");
+    Options.show_gui                 = ToggleItem:New("show_gui",                 nil);
+    Options.sound                    = ToggleItem:New("sound_enabled",            "Sound is now");
+    Options.assume_realm_keeps_shard = ToggleItem:New("assume_realm_keeps_shard", "Option to assume realms do not change shards is now");
+    Options.multi_realm              = ToggleItem:New("multi_realm",              "Option to show timers for other shards is now");
+    Options.show_boss_zone_only      = ToggleItem:New("show_boss_zone_only",      "Only show GUI in boss zone mode is now");
+    Options.cyclic                   = ToggleItem:New("cyclic",                   "Cyclic mode is now");
+    Options.highlight                = ToggleItem:New("highlight",                "Highlighting of current zone is now");
+    Options.show_saved               = ToggleItem:New("show_saved",               "Showing if saved on boss (on timer) is now");
+    Options.show_realm               = ToggleItem:New("show_realm",               "Showing realm on which timer was recorded is now");
+    Options.dev_silent               = ToggleItem:New("dev_silent",               "Silent mode is now");
+    Options.log_level                = SelectItem:New("log_level",                "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
+    Options.spawn_alert_sound        = SelectItem:New("spawn_alert_sound",        "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    WBT.defaults.global.spawn_alert_sound);
+    Options.spawn_alert_sec_before   = RangeItem:New("spawn_alert_sec_before",    "Spawn alert sound sec before is now", WBT.defaults.global.spawn_alert_sec_before);
      -- Wrapping in some help printing for cyclic mode.
     local cyclic_set_temp = Options.cyclic.set;
     Options.cyclic.set = function(state) cyclic_set_temp(state); WBT:Print(CYCLIC_HELP_TEXT); end
@@ -234,8 +235,8 @@ function Options.SlashHandler(input)
     elseif arg1 == "request" then
         WBT.RequestKillData();
     elseif arg1 == "sound" then
-        sound_type_args = {Sound.SOUND_CLASSIC, Sound.SOUND_FANCY};
-        if Util.SetContainsValue(sound_type_args, arg2) then
+        local sound_type_args = {Sound.SOUND_CLASSIC, Sound.SOUND_FANCY};
+        if Util.SetUtil.ContainsValue(sound_type_args, arg2) then
             WBT.db.global.sound_type = arg2;
             WBT:Print("SoundType: " .. arg2);
         else
@@ -292,13 +293,14 @@ function Options.InitializeOptionsTable()
         },
         sharing_explanation_body = {
             name = -- Hint_1
-                    "- Press the " .. Util.ColoredString(Util.COLOR_ORANGE, "Req.") ..
-                    " button to request timers from other nearby " ..  Util.ColoredString(Util.COLOR_ORANGE, "WBT") ..
-                    " users. Since 8.2.5 this no longer causes automatic sharing. The other player must manually " ..
-                    " share the timer by using the " .. Util.ColoredString(Util.COLOR_ORANGE, "Share") .. " button.\n" ..
+                    "- Press the " .. Util.ColoredString(Util.COLOR_ORANGE, "Req.") .. " " ..
+                    "button to request timers from other nearby WBT " ..
+                    "users. Since 8.2.5 there is no longer any automatic sharing, so other players must manually " ..
+                    "share the timer by using the " .. Util.ColoredString(Util.COLOR_ORANGE, "Share") .. " button.\n" ..
                     -- Hint_2
-                    "- Click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") ..
-                    " to reset that (and only that) timer.",
+                    "- Control-click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") .. " to reset it.\n" ..
+                    -- Hint_3
+                    "- Control-shift-click any timer to reset it.",
             order = t_cnt:plusplus(),
             type = "description",
             fontSize = "medium",
@@ -349,17 +351,23 @@ function Options.InitializeOptionsTable()
             set = function(info, val) Options.cyclic:Toggle(); end,
             get = function(info) return Options.cyclic.get(); end,
         },
+        assume_realm_keeps_shard = {
+            name = "Assume realms do not change shards",
+            order = t_cnt:plusplus(),
+            desc = "Uses the last known shard ID for this realm when the current shard ID is unknown. " ..
+                   "This may lead to incorrect timers.",
+            type = "toggle",
+            width = "full",
+            set = function(info, val) Options.assume_realm_keeps_shard:Toggle(); end,
+            get = function(info) return Options.assume_realm_keeps_shard.get(); end,
+        },
         multi_realm = {  -- NOTE: Should be named multi_shard, but to keep user set option values, it was not renamed.
             name = "Show timers for other shards",
             order = t_cnt:plusplus(),
             desc = "Shows timers for other shards",
             type = "toggle",
             width = "full",
-            set =
-                function(info, val)
-                    Options.multi_realm:Toggle();
-                    GUI:UpdateWindowTitle();
-                end,
+            set = function(info, val) Options.multi_realm:Toggle(); end,
             get = function(info) return Options.multi_realm.get(); end,
         },
         highlight = {
@@ -418,7 +426,7 @@ function Options.InitializeOptionsTable()
         spawn_alert_sec_before = {
             name = "Alert sec before spawn",
             order = t_cnt:plusplus(),
-            desc = "How many seconds before boss spawns that alerts should happen",
+            desc = "How many seconds before boss spawn the alert will happen",
             type = "range",
             min = 0,
             max = 60*5,
