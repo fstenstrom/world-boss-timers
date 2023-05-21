@@ -349,7 +349,7 @@ local function TestShare(bossname, expectSuccess)
     assert(nTimers == nTimersExp, "Incorrect number of timers: " .. nTimers);
 end
 
-local function TestSavedShard(bossname, expectSuccess)
+local function TestSavedShard()
     EventManager:Reset();
     WBT = LoadWBT();
     local KillInfo = WBT.KillInfo;
@@ -392,10 +392,9 @@ local function TestSavedShard(bossname, expectSuccess)
     assert(WBT.GetSavedShardID(WBT.GetCurrentMapId()) == g_game.world.shard_id);
 end
 
-local function TestSavedShardKillInfo(bossname, expectSuccess)
+local function TestSavedShardKillInfo()
     EventManager:Reset();
     WBT = LoadWBT();
-    local KillInfo = WBT.KillInfo;
     local Options = WBT.Options;
     WBT.AceAddon:OnEnable();
     local ki;
