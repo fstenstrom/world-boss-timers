@@ -299,7 +299,7 @@ function Options.InitializeOptionsTable()
                     "Control-click a timer that is shown in " .. Util.ColoredString(Util.COLOR_RED, "red") .. " to reset it.\n" ..
                     -- Hint_2
                     Util.ColoredString(Util.COLOR_ORANGE, "Hint: ") ..
-                    "Control-shift-click any timer to reset it.\n",
+                    "Control-shift-click to reset any timer.\n",
             order = t_cnt:plusplus(),
             type = "description",
             fontSize = "medium",

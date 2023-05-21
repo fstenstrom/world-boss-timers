@@ -880,8 +880,6 @@ end
 -- Dev
 --------------------------------------------------------------------------------
 
-WBT = WBT;  -- Make global when developing
-
 WBT.Dev = {};
 local Dev = WBT.Dev;
 
