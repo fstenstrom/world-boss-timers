@@ -201,11 +201,15 @@ function Test.IncreaseAllTimerAges(sec)
     WBT.GUI:Update();
 end
 
-function Test.AgeTimersOneMin()
+function Test.AgeTimers_10s()
+    Test.IncreaseAllTimerAges(10);
+end
+
+function Test.AgeTimers_1m()
     Test.IncreaseAllTimerAges(60);
 end
 
-function Test.AgeTimersTenMin()
+function Test.AgeTimers_10m()
     Test.IncreaseAllTimerAges(10*60);
 end
 
@@ -230,8 +234,9 @@ function Test:BuildTestGUI()
     self.grp:AddChild(self:CreateButton("dsim300",        Test.StartTimers300));
     self.grp:AddChild(self:CreateButton("dsim25",         Test.StartTimers25));
     self.grp:AddChild(self:CreateButton("dsim4",          Test.StartTimers4));
-    self.grp:AddChild(self:CreateButton("Age 1",          Test.AgeTimersOneMin));
-    self.grp:AddChild(self:CreateButton("Age 10",         Test.AgeTimersTenMin));
+    self.grp:AddChild(self:CreateButton("Age 10s",        Test.AgeTimers_10s));
+    self.grp:AddChild(self:CreateButton("Age 1m",         Test.AgeTimers_1m));
+    self.grp:AddChild(self:CreateButton("Age 10m",        Test.AgeTimers_10m));
     self.grp:AddChild(self:CreateButton("Reset",          WBT.ResetKillInfo));
     self.grp:AddChild(self:CreateButton("Set isle id 1",  Test.SetIsleOfGiantsSavedShardId_1));
     self.grp:AddChild(self:CreateButton("Set isle id 2",  Test.SetIsleOfGiantsSavedShardId_2));
@@ -242,7 +247,7 @@ function Test:BuildTestGUI()
 
     -- Keep at bottom:
     self.grp:AddChild(self:CreateButton("Reload", ReloadUI));
-    
+
     self.grp:ClearAllPoints();
     self.grp:SetPoint("TopLeft", nil, 100, -200);
 

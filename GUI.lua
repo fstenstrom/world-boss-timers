@@ -274,7 +274,7 @@ function GUI.CyclicKillInfoRestarted(kill_info, label)
 end
 
 function GUI.ShouldShowKillInfo(kill_info)
-    if kill_info:IsExpired() and not Options.cyclic.get() then
+    if kill_info:IsCyclicExpired() then
         return false;
     end
     local shard_ok = Options.assume_realm_keeps_shard.get()
