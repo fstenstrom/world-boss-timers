@@ -802,8 +802,6 @@ local function StartKillInfoManager()
             self.since_update = self.since_update + elapsed;
             if (self.since_update > t_update) then
                 for _, kill_info in pairs(g_kill_infos) do
-                    kill_info:Update();
-
                     if kill_info:ShouldAutoAnnounce() then
                         -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken in 8.2.5
                         -- TODO: Consider if here should be something else
@@ -812,12 +810,6 @@ local function StartKillInfoManager()
                     if kill_info:ShouldRespawnAlertPlayNow(Options.spawn_alert_sec_before.get()) then
                         FlashClientIcon();
                         PlaySoundAlertSpawn();
-                    end
-
-                    if kill_info:IsExpired() and Options.cyclic.get() then
-                        local t_death_new, t_spawn = kill_info:EstimationNextSpawn();
-                        kill_info.t_death = t_death_new
-                        self.until_time = t_spawn;
                     end
                 end
 

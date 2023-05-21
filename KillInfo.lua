@@ -30,16 +30,13 @@ function KillInfo.CompareTo(t, a, b)
     local k1 = t[a];
     local k2 = t[b];
 
-    k1:Update();
-    k2:Update();
-
     if k1:IsExpired() and not k2:IsExpired() then
         return false;
     elseif not k1:IsExpired() and k2:IsExpired() then
         return true;
     end
 
-    return k1:GetSpawnTimeSec() < k2:GetSpawnTimeSec();
+    return k1:GetSecondsUntilLatestRespawn() < k2:GetSecondsUntilLatestRespawn();
 end
 
 function KillInfo.IsValidID(id)
@@ -83,9 +80,7 @@ function KillInfo:HasShardID()
     return self.shard_id ~= nil;
 end
 
--- A KillInfo is no longer valid if its data was recorded before
--- the KillInfo class was introduced.
--- The field self.until_time did not exist then.
+-- Needed in order to verify that all fields are present.
 function KillInfo:IsValidVersion()
     return self.version and self.version == KillInfo.CURRENT_VERSION;
 end
@@ -118,16 +113,11 @@ function KillInfo:Print(indent)
 end
 
 function KillInfo:SetNewDeath(t_death)
-    -- FIXME: It doesn't make sense to this function from here. I think it's
+    -- FIXME: It doesn't make sense to call this function from here. I think it's
     -- a remnant from the time when the addon tried to upgrade KillInfos.
     self:SetInitialValues();
 
-    -- NOTE: self.t_death is later updated when the kill_info has expired.
-    -- self.until_time is (currently) never updated though.
     self.t_death = t_death;
-    self.until_time = self.t_death + self.db.max_respawn;
-
-    return self.until_time < GetServerTime();
 end
 
 function KillInfo:New(boss_name, t_death, shard_id)
@@ -190,55 +180,61 @@ function KillInfo:GetServerDeathTime()
     return self.t_death;
 end
 
-function KillInfo:GetTimeSinceDeath()
+function KillInfo:GetSecondsSinceDeath()
     return GetServerTime() - self.t_death;
 end
 
-function KillInfo:GetSpawnTimesSecRandom()
-    local t_since_death = self:GetTimeSinceDeath();
-    local t_lower_bound = self.db.min_respawn - t_since_death;
-    local t_upper_bound = self.db.max_respawn - t_since_death;
-
-    return t_lower_bound, t_upper_bound;
+function KillInfo:GetEarliestRespawnTimePoint()
+    return self.t_death + self.db.min_respawn;
 end
 
-function KillInfo:GetSpawnTimeSec()
-    if self:HasRandomSpawnTime() then
-        local _, t_upper = self:GetSpawnTimesSecRandom();
-        return t_upper;
-    else
-        return self.db.min_respawn - self:GetTimeSinceDeath();
+function KillInfo:GetLatestRespawnTimePoint()
+    return self.t_death + self.db.max_respawn;
+end
+
+function KillInfo:GetSecondsUntilEarliestRespawn(opt_cyclic)
+    local t = self:GetEarliestRespawnTimePoint() - GetServerTime();
+    if opt_cyclic then
+        while t < 0 do
+            t = t + self.db.max_respawn;
+        end
     end
+    return t;
+end
+
+function KillInfo:GetSecondsUntilLatestRespawn(opt_cyclic)
+    local t = self:GetLatestRespawnTimePoint() - GetServerTime();
+    if opt_cyclic then
+        while t < 0 do
+            t = t + self.db.max_respawn;
+        end
+    end
+    return t;
 end
 
 function KillInfo:GetSpawnTimeAsText()
-    local outdated =  "--outdated--";
     if not self:IsValidVersion() then
-        return outdated;
+        return "--outdated--";
     end
 
     if self:HasRandomSpawnTime() then
-        local t_lower, t_upper = self:GetSpawnTimesSecRandom();
+        local t_lower = self:GetSecondsUntilEarliestRespawn(true);
+        local t_upper = self:GetSecondsUntilLatestRespawn(true);
         if t_lower == nil or t_upper == nil then
-            return outdated;
-        elseif t_lower < 0 then
+            return "--invalid1--";
+        elseif t_lower > t_upper then
             return "0s" .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
         else
             return Util.FormatTimeSeconds(t_lower) .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
         end
     else
-        local spawn_time_sec = self:GetSpawnTimeSec();
-        if spawn_time_sec == nil or spawn_time_sec < 0 then
-            return outdated;
-        end
-
-        return Util.FormatTimeSeconds(spawn_time_sec);
+        return Util.FormatTimeSeconds(self:GetSecondsUntilEarliestRespawn(true));
     end
 end
 
 function KillInfo:ShouldAutoAnnounce()
     return WBT.db.global.auto_announce
-            and Util.SetUtil.ContainsValue(self.announce_times, self.remaining_time)
+            and Util.SetUtil.ContainsValue(self.announce_times, self:GetSecondsUntilLatestRespawn())
             and WBT.PlayerIsInBossPerimiter(self.boss_name)
             and WBT.BossData.Get(self.boss_name).auto_announce
             and self:IsSafeToShare({});
@@ -250,9 +246,9 @@ function KillInfo:InTimeWindow(from, to)
 end
 
 function KillInfo:ShouldRespawnAlertPlayNow(offset)
-    local t_now = GetServerTime();
-    local until_time_offset = self.until_time - offset;
-    local trigger = self:InTimeWindow(until_time_offset, until_time_offset + 1)
+    local t_before_respawn = self:GetLatestRespawnTimePoint() - offset;
+
+    local trigger = self:InTimeWindow(t_before_respawn, t_before_respawn + 2)
             and WBT.InZoneAndShardForTimer(self)
             and WBT.PlayerIsInBossPerimiter(self.boss_name)
             and self:IsValidVersion()
@@ -265,24 +261,8 @@ function KillInfo:ShouldRespawnAlertPlayNow(offset)
     return trigger;
 end
 
-function KillInfo:Update()
-    self.remaining_time = self.until_time - GetServerTime();
-end
-
-function KillInfo:EstimationNextSpawn()
-    local t_spawn = self.t_death;
-    local t_now = GetServerTime();
-    local max_respawn = self.db.max_respawn;
-    while t_spawn < t_now do
-        t_spawn = t_spawn + max_respawn;
-    end
-
-    local t_death_new = t_spawn - max_respawn;
-    return t_death_new, t_spawn;
-end
-
 function KillInfo:IsExpired()
-    return self.until_time < GetServerTime();
+    return self:GetSecondsUntilLatestRespawn() < 0;
 end
 
 function KillInfo:HasUnknownShard()
