@@ -222,7 +222,10 @@ function WBT.GetSavedShardID(zone_id)
 end
 
 function WBT.PutSavedShardIDForZone(zone_id, shard_id)
-    if not zone_id then return end
+    if zone_id == nil then
+        -- Wow's zone ID API is bugged and returns nil for some zones, e.g. Valdrakken time-portal room.
+        return;
+    end
     local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
     if crd == nil then 
         crd = ConnectedRealmsData:New();
