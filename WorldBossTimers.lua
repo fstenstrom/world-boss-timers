@@ -222,6 +222,7 @@ function WBT.GetSavedShardID(zone_id)
 end
 
 function WBT.PutSavedShardIDForZone(zone_id, shard_id)
+    if not zone_id then return end
     local crd = WBT.db.global.connected_realms_data[WBT.GetRealmKey()];
     if crd == nil then 
         crd = ConnectedRealmsData:New();
