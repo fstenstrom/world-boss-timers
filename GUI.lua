@@ -356,10 +356,10 @@ function GUI:Update(event)
     self.update_event = WBT.UpdateEvents.UNSPECIFIED;
 end
 
-function GUI:SetPosition(gp)
+function GUI:SetPosition(pos)
     local relativeTo = nil;
     self.window:ClearAllPoints();
-    self.window:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
+    self.window:SetPoint(pos.point, relativeTo, pos.xOfs, pos.yOfs);
 end
 
 local function GetDefaultGUIPosition()
@@ -377,6 +377,10 @@ local function GetGUIPosition()
             and WBT.db.global.gui_position
             or WBT.db.char.gui_position;
     if pos == nil then
+        return GetDefaultGUIPosition();
+    elseif pos.point == nil or pos.xOfs == nil or pos.yOfs == nil then
+        -- Corrupted point. Could happen due to issue #109. This will restore the
+        -- default position without users needing to reset all WBT settings.
         return GetDefaultGUIPosition();
     else
         return pos;
