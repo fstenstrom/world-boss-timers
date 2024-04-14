@@ -402,8 +402,9 @@ function GUI:InitPosition()
     self:SetPosition(pos);
 end
 
-function GUI:SaveGUIPosition()
-    if not self.visible then
+-- No "self" variable here since this can be called from hooksecurefunc.
+function GUI.SaveGUIPosition()
+    if not GUI.visible then
         -- If the GUI is not visible the position will not contain e.g. coordinates.
         -- Trying to save it will corrupt the position.
         return;
@@ -411,7 +412,7 @@ function GUI:SaveGUIPosition()
 
     local point, _, relativePoint, xOfs, yOfs = WBT.G_window:GetPoint();
 
-    if not self.visible or xOfs == nil or yOfs == nil then
+    if xOfs == nil or yOfs == nil then
         -- Extra check for case mentioned above.
         WBT.Logger.Debug("WARNING: Tried to save GUI position without coordinates");
         return;

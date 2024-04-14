@@ -184,7 +184,7 @@ function Options.InitializeItems()
     -- Needs to update window position.
     local global_gui_position_set_temp = Options.global_gui_position.set;
     Options.global_gui_position.set = function(state)
-        WBT.GUI:SaveGUIPosition();
+        WBT.GUI.SaveGUIPosition();
         global_gui_position_set_temp(state);
         WBT.GUI:InitPosition();
     end
