@@ -1,3 +1,5 @@
+-- Sound related constant data.
+
 local _, WBT = ...;
 
 local Sound = {};
@@ -35,4 +37,3 @@ Sound.sound_tbl = {
         { option = "drum-hit",                    file_id = 1487139, },
     }),
 };
-

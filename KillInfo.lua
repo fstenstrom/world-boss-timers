@@ -1,12 +1,5 @@
--- ----------------------------------------------------------------------------
---  KillInfo: Data structure for holding data about previous kills. (And update-timers.)
--- ----------------------------------------------------------------------------
---@do-not-package@
--- Meta table doesn't have to be the prototype's class, in can be any table.
--- The meta table is just a table that contains a method __index which points to the table.
--- where to look for missing functions (or fields?).
--- It doesn't look for the methods directly in the table. That is why we need to set self.__index = self.
---@end-do-not-package@
+--  KillInfo: The class with the data for showing a boss respawn timer.
+-- Note that the timers themselves are GUI text labels.
 
 local _, WBT = ...;
 

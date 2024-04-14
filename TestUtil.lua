@@ -1,3 +1,5 @@
+-- Test utils for both in-game testing and unit tests.
+
 local _, WBT = ...;
 
 local TestUtil = {};

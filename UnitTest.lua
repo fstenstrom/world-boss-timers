@@ -1,3 +1,9 @@
+-- Unit tests.
+--
+-- Intended to be run from CLI. Either install some lua interpreter, or use the devcontainer,
+-- and then run the tests:
+--   lua UnitTest.lua
+
 local Util     = require("Util");
 local TestUtil = require("TestUtil");
 
@@ -253,8 +259,6 @@ local function LoadWBT()
     assert(loadfile("Util.lua"))            (addonName, addonTable);
     assert(loadfile("Sound.lua"))           (addonName, addonTable);
     assert(loadfile("BossData.lua"))        (addonName, addonTable);
-    assert(loadfile("Com.lua"))             (addonName, addonTable);
-    assert(loadfile("NameplateTracker.lua"))(addonName, addonTable);
     addonTable.GUI = GUI;  -- GUI is a fake defined in this file.
     assert(loadfile("Options.lua"))         (addonName, addonTable);
     assert(loadfile("KillInfo.lua"))        (addonName, addonTable);

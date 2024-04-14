@@ -1,8 +1,5 @@
--- ----------------------------------------------------------------------------
---  A persistent timer for World Bosses.
--- ----------------------------------------------------------------------------
+-- The constant boss data, e.g. boss location and respawn time.
 
--- addonName, addonTable = ...;
 local _, WBT = ...;
 
 local Util = WBT.Util;

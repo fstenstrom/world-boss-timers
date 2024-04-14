@@ -1,6 +1,6 @@
--- ----------------------------------------------------------------------------
---  A persistent timer for World Bosses.
--- ----------------------------------------------------------------------------
+-- The core code.
+--
+-- Entry point: WBT.AceAddon:OnEnable
 
 -- addonName, addonTable = ...;
 local _, WBT = ...;
@@ -12,7 +12,6 @@ local Options  = WBT.Options;
 local Sound    = WBT.Sound;
 local Util     = WBT.Util;
 local GUI      = WBT.GUI;
-local Com      = WBT.Com;
 
 -- Functions that will be created during startup.
 WBT.Functions = {
@@ -825,24 +824,11 @@ local function StartKillInfoManager()
         end);
 end
 
+-- Addon entry point.
 function WBT.AceAddon:OnEnable()
     GUI.Init();
 
 	WBT.db = LibStub("AceDB-3.0"):New("WorldBossTimersDB", WBT.defaults);
-
-    -- FIXME:
-    -- What is the Com code doing here if it's not used? I can't tell from the code here whether
-    -- it's actually disabled or not.
-    --
-    LibStub("AceComm-3.0"):Embed(Com);
-    Com:Init(); -- Must init after db.
-    if Com.ShouldRevertRequestMode() then
-        Com.LeaveRequestMode();
-    end
-    -- Note that Com is currently not used, since it only works for
-    -- connected realms.
-    Com:RegisterComm(Com.PREF_SR, Com.OnCommReceivedSR);
-    Com:RegisterComm(Com.PREF_RR, Com.OnCommReceivedRR);
 
     WBT.Functions.AnnounceTimerInChat = GetSafeSpawnAnnouncerWithCooldown();
 

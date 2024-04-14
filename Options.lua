@@ -1,3 +1,7 @@
+-- The code for setting and getting options, and for creating the options GUI (i.e. /wbt).
+-- 
+-- When an option is changed, the GUI is also immediately updated.
+
 local _, WBT = ...;
 
 local Options = {};

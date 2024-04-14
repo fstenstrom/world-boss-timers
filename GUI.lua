@@ -1,12 +1,8 @@
--- ----------------------------------------------------------------------------
---  A persistent timer for World Bosses.
--- ----------------------------------------------------------------------------
+-- The code for the GUI, i.e. the window with the timers.
 
--- addonName, addonTable = ...;
 local _, WBT = ...;
 
 local Util = WBT.Util;
-local Com = WBT.Com;
 local Options = {}; -- Must be initialized later.
 
 -- Provides the GUI API and performs checks if the GUI is shown etc.
@@ -20,39 +16,11 @@ local HEIGHT_BASE = 30;
 local HEIGHT_DEFAULT = 106;
 local MAX_ENTRIES_DEFAULT = 7;
 
-local WIDTH_EXTENDED = 240;
-
 -- The sum of the relatives is not 1, because I've had issues with "Flow"
 -- elements sometimes overflowing to next line then.
 local BTN_OPTS_REL_WIDTH  = 30/100;
 local BTN_REQ_REL_WIDTH   = 30/100;
 local BTN_SHARE_REL_WIDTH = 39/100; -- Needs the extra width or name might not show.
-
-
---------------------------------------------------------------------------------
-
-
---@do-not-package@
-local function PrintAllFunctionsRec(o)
-    print("Starting recursion for:", o);
-    if o == nil then
-        return;
-    end
-
-    for k, v in pairs(o) do
-        --if type(v) == "function" then
-            print(k);
-        --end
-    end
-
-    local mt = getmetatable(o);
-    if mt == nil then
-        return;
-    end
-
-    PrintAllFunctionsRec(mt.__index);
-end
---@end-do-not-package@
 
 
 function GUI:Init()
@@ -561,9 +529,3 @@ function GUI:New()
 
     return self;
 end
-
---@do-not-package@
-function GUI:PrintWindowFunctions()
-    PrintAllFunctionsRec(self.window);
-end
---@end-do-not-package@

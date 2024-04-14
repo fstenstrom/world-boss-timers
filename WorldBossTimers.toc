@@ -11,8 +11,6 @@ embeds.xml
 Util.lua
 Sound.lua
 BossData.lua
-Com.lua
-NameplateTracker.lua
 GUI.lua
 Options.lua
 KillInfo.lua
