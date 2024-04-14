@@ -140,19 +140,13 @@ function RangeItem:New(var_name, status_msg, default_val)
 end
 
 local function ShowGUI(show)
-    local gui = GUI;
-    if show then
-        WBT.db.global.hide_gui = false;
-        if gui:ShouldShow() then
-            gui:Show();
-        else
-            WBT:Print("The GUI will show when next you enter a boss zone.");
-        end
-    else
-        WBT.db.global.hide_gui = true;
-        gui:Hide();
+    WBT.db.global.hide_gui = not show;
+
+    if show and not GUI:ShouldShow() then
+        WBT:Print("The GUI will show when next you enter a boss zone.");
     end
-    gui:Update();
+
+    GUI:Update();
 end
 
 function Options.InitializeItems()
@@ -190,14 +184,14 @@ function Options.InitializeItems()
     -- Needs to update window position.
     local global_gui_position_set_temp = Options.global_gui_position.set;
     Options.global_gui_position.set = function(state)
-        WBT.GUI:SaveGUIPosition();
+        WBT.GUI.SaveGUIPosition();
         global_gui_position_set_temp(state);
         WBT.GUI:InitPosition();
     end
 
-    -- Option show_gui is a bit complicated. Override overything:
+    -- Option show_gui is a bit complicated. Override everything:
     Options.show_gui.set = function(state)
-        ShowGUI(state);  -- Makes the option more snappy.
+        ShowGUI(state);  -- Makes the option more snappy, i.e don't wait for GUI to read updated options at next tic.
     end
     Options.show_gui.get = function()
         return not WBT.db.global.hide_gui;  -- I don't want to rename db variable, so just negate (hide -> show).

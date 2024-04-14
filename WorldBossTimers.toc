@@ -1,4 +1,4 @@
-## Interface: 100200
+## Interface: 100206
 ## Title: WorldBossTimers
 ## Notes: Creates timers for world bosses
 ## Author: Soulstorm
@@ -17,6 +17,7 @@ GUI.lua
 Options.lua
 KillInfo.lua
 WorldBossTimers.lua
+
 #@do-not-package@
 TestUtil.lua
 Test.lua

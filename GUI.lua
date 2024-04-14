@@ -99,6 +99,11 @@ function GUI:Show()
 
     self.gui_container.frame:Show();
     self.visible = true;
+
+    -- It's possible that options that affect the GUI position have changed
+    -- while the GUI has been hidden, e.g. toggling between char/global position.
+    -- In that case the position must be updated.
+    self:InitPosition();
 end
 
 function GUI:Hide()
@@ -356,10 +361,14 @@ function GUI:Update(event)
     self.update_event = WBT.UpdateEvents.UNSPECIFIED;
 end
 
-function GUI:SetPosition(gp)
+function GUI:SetPosition(pos)
+    if self.released then
+        -- It's possible to get here when toggling GUI options while the GUI is hidden (i.e. released).
+        return;
+    end
     local relativeTo = nil;
     self.window:ClearAllPoints();
-    self.window:SetPoint(gp.point, relativeTo, gp.xOfs, gp.yOfs);
+    self.window:SetPoint(pos.point, relativeTo, pos.xOfs, pos.yOfs);
 end
 
 local function GetDefaultGUIPosition()
@@ -378,6 +387,11 @@ local function GetGUIPosition()
             or WBT.db.char.gui_position;
     if pos == nil then
         return GetDefaultGUIPosition();
+    elseif pos.point == nil or pos.xOfs == nil or pos.yOfs == nil then
+        -- Corrupted point. Could happen due to issue #109. This will restore the
+        -- default position without users needing to reset all WBT settings.
+        WBT.Logger.Debug("Restoring corrupted GUI position.");
+        return GetDefaultGUIPosition();
     else
         return pos;
     end
@@ -388,8 +402,22 @@ function GUI:InitPosition()
     self:SetPosition(pos);
 end
 
-function GUI:SaveGUIPosition()
+-- Function is on class since this can be called from hooksecurefunc. The GUI is singleton right now either way.
+function GUI.SaveGUIPosition()
+    if not GUI.visible then
+        -- If the GUI is not visible the position will not contain e.g. coordinates.
+        -- Trying to save it will corrupt the position.
+        return;
+    end
+
     local point, _, relativePoint, xOfs, yOfs = WBT.G_window:GetPoint();
+
+    if xOfs == nil or yOfs == nil then
+        -- Extra check for case mentioned above.
+        WBT.Logger.Debug("WARNING: Tried to save GUI position without coordinates");
+        return;
+    end
+
     local pos = {
         point = point,
         relativeToName = "UIParrent",
@@ -528,8 +556,8 @@ function GUI:New()
     self:InitPosition();
     self:SaveGUIPositionOnMove();
 
-    self:Show();                -- Just sets a well defined state of visibility...
-    self:UpdateGUIVisibility(); -- ... that will be updated here.
+    self:Show();                -- Initialize visibility (arbitrarily chosen as shown) ...
+    self:UpdateGUIVisibility(); -- ... and then set correct visibility from options and so on.
 
     return self;
 end
