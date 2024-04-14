@@ -390,7 +390,7 @@ local function GetGUIPosition()
     elseif pos.point == nil or pos.xOfs == nil or pos.yOfs == nil then
         -- Corrupted point. Could happen due to issue #109. This will restore the
         -- default position without users needing to reset all WBT settings.
-        WBT.Logger.Debug("Restoring corrupted GUI position.")
+        WBT.Logger.Debug("Restoring corrupted GUI position.");
         return GetDefaultGUIPosition();
     else
         return pos;
@@ -402,7 +402,7 @@ function GUI:InitPosition()
     self:SetPosition(pos);
 end
 
--- No "self" variable here since this can be called from hooksecurefunc.
+-- Function is on class since this can be called from hooksecurefunc. The GUI is singleton right now either way.
 function GUI.SaveGUIPosition()
     if not GUI.visible then
         -- If the GUI is not visible the position will not contain e.g. coordinates.
