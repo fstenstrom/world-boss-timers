@@ -99,6 +99,11 @@ function GUI:Show()
 
     self.gui_container.frame:Show();
     self.visible = true;
+
+    -- It's possible that options that affect the GUI position have changed
+    -- while the GUI has been hidden, e.g. toggling between char/global position.
+    -- In that case the position must be updated.
+    self:InitPosition();
 end
 
 function GUI:Hide()
@@ -357,6 +362,10 @@ function GUI:Update(event)
 end
 
 function GUI:SetPosition(pos)
+    if self.released then
+        -- It's possible to get here when toggling GUI options while the GUI is hidden (i.e. released).
+        return;
+    end
     local relativeTo = nil;
     self.window:ClearAllPoints();
     self.window:SetPoint(pos.point, relativeTo, pos.xOfs, pos.yOfs);
@@ -381,6 +390,7 @@ local function GetGUIPosition()
     elseif pos.point == nil or pos.xOfs == nil or pos.yOfs == nil then
         -- Corrupted point. Could happen due to issue #109. This will restore the
         -- default position without users needing to reset all WBT settings.
+        WBT.Logger.Debug("Restoring corrupted GUI position.")
         return GetDefaultGUIPosition();
     else
         return pos;
@@ -393,7 +403,20 @@ function GUI:InitPosition()
 end
 
 function GUI:SaveGUIPosition()
+    if not self.visible then
+        -- If the GUI is not visible the position will not contain e.g. coordinates.
+        -- Trying to save it will corrupt the position.
+        return;
+    end
+
     local point, _, relativePoint, xOfs, yOfs = WBT.G_window:GetPoint();
+
+    if not self.visible or xOfs == nil or yOfs == nil then
+        -- Extra check for case mentioned above.
+        WBT.Logger.Debug("WARNING: Tried to save GUI position without coordinates");
+        return;
+    end
+
     local pos = {
         point = point,
         relativeToName = "UIParrent",
@@ -532,8 +555,8 @@ function GUI:New()
     self:InitPosition();
     self:SaveGUIPositionOnMove();
 
-    self:Show();                -- Just sets a well defined state of visibility...
-    self:UpdateGUIVisibility(); -- ... that will be updated here.
+    self:Show();                -- Initialize visibility (arbitrarily chosen as shown) ...
+    self:UpdateGUIVisibility(); -- ... and then set correct visibility from options and so on.
 
     return self;
 end
