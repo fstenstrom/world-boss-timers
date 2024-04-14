@@ -1,6 +1,7 @@
 # WorldBossTimers #
 
-This is the repo for the World of Warcraft addon "WorldBossTimers" which is used to track and share timers for world bosses.
+The World of Warcraft addon **WorldBossTimers** which is used to track and share respawn timers for world bosses
+and other rare spawns that drop mounts.
 
 Curse addon site: https://www.curseforge.com/wow/addons/worldbosstimers
 
