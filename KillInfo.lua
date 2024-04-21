@@ -132,6 +132,11 @@ function KillInfo:Deserialize(serialized)
     local ki = serialized;
     setmetatable(ki, self);
     self.__index = self;
+
+    -- Workaround: Update old timers with new db object in case BossData has been updated in new addon version.
+    -- FIXME: Don't save db object. See KillInfo.New.
+    ki.db = WBT.BossData.Get(ki.boss_name);  
+
     return ki;
 end
 
