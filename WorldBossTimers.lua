@@ -249,7 +249,10 @@ end
 
 function WBT.HasKillInfoExpired(ki_id)
     local ki = g_kill_infos[ki_id];
-    if ki and ki:IsValidVersion() then
+    if ki == nil then
+        return true;
+    end
+    if ki:IsValidVersion() then
         return ki:IsExpired();
     end
 
@@ -337,7 +340,7 @@ function WBT.PlayerIsInBossPerimiter(boss_name)
     return WBT.PlayerDistanceToBoss(boss_name) < BossData.Get(boss_name).perimiter.radius;
 end
 
--- Returns ta KillInfo for the dead boss which the player is waiting for at the current
+-- Returns the KillInfo for the dead boss which the player is waiting for at the current
 -- position and shard, if any. Else nil.
 function WBT.GetPrimaryKillInfo()
     local found = {};
@@ -740,7 +743,7 @@ local function StartChatParser()
                         if not WBT.IsBoss(name) then
                             Logger.Debug("[Parser]: Failed to parse timer. Unknown boss name:", name);
                             return;
-                        elseif WBT.HasKillInfoExpired(ki_id) then
+                        elseif not WBT.HasKillInfoExpired(ki_id) then
                             Logger.Debug("[Parser]: Ignoring shared timer. Player already has fresh timer.");
                             return;
                         else

@@ -353,6 +353,44 @@ local function TestShare(bossname, expectSuccess)
     assert(nTimers == nTimersExp, "Incorrect number of timers: " .. nTimers);
 end
 
+local function TestShareReceiverHasExpiredTimer()
+    EventManager:Reset();
+    WBT = LoadWBT();
+    WBT.AceAddon:OnEnable();
+
+    -- Detect current shard:
+    g_game.world.shard_id = 44;
+    FireDetectShard();
+
+    -- Assert no timer:
+    assert(Util.TableIsEmpty(WBT.db.global.kill_infos), "Incorrect setup.");
+
+    -- Share the timer:
+    local bossname = "Oondasta";
+    local event = "CHAT_MSG_SAY";
+    local msg = TestUtil.CreateShareMsg(bossname, g_game.servertime, 9, g_game.world.shard_id);
+    local sender = "Shareson";
+    EventManager:FireEvent(event, msg, sender);
+
+    -- Retrieve timer:
+    assert(not Util.TableIsEmpty(WBT.db.global.kill_infos));
+    local ki = WBT.GetPrimaryKillInfo();
+    assert(ki ~= nil);
+    assert(not ki:IsExpired());
+
+    -- Expire the timer
+    g_game.servertime = g_game.servertime + WBT.BossData.Get(bossname).max_respawn + 1;
+    assert(ki:IsExpired());
+
+    -- Share fresh timer
+    msg = TestUtil.CreateShareMsg(bossname, g_game.servertime, 9, g_game.world.shard_id);
+    EventManager:FireEvent(event, msg, sender);
+
+    -- Assert timer is updated
+    ki = WBT.GetPrimaryKillInfo();
+    assert(not ki:IsExpired());
+end
+
 local function TestSavedShard()
     EventManager:Reset();
     WBT = LoadWBT();
@@ -478,6 +516,7 @@ local function main()
     TestShare("A. Harvester", true);
     TestShare("NotBoss",      false);
     TestShare("Sha of Rage",  false);
+    TestShareReceiverHasExpiredTimer();
     TestSavedShard();
     TestSavedShardKillInfo();
 end
