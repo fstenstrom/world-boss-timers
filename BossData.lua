@@ -198,6 +198,82 @@ local tracked_bosses = {
             radius = 0.05,
         },
     },
+    ["Rei Lun"] = {
+        name = "Rei Lun",
+        color = "|cff23dcfc",
+        ids = {157162},
+        is_saved_fcn = function() return IsSavedDaily(57346); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(30),
+        max_respawn = MinToSec(60),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1530,  -- N'Zoth Assault. Old timeline zone has different.
+        perimiter = {
+            origin = {
+                x = 0.21920382,
+                y = 0.12227475,
+            },
+            radius = 0.03,
+        },
+    },
+    ["Ha-Li"] = {
+        name = "Ha-Li",
+        color = "|cff23a2fc",
+        ids = {157153},
+        is_saved_fcn = function() return IsSavedDaily(57344); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(30),
+        max_respawn = MinToSec(60),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1530,
+        perimiter = {
+            origin = {
+                x = 0.3437,
+                y = 0.3828,
+            },
+            radius = 0.08,
+        },
+    },
+    ["Anh-De"] = {
+        name = "Anh-De",
+        color = "|cff025d96",
+        ids = {157466},
+        is_saved_fcn = function() return IsSavedDaily(57363); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(30),
+        max_respawn = MinToSec(60),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1530,
+        perimiter = {
+            origin = {
+                x = 0.3389,
+                y = 0.6837,
+            },
+            radius = 0.02,
+        },
+    },
+    ["Houndlord"] = {
+        name = "Houndlord",  -- Houndlord Ren
+        color = "|cfffaab34",
+        ids = {157160},
+        is_saved_fcn = function() return IsSavedDaily(57345); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(30),
+        max_respawn = MinToSec(90),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1530,
+        perimiter = {
+            origin = {
+                x = 0.1310,
+                y = 0.2600,
+            },
+            radius = 0.02,
+        },
+    },
 --@do-not-package@
     ["Grellkin"] = {
         name = "Grellkin",
