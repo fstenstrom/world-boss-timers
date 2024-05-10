@@ -219,7 +219,7 @@ local tracked_bosses = {
     },
     ["Ha-Li"] = {
         name = "Ha-Li",
-        color = "|cff23a2fc",
+        color = "|cff0394fc",
         ids = {157153},
         is_saved_fcn = function() return IsSavedDaily(57344); end,
         soundfile = Sound.SOUND_FILE_DEFAULT,
@@ -238,7 +238,7 @@ local tracked_bosses = {
     },
     ["Anh-De"] = {
         name = "Anh-De",
-        color = "|cff025d96",
+        color = "|cfffaea75",
         ids = {157466},
         is_saved_fcn = function() return IsSavedDaily(57363); end,
         soundfile = Sound.SOUND_FILE_DEFAULT,
@@ -255,14 +255,14 @@ local tracked_bosses = {
             radius = 0.02,
         },
     },
-    ["Houndlord"] = {
-        name = "Houndlord",  -- Houndlord Ren
+    ["Houndlord Ren"] = {
+        name = "Houndlord Ren",
         color = "|cfffaab34",
         ids = {157160},
         is_saved_fcn = function() return IsSavedDaily(57345); end,
         soundfile = Sound.SOUND_FILE_DEFAULT,
         min_respawn = MinToSec(30),
-        max_respawn = MinToSec(90),
+        max_respawn = MinToSec(60),
         random_spawn_time = true,
         auto_announce = true,
         map_id = 1530,
