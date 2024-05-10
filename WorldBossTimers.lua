@@ -721,8 +721,10 @@ local function StartChatParser()
                     elseif string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
                         -- NOTE: The name may contain dots and spaces, e.g. 'A. Harvester'.
                         local name, data = string.match(msg,
-                                "[^A-Z]*([A-Z][A-Za-z%s\\.]+)[^\\(]*" ..  -- The name and any potential {rt8} from old versions.
-                                "%(" .. SERVER_DEATH_TIME_PREFIX .. "([%w-\\-]+)" .. "%)");  -- The data/payload.
+                                "[^A-Z]*" ..                   -- Discard any {rt8} from old versions
+                                "([A-Z][A-Za-z%s\\.]+)" ..     -- The boss name
+                                "[^\\(]*" ..                   -- Discard visuals, e.g. old {rt8} and timer as text
+                                "%(" .. SERVER_DEATH_TIME_PREFIX .. "([%w-\\-]+)" .. "%)");  -- The payload
                         if not data then
                             Logger.Debug("[Parser]: Failed to parse timer. Unknown format.");
                             return;

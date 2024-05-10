@@ -222,9 +222,10 @@ function KillInfo:GetSpawnTimeAsText()
         local t_lower = self:GetSecondsUntilEarliestRespawn(true);
         local t_upper = self:GetSecondsUntilLatestRespawn(true);
         if t_lower == nil or t_upper == nil then
-            return "--invalid1--";
+            return "--invalid--";
         elseif t_lower < 0 then
-            return "0s" .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
+            -- Just display 0 instead of 00:00 to make it easier to read
+            return "0" .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
         else
             return Util.FormatTimeSeconds(t_lower) .. RANDOM_DELIM .. Util.FormatTimeSeconds(t_upper)
         end

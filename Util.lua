@@ -101,13 +101,24 @@ end
 --------------------------------------------------------------------------------
 
 function Util.FormatTimeSeconds(seconds)
-    local mins = math.floor(seconds / 60);
-    local secs = math.floor(seconds % 60);
-    if mins > 0 then
-        return mins .. "m " .. secs .. "s";
+    local min = math.floor(seconds / 60);
+    local sec = math.floor(seconds % 60);
+
+    local min_text;
+    if min < 10 then
+        min_text = "0" .. min;
     else
-        return secs .. "s";
+        min_text = min;
     end
+
+    local sec_text
+    if sec < 10 then
+        sec_text = "0" .. sec;
+    else
+        sec_text = sec;
+    end
+    
+    return min_text .. ":" .. sec_text;
 end
 
 function Util.PlaySoundAlert(soundfile)
