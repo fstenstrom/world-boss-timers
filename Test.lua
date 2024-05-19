@@ -170,6 +170,47 @@ function Test.ResetOpts()
     WBT.GUI:Update();
 end
 
+
+
+-- First time this is run it saves all saved ids. Consecutive times it prints
+-- all new ids completed after that point.
+function Test.FindQuestFlaggedComplete()
+    if Test.saved_ids_pre == nil then
+        -- Save all completed ids
+        Test.saved_ids_pre = {};
+        for id=1,100000 do
+            Test.saved_ids_pre[id] = C_QuestLog.IsQuestFlaggedCompleted(id);
+        end
+    else
+        -- Diff with the saved ids to find what's changed
+        for id=1,100000 do  
+            if Test.saved_ids_pre[id] ~= C_QuestLog.IsQuestFlaggedCompleted(id) then
+                print("New saved id: " .. id);
+            end
+        end
+    end
+end
+
+
+function Test.GetEnvData()
+    print("MapId: " .. WBT.GetCurrentMapId());
+
+    local x, y = WBT.GetPlayerCoords();
+    print("x: "   .. string.format("%.4f", x));
+    print("y: "   .. string.format("%.4f", y));
+
+    local ki = WBT.GetPrimaryKillInfo();
+    if ki == nil then
+        print("Primary KI: nil");
+    else
+        print("Primary KI: " .. ki.boss_name);
+        print("  Distance to: "  .. string.format("%.4f", WBT.PlayerDistanceToBoss(ki.boss_name)));
+    end
+
+    -- Will print by itself:
+    Test.FindQuestFlaggedComplete();
+end
+
 function Test.RestartShardDetection()
     local f = WBT.EventHandlerFrames.shard_detection_restarter_frame;
     local delay_old = f.delay;
@@ -247,12 +288,13 @@ function Test:BuildTestGUI()
     self.grp:AddChild(self:CreateButton("Show shards",    Test.PrintShards));
     self.grp:AddChild(self:CreateButton("Silent +-",      Test.ToggleDevSilent));
     self.grp:AddChild(self:CreateButton("Reset opts",     Test.ResetOpts));
+    self.grp:AddChild(self:CreateButton("Get env data",   Test.GetEnvData));
 
     -- Keep at bottom:
     self.grp:AddChild(self:CreateButton("Reload", ReloadUI));
 
     self.grp:ClearAllPoints();
-    self.grp:SetPoint("TopLeft", nil, 100, -200);
+    self.grp:SetPoint("TopLeft", nil, 100, -160);
 
     self.grp.frame:Show();
 end

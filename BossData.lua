@@ -198,6 +198,9 @@ local tracked_bosses = {
             radius = 0.05,
         },
     },
+--  ["Soundless"] = {
+--      Won't add. Very long timer and prone to zone resets. Timers will not be reliable.
+-- },
     ["Rei Lun"] = {
         name = "Rei Lun",
         color = "|cff23dcfc",
@@ -274,6 +277,179 @@ local tracked_bosses = {
             radius = 0.02,
         },
     },
+    ["Corpse Eater"] = {
+        name = "Corpse Eater",
+        color = "|cffa884ff",
+        ids = {162147},
+        is_saved_fcn = function() return IsSavedDaily(58696); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(5),
+        max_respawn = MinToSec(30),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1527,
+        perimiter = {
+            origin = {
+                x = 0.3091,
+                y = 0.4967,
+            },
+            radius = 0.02,
+        },
+    },
+    ["Rotfeaster"] = {
+        name = "Rotfeaster",
+        color = "|cffffc489",
+        ids = {157146},
+        is_saved_fcn = function() return IsSavedDaily(57273); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(30),
+        max_respawn = MinToSec(90),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1527,
+        perimiter = {
+            origin = {
+                x = 0.6831,
+                y = 0.3188,
+            },
+            radius = 0.01,
+        },
+    },
+    ["Ishak"] = {
+        name = "Ishak",  -- Ishak of the Four Winds
+        color = "|cff0394fc",
+        ids = {157134},
+        is_saved_fcn = function() return IsSavedDaily(57259); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(135),  -- 2h 15m
+        max_respawn = MinToSec(255),  -- 4h 45m
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1527,
+        perimiter = {
+            origin = {
+                x = 0.7390,
+                y = 0.8355,
+            },
+            radius = 0.02,
+        },
+    },
+    ["Mal'Korak"] = {
+        name = "Mal'Korak",  -- Warbringer Mak'Korak
+        color = "|cff99ba4e",
+        ids = {162819},
+        is_saved_fcn = function() return IsSavedDaily(58889); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(45),
+        max_respawn = MinToSec(90),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1536,
+        perimiter = {
+            origin = {
+                x = 0.3372,
+                y = 0.8009,
+            },
+            radius = 0.01,
+        },
+    },
+    ["Nerissa"] = {
+        name = "Nerissa",  -- Nerissa Heartless
+        color = "|cffbec0c2",
+        ids = {162819},
+        is_saved_fcn = function() return IsSavedDaily(58851); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(45),
+        max_respawn = MinToSec(90),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1536,
+        perimiter = {
+            origin = {
+                x = 0.6605,
+                y = 0.3518,
+            },
+            radius = 0.01,
+        },
+    },
+--  ["Violet Mistake"] = {
+--      Won't add. Not limited by respawn time, but by the time and effort it takes to spawn it.
+--  },
+    ["Hopecrusher"] = {
+        name = "Hopecrusher",
+        color = "|cfffaab34",
+        ids = {166679},
+        is_saved_fcn = function() return IsSavedDaily(59900); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(60),
+        max_respawn = MinToSec(60),
+        random_spawn_time = false,
+        auto_announce = true,
+        map_id = 1525,
+        perimiter = {
+            origin = {
+                x = 0.5197,
+                y = 0.5181,
+            },
+            radius = 0.01,
+        },
+    },
+    ["Famu"] = {
+        name = "Famu",  -- Famu the Infinite
+        color = "|cff0394fc",
+        ids = {166521},
+        is_saved_fcn = function() return IsSavedDaily(59869); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(25),
+        max_respawn = MinToSec(35),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1525,
+        perimiter = {
+            origin = {
+                x = 0.6257,
+                y = 0.4723,
+            },
+            radius = 0.01,
+        },
+    },
+--  ["Gorged Shadehound"] = {
+--      Won't add (for now). Apparently the event is bugged.
+--  },
+--  ["Fallen Charger"] = {
+--      Won't add. TLPD-like.
+--  },
+--  ["Konthrogz the Obliterator"] = {
+--      Won't add. Apparently the spawn time is very buggy.
+--  },
+--  ["Malbog"] = {
+--      Won't add. Apparently short respawn of about 5 min.
+--  },
+    ["Reliwik"] = {
+        name = "Reliwik",  -- Reliwik the Defiant
+        color = "|cffe147ff",
+        ids = {180160},
+        is_saved_fcn = function() return IsSavedDaily(64455); end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(15),
+        max_respawn = MinToSec(60),  -- This spawn seems to be bugged. Timer probably inaccurate.
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 1961,
+        perimiter = {
+            origin = {
+                x = 0.5620,
+                y = 0.6630,
+            },
+            radius = 0.02,
+        },
+    },
+--  ["Rhuv, Gorger of Ruin"] = {
+--      Won't add. Not a fixed respawn time, and shares spawn with other mobs.
+--  },
+--  ["Hirukon"] = {
+--      Won't add. Not limited by respawn time, but by the time and effort it takes to spawn it.
+--  },
 --@do-not-package@
     ["Grellkin"] = {
         name = "Grellkin",
