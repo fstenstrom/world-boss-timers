@@ -546,7 +546,7 @@ function BossData.GetFromUnitGuid(guid, map_id)
     return nil;
 end
 
-function BossData.NameFromUnitGuid(guid, map_id)
+function BossData.BossNameFromUnitGuid(guid, map_id)
     local data = BossData.GetFromUnitGuid(guid, map_id);
     if data then
         return data.name;
