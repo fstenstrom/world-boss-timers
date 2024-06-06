@@ -729,7 +729,6 @@ local function StartChatParser()
         );
     end
 
-    InitRequestParser();
     InitSharedTimersParser();
 end
 
