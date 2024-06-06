@@ -136,7 +136,6 @@ end
 WBT.EventHandlerFrames = {
     boss_death_frame                = nil,
     boss_combat_frame               = nil,
-    request_parser                  = nil,
     timer_parser                    = nil,
     shard_detection_frame           = nil,
     shard_detection_restarter_frame = nil,
@@ -683,32 +682,6 @@ local function StartChatParser()
     local function PlayerSentMessage(sender)
         -- Since \b and alike doesnt exist: use "frontier pattern": %f[%A]
         return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
-    end
-
-    local function InitRequestParser()
-        local request_parser = CreateFrame("Frame", "WBT_REQUEST_PARSER_FRAME");
-        WBT.EventHandlerFrames.request_parser = request_parser;
-        local answered_requesters = {};
-        request_parser:RegisterEvent("CHAT_MSG_SAY");
-        request_parser:SetScript("OnEvent",
-            function(self, event, msg, sender)
-                if event == "CHAT_MSG_SAY" 
-                        and msg == CHAT_MESSAGE_TIMER_REQUEST
-                        and not Util.SetUtil.ContainsKey(answered_requesters, sender)
-                        and not PlayerSentMessage(sender) then
-
-                    if WBT.InBossZone() then
-                        local ki = WBT.GetPrimaryKillInfo();
-                        if ki and ki:IsSafeToShare({}) then
-                            -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken by 8.2.5
-                            -- TODO: Consider if this could trigger some optional sparkle
-                            -- in the GUI instead
-                            answered_requesters[sender] = sender;
-                        end
-                    end
-                end
-            end
-        );
     end
 
     local function InitSharedTimersParser()
