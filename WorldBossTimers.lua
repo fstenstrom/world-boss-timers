@@ -534,8 +534,16 @@ local function StartCombatHandler()
     local time_out_death  = 30;   -- No debuff from the bosses should last longer than this
     combat_frame.t_next_alert_boss_combat = 0;
 
+    -- This function is called on every combat event, so needs to be performant.
     function CombatHandler(...)
-        local _, event_type, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
+        local _, subevent, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
+
+        if not (Util.StrEndsWith(subevent, "_DAMAGE") or
+                Util.StrEndsWith(subevent, "_MISSED") or
+                subevent == "UNIT_DIED")
+        then
+            return;
+        end
 
         -- Convert to English name from GUID, to make it work for
         -- localization.
@@ -552,9 +560,9 @@ local function StartCombatHandler()
             FlashClientIcon();
             combat_frame.t_next_alert_boss_combat = t + time_out_combat;
         end
-        
+
         -- Check for boss death
-        if event_type == "UNIT_DIED" then
+        if subevent == "UNIT_DIED" then
             local shard_id = WBT.ParseShardID(dest_unit_guid);
             WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
             RequestRaidInfo(); -- Updates which bosses are saved

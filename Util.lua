@@ -98,6 +98,16 @@ end
 function SetUtil.ContainsValue(set, value)
     return SetUtil.FindKey(set, value) and true;
 end
+
+--------------------------------------------------------------------------------
+-- String utils
+--------------------------------------------------------------------------------
+
+-- Source: http://lua-users.org/wiki/StringRecipes
+function Util.StrEndsWith(str, ending)
+    return ending == "" or str:sub(-#ending) == ending;
+end
+
 --------------------------------------------------------------------------------
 
 function Util.FormatTimeSeconds(seconds)
