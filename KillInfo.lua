@@ -234,14 +234,6 @@ function KillInfo:GetSpawnTimeAsText()
     end
 end
 
-function KillInfo:ShouldAutoAnnounce()
-    return WBT.db.global.auto_announce
-            and Util.SetUtil.ContainsValue(self.announce_times, self:GetSecondsUntilLatestRespawn())
-            and WBT.PlayerIsInBossPerimiter(self.boss_name)
-            and WBT.BossData.Get(self.boss_name).auto_announce
-            and self:IsSafeToShare({});
-end
-
 function KillInfo:InTimeWindow(from, to)
     local t_now = GetServerTime();
     return from <= t_now and t_now <= to;

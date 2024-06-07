@@ -263,6 +263,10 @@ local function LoadWBT()
     assert(loadfile("Options.lua"))         (addonName, addonTable);
     assert(loadfile("KillInfo.lua"))        (addonName, addonTable);
     local WBT = assert(loadfile("WorldBossTimers.lua"))(addonName, addonTable);
+
+    WBT.AceAddon:OnEnable();
+    EventManager:FireEvent("PLAYER_ENTERING_WORLD");
+
     return WBT;
 end
 
@@ -304,7 +308,6 @@ local function TestSharingWithoutShardId()
     local bossname = "Oondasta";
     EventManager:Reset();
     WBT = LoadWBT();
-    WBT.AceAddon:OnEnable();
 
     -- Detect current shard:
     local test_shard_id = 44;
@@ -332,7 +335,6 @@ end
 local function TestShare(bossname, expectSuccess)
     EventManager:Reset();
     WBT = LoadWBT();
-    WBT.AceAddon:OnEnable();
 
     -- Detect current shard:
     g_game.world.shard_id = 44;
@@ -356,7 +358,6 @@ end
 local function TestShareReceiverHasExpiredTimer()
     EventManager:Reset();
     WBT = LoadWBT();
-    WBT.AceAddon:OnEnable();
 
     -- Detect current shard:
     g_game.world.shard_id = 44;
@@ -395,7 +396,6 @@ local function TestSavedShard()
     EventManager:Reset();
     WBT = LoadWBT();
     local KillInfo = WBT.KillInfo;
-    WBT.AceAddon:OnEnable();
 
     -- Initially saved shard should be unknown:
     assert(WBT.GetCurrentShardID()                    == KillInfo.UNKNOWN_SHARD);
@@ -438,7 +438,6 @@ local function TestSavedShardKillInfo()
     EventManager:Reset();
     WBT = LoadWBT();
     local Options = WBT.Options;
-    WBT.AceAddon:OnEnable();
     local ki;
 
     -- Detect shard and kill boss:

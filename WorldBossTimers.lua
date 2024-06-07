@@ -134,9 +134,8 @@ end
 
 -- The frames that handle events. Used as an access point for testing.
 WBT.EventHandlerFrames = {
-    boss_death_frame                = nil,
-    boss_combat_frame               = nil,
-    request_parser                  = nil,
+    combat_frame                    = nil,
+    toggle_combat_frame             = nil,
     timer_parser                    = nil,
     shard_detection_frame           = nil,
     shard_detection_restarter_frame = nil,
@@ -512,30 +511,6 @@ function WBT.PutOrUpdateKillInfo(name, shard_id, t_death)
     g_gui:Update();
 end
 
-local function StartDeathTrackerFrame()
-    local boss_death_frame = CreateFrame("Frame", "WBT_BOSS_DEATH_FRAME");
-    WBT.EventHandlerFrames.boss_death_frame = boss_death_frame;
-
-    boss_death_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    boss_death_frame:SetScript("OnEvent", function(...)
-            local _, eventType, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
-
-            -- Convert to English name from GUID, to make it work for
-            -- localization.
-            local name = BossData.NameFromUnitGuid(dest_unit_guid, WBT.GetCurrentMapId());
-            if name == nil then
-                return;
-            end
-
-            if eventType == "UNIT_DIED" then
-                local shard_id = WBT.ParseShardID(dest_unit_guid);
-                WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
-                RequestRaidInfo(); -- Updates which bosses are saved
-                g_gui:Update();
-            end
-        end);
-end
-
 local function PlaySoundAlertSpawn()
     Util.PlaySoundAlert(Options.spawn_alert_sound:Value());
 end
@@ -551,34 +526,69 @@ local function PlaySoundAlertBossCombat(name)
     Util.PlaySoundAlert(soundfile);
 end
 
-local function StartCombatScannerFrame()
-    local boss_combat_frame = CreateFrame("Frame", "WBT_BOSS_COMBAT_FRAME");
-    WBT.EventHandlerFrames.boss_combat_frame = boss_combat_frame;
+local function StartCombatHandler()
+    local combat_frame = CreateFrame("Frame", "WBT_COMBAT_FRAME");
+    WBT.EventHandlerFrames.combat_frame = combat_frame;
 
-    local time_out = 60*2; -- Old expansion world bosses SHOULD die in this time.
-    boss_combat_frame.t_next = 0;
+    local time_out_combat = 60*2; -- Old expansion world bosses should die in this time
+    local time_out_death  = 30;   -- No debuff from the bosses should last longer than this
+    combat_frame.t_next_alert_boss_combat = 0;
 
-    function ScanWorldBossCombat(...)
-		local dest_unit_guid = select(8, CombatLogGetCurrentEventInfo());
+    -- This function is called on every combat event, so needs to be performant.
+    function CombatHandler(...)
+        local _, subevent, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
 
-        -- Convert to English name from GUID, to make it work for
-        -- localization.
-        local name = BossData.NameFromUnitGuid(dest_unit_guid, WBT.GetCurrentMapId());
+        if not (Util.StrEndsWith(subevent, "_DAMAGE") or
+                Util.StrEndsWith(subevent, "_MISSED") or
+                subevent == "UNIT_DIED")
+        then
+            return;
+        end
+
+        -- Find the English name from GUID, to make it work for localization, instead
+        -- of using the name in the event args.
+        local name = BossData.BossNameFromUnitGuid(dest_unit_guid, WBT.GetCurrentMapId());
         if name == nil then
             return;
         end
 
+        -- Check for boss combat
         local t = GetServerTime();
-        if WBT.IsBoss(name) and t > boss_combat_frame.t_next then
+        if t > combat_frame.t_next_alert_boss_combat then
             WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
             PlaySoundAlertBossCombat(name);
             FlashClientIcon();
-            boss_combat_frame.t_next = t + time_out;
+            combat_frame.t_next_alert_boss_combat = t + time_out_combat;
+        end
+
+        -- Check for boss death
+        if subevent == "UNIT_DIED" then
+            local shard_id = WBT.ParseShardID(dest_unit_guid);
+            WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
+            RequestRaidInfo(); -- Updates which bosses are saved
+            g_gui:Update();
+            combat_frame.t_next_alert_boss_combat = t + time_out_death;
         end
     end
 
-    boss_combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
-    boss_combat_frame:SetScript("OnEvent", ScanWorldBossCombat);
+    combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+
+    -- Start a handler which makes sure that the combat handler is only enabled when
+    -- in a boss zone. For performance.
+    local toggle_combat_frame = CreateFrame("Frame", "WBT_TOGGLE_COMBAT_FRAME");
+    WBT.EventHandlerFrames.toggle_combat_frame = toggle_combat_frame;
+
+    toggle_combat_frame:RegisterEvent("ZONE_CHANGED_NEW_AREA");
+    toggle_combat_frame:RegisterEvent("PLAYER_ENTERING_WORLD");
+    toggle_combat_frame:SetScript("OnEvent",
+        function(...)
+            local handler = nil;
+            if WBT.InBossZone() then
+                handler = CombatHandler;
+            end
+            combat_frame:SetScript("OnEvent", handler);
+        end
+    );
 end
 
 function WBT.AceAddon:OnInitialize()
@@ -685,32 +695,6 @@ local function StartChatParser()
         return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
     end
 
-    local function InitRequestParser()
-        local request_parser = CreateFrame("Frame", "WBT_REQUEST_PARSER_FRAME");
-        WBT.EventHandlerFrames.request_parser = request_parser;
-        local answered_requesters = {};
-        request_parser:RegisterEvent("CHAT_MSG_SAY");
-        request_parser:SetScript("OnEvent",
-            function(self, event, msg, sender)
-                if event == "CHAT_MSG_SAY" 
-                        and msg == CHAT_MESSAGE_TIMER_REQUEST
-                        and not Util.SetUtil.ContainsKey(answered_requesters, sender)
-                        and not PlayerSentMessage(sender) then
-
-                    if WBT.InBossZone() then
-                        local ki = WBT.GetPrimaryKillInfo();
-                        if ki and ki:IsSafeToShare({}) then
-                            -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken by 8.2.5
-                            -- TODO: Consider if this could trigger some optional sparkle
-                            -- in the GUI instead
-                            answered_requesters[sender] = sender;
-                        end
-                    end
-                end
-            end
-        );
-    end
-
     local function InitSharedTimersParser()
         local timer_parser = CreateFrame("Frame", "WBT_TIMER_PARSER_FRAME");
         WBT.EventHandlerFrames.timer_parser = timer_parser;
@@ -756,7 +740,6 @@ local function StartChatParser()
         );
     end
 
-    InitRequestParser();
     InitSharedTimersParser();
 end
 
@@ -810,12 +793,8 @@ local function StartKillInfoManager()
     WBT.kill_info_manager:SetScript("OnUpdate", function(self, elapsed)
             self.since_update = self.since_update + elapsed;
             if (self.since_update > t_update) then
-                for _, kill_info in pairs(g_kill_infos) do
-                    if kill_info:ShouldAutoAnnounce() then
-                        -- WBT.AnnounceSpawnTime(kill_info, true); DISABLED: broken in 8.2.5
-                        -- TODO: Consider if here should be something else
-                    end
 
+                for _, kill_info in pairs(g_kill_infos) do
                     if kill_info:ShouldRespawnAlertPlayNow(Options.spawn_alert_sec_before.get()) then
                         FlashClientIcon();
                         PlaySoundAlertSpawn();
@@ -855,13 +834,14 @@ function WBT.AceAddon:OnEnable()
     DeserializeKillInfos();
     FilterValidKillInfosStep2();
 
+    -- Start event handlers
     StartShardDetectionHandler();
-    StartDeathTrackerFrame();
-    StartCombatScannerFrame();
+    StartCombatHandler();
     StartKillInfoManager();
     StartVisibilityHandler();
     StartChatParser();
 
+    -- Initialize slash handlers
     self:RegisterChatCommand("wbt", Options.SlashHandler);
     self:RegisterChatCommand("worldbosstimers", Options.SlashHandler);
 end
