@@ -18,5 +18,5 @@ WorldBossTimers.lua
 
 #@do-not-package@
 TestUtil.lua
-Test.lua
+InteractiveTest.lua
 #@end-do-not-package@

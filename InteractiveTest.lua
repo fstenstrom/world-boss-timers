@@ -1,4 +1,4 @@
--- This file is intended for in-game testing. The file provides functions
+-- This file is intended for manual in-game testing. The file provides functions
 -- for quickly populating the addon instance with test data, which then
 -- can be used to manually verify mainly the behavior of the GUI, but also
 -- the system in its real environment.
@@ -53,13 +53,13 @@ local _, addon = ...;
 
 WBT = addon;  -- Make global when developing
 
-WBT.Test = {};
+WBT.ITest = {};  -- InteractiveTest
 
 local BossData = WBT.BossData;
 local KillInfo = WBT.KillInfo;
 local Util     = WBT.Util;
 local TestUtil = WBT.TestUtil;
-local Test     = WBT.Test;
+local ITest    = WBT.ITest;
 
 local ShardIds = {
     NON_SAVED_ZONE   = 0,  -- No saved zone should have this ID.
@@ -139,28 +139,28 @@ end
 
 -- Starts timers 300 seconds before they expire. This gives time to /reload and still keep
 -- timers before expiration.
-function Test.StartTimers300()
+function ITest.StartTimers300()
     SimKillEverything(300);
 end
 
 -- Starts timers 25 seconds before they expire. This gives time to check that
 -- alerts/sharing is performed.
-function Test.StartTimers25()
+function ITest.StartTimers25()
     SimKillEverything(25);
 end
 
 -- Starts timer 4 seconds before sharing. This allows to check what happens when
 -- timers expire.
-function Test.StartTimers4(n)
+function ITest.StartTimers4(n)
     SimKillEverything(4);
 end
 
-function Test.ShareLegacyTimer(shard_id_or_nil)
+function ITest.ShareLegacyTimer(shard_id_or_nil)
     local msg = TestUtil.CreateShareMsg("Grellkin", GetServerTime(), 9, shard_id_or_nil)
     SendChatMessage(msg, "SAY");
 end
 
-function Test.ResetOpts()
+function ITest.ResetOpts()
     -- FIXME: This also resets other saved non-opts saved values.
     for k, v in pairs(WBT.defaults.global) do
         if k ~= "kill_infos" then
@@ -174,17 +174,17 @@ end
 
 -- First time this is run it saves all saved ids. Consecutive times it prints
 -- all new ids completed after that point.
-function Test.FindQuestFlaggedComplete()
-    if Test.saved_ids_pre == nil then
+function ITest.FindQuestFlaggedComplete()
+    if ITest.saved_ids_pre == nil then
         -- Save all completed ids
-        Test.saved_ids_pre = {};
+        ITest.saved_ids_pre = {};
         for id=1,100000 do
-            Test.saved_ids_pre[id] = C_QuestLog.IsQuestFlaggedCompleted(id);
+            ITest.saved_ids_pre[id] = C_QuestLog.IsQuestFlaggedCompleted(id);
         end
     else
         -- Diff with the saved ids to find what's changed
         for id=1,100000 do  
-            if Test.saved_ids_pre[id] ~= C_QuestLog.IsQuestFlaggedCompleted(id) then
+            if ITest.saved_ids_pre[id] ~= C_QuestLog.IsQuestFlaggedCompleted(id) then
                 print("New saved id: " .. id);
             end
         end
@@ -192,7 +192,7 @@ function Test.FindQuestFlaggedComplete()
 end
 
 
-function Test.GetEnvData()
+function ITest.GetEnvData()
     print("MapId: " .. WBT.GetCurrentMapId());
 
     local x, y = WBT.GetPlayerCoords();
@@ -208,10 +208,10 @@ function Test.GetEnvData()
     end
 
     -- Will print by itself:
-    Test.FindQuestFlaggedComplete();
+    ITest.FindQuestFlaggedComplete();
 end
 
-function Test.RestartShardDetection()
+function ITest.RestartShardDetection()
     local f = WBT.EventHandlerFrames.shard_detection_restarter_frame;
     local delay_old = f.delay;
     f.delay = 0;
@@ -219,54 +219,54 @@ function Test.RestartShardDetection()
     f.delay = delay_old;
 end
 
-function Test.SetIsleOfGiantsSavedShardId_1()
+function ITest.SetIsleOfGiantsSavedShardId_1()
     WBT.PutSavedShardIDForZone(WBT.BossData.Get("Oondasta").map_id, ShardIds.ISLE_OF_GIANTS_1);
     WBT.GUI:Update();
 end
 
-function Test.SetIsleOfGiantsSavedShardId_2()
+function ITest.SetIsleOfGiantsSavedShardId_2()
     WBT.PutSavedShardIDForZone(WBT.BossData.Get("Oondasta").map_id, ShardIds.ISLE_OF_GIANTS_2);
     WBT.GUI:Update();
 end
 
-function Test.ToggleDevSilent()
+function ITest.ToggleDevSilent()
     WBT.Options.dev_silent:Toggle();
 end
 
-function Test.PrintShards()
+function ITest.PrintShards()
     print("Current:", WBT.GetCurrentShardID());
     print("Saved:", WBT.GetSavedShardID(WBT.GetCurrentMapId()));
 end
 
-function Test.IncreaseAllTimerAges(sec)
+function ITest.IncreaseAllTimerAges(sec)
     for _, ki in pairs(WBT.db.global.kill_infos) do
         ki.t_death = ki.t_death - sec;
     end
     WBT.GUI:Update();
 end
 
-function Test.AgeTimers_10s()
-    Test.IncreaseAllTimerAges(10);
+function ITest.AgeTimers_10s()
+    ITest.IncreaseAllTimerAges(10);
 end
 
-function Test.AgeTimers_1m()
-    Test.IncreaseAllTimerAges(60);
+function ITest.AgeTimers_1m()
+    ITest.IncreaseAllTimerAges(60);
 end
 
-function Test.AgeTimers_10m()
-    Test.IncreaseAllTimerAges(10*60);
+function ITest.AgeTimers_10m()
+    ITest.IncreaseAllTimerAges(10*60);
 end
 
 --------------------------------------------------------------------------------
 
-function Test:CreateButton(text, fcn)
+function ITest:CreateButton(text, fcn)
     local btn = self.AceGUI:Create("Button");
     btn:SetText(text);
     btn:SetCallback("OnClick", fcn);
     return btn;
 end
 
-function Test:BuildTestGUI()
+function ITest:BuildTestGUI()
     if self.AceGUI == nil then
         self.AceGUI = LibStub("AceGUI-3.0");
     end
@@ -275,20 +275,20 @@ function Test:BuildTestGUI()
     self.grp.frame:SetFrameStrata("LOW");
     self.grp:SetLayout("Flow");
     self.grp:SetWidth(120);
-    self.grp:AddChild(self:CreateButton("dsim300",        Test.StartTimers300));
-    self.grp:AddChild(self:CreateButton("dsim25",         Test.StartTimers25));
-    self.grp:AddChild(self:CreateButton("dsim4",          Test.StartTimers4));
-    self.grp:AddChild(self:CreateButton("Age 10s",        Test.AgeTimers_10s));
-    self.grp:AddChild(self:CreateButton("Age 1m",         Test.AgeTimers_1m));
-    self.grp:AddChild(self:CreateButton("Age 10m",        Test.AgeTimers_10m));
+    self.grp:AddChild(self:CreateButton("dsim300",        ITest.StartTimers300));
+    self.grp:AddChild(self:CreateButton("dsim25",         ITest.StartTimers25));
+    self.grp:AddChild(self:CreateButton("dsim4",          ITest.StartTimers4));
+    self.grp:AddChild(self:CreateButton("Age 10s",        ITest.AgeTimers_10s));
+    self.grp:AddChild(self:CreateButton("Age 1m",         ITest.AgeTimers_1m));
+    self.grp:AddChild(self:CreateButton("Age 10m",        ITest.AgeTimers_10m));
     self.grp:AddChild(self:CreateButton("Reset",          WBT.ResetKillInfo));
-    self.grp:AddChild(self:CreateButton("Set isle id 1",  Test.SetIsleOfGiantsSavedShardId_1));
-    self.grp:AddChild(self:CreateButton("Set isle id 2",  Test.SetIsleOfGiantsSavedShardId_2));
-    self.grp:AddChild(self:CreateButton("Restart shard",  Test.RestartShardDetection));
-    self.grp:AddChild(self:CreateButton("Show shards",    Test.PrintShards));
-    self.grp:AddChild(self:CreateButton("Silent +-",      Test.ToggleDevSilent));
-    self.grp:AddChild(self:CreateButton("Reset opts",     Test.ResetOpts));
-    self.grp:AddChild(self:CreateButton("Get env data",   Test.GetEnvData));
+    self.grp:AddChild(self:CreateButton("Set isle id 1",  ITest.SetIsleOfGiantsSavedShardId_1));
+    self.grp:AddChild(self:CreateButton("Set isle id 2",  ITest.SetIsleOfGiantsSavedShardId_2));
+    self.grp:AddChild(self:CreateButton("Restart shard",  ITest.RestartShardDetection));
+    self.grp:AddChild(self:CreateButton("Show shards",    ITest.PrintShards));
+    self.grp:AddChild(self:CreateButton("Silent +-",      ITest.ToggleDevSilent));
+    self.grp:AddChild(self:CreateButton("Reset opts",     ITest.ResetOpts));
+    self.grp:AddChild(self:CreateButton("Get env data",   ITest.GetEnvData));
 
     -- Keep at bottom:
     self.grp:AddChild(self:CreateButton("Reload", ReloadUI));
@@ -301,6 +301,6 @@ end
 
 hooksecurefunc(WBT.AceAddon, "OnEnable", function(...)
     if WBT.db.global.build_test_gui then
-        Test:BuildTestGUI();
+        ITest:BuildTestGUI();
     end
 end);
