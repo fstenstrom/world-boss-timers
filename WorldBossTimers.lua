@@ -536,18 +536,20 @@ local function StartCombatHandler()
 
     -- This function is called on every combat event, so needs to be performant.
     function CombatHandler(...)
-        local _, subevent, _, _, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
+        local _, subevent, _, src_unit_guid, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
 
         if not (Util.StrEndsWith(subevent, "_DAMAGE") or
-                Util.StrEndsWith(subevent, "_MISSED") or
+                Util.StrEndsWith(subevent, "_MISSED") or  -- E.g. Rustfeather missing on AFK player
                 subevent == "UNIT_DIED")
         then
             return;
         end
 
-        -- Find the English name from GUID, to make it work for localization, instead
-        -- of using the name in the event args.
-        local name = BossData.BossNameFromUnitGuid(dest_unit_guid, WBT.GetCurrentMapId());
+        -- Find the English name from GUID, to make it work for localization,
+        -- instead of using the name in the event args.
+        local map_id = WBT.GetCurrentMapId();
+        local name = BossData.BossNameFromUnitGuid(dest_unit_guid, map_id) or
+                     BossData.BossNameFromUnitGuid(src_unit_guid,  map_id);
         if name == nil then
             return;
         end
