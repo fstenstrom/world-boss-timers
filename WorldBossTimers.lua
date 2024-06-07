@@ -530,7 +530,7 @@ local function StartCombatHandler()
     local combat_frame = CreateFrame("Frame", "WBT_COMBAT_FRAME");
     WBT.EventHandlerFrames.combat_frame = combat_frame;
 
-    local time_out_combat = 60*2; -- Old expansion world bosses SHOULD die in this time
+    local time_out_combat = 60*2; -- Old expansion world bosses should die in this time
     local time_out_death  = 30;   -- No debuff from the bosses should last longer than this
     combat_frame.t_next_alert_boss_combat = 0;
 
@@ -545,8 +545,8 @@ local function StartCombatHandler()
             return;
         end
 
-        -- Convert to English name from GUID, to make it work for
-        -- localization.
+        -- Find the English name from GUID, to make it work for localization, instead
+        -- of using the name in the event args.
         local name = BossData.BossNameFromUnitGuid(dest_unit_guid, WBT.GetCurrentMapId());
         if name == nil then
             return;
