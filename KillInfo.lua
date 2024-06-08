@@ -83,7 +83,6 @@ function KillInfo:SetInitialValues()
     self.realm_name            = GetRealmName(); -- Only use for printing!
     self.realm_name_normalized = GetNormalizedRealmName();
     self.map_id                = WBT.GetCurrentMapId();
-    self.announce_times        = {1, 2, 3, 10, 30, 1*60, 5*60, 10*60};
     self.has_triggered_respawn = false;
 end
 
@@ -135,7 +134,7 @@ function KillInfo:Deserialize(serialized)
 
     -- Workaround: Update old timers with new db object in case BossData has been updated in new addon version.
     -- FIXME: Don't save db object. See KillInfo.New.
-    ki.db = WBT.BossData.Get(ki.boss_name);  
+    ki.db = WBT.BossData.Get(ki.boss_name);
 
     return ki;
 end
