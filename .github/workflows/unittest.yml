@@ -1,0 +1,17 @@
+name: UnitTest
+
+on:
+  push
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+      - name: Install Lua
+        run: |
+          sudo apt-get update
+          sudo apt-get install lua5.3
+      - name: Run tests
+        run: lua UnitTest.lua
