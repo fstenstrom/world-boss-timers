@@ -254,6 +254,10 @@ end
 -- as Blizzard (probably) does it. (An option would be to change how module
 -- imports are done, and instead import with 'require' instead of file varargs.)
 local function LoadWBT()
+    WBT = nil;  -- Remove any global WBT from previous tests
+
+    EventManager:Reset();
+
     local addonName = "addonname_unused";
     local addonTable = {};
 
@@ -319,7 +323,6 @@ end
 local function TestSharingWithoutShardId()
     g_test_settings.wbt_print = false;
     local bossname = "Oondasta";
-    EventManager:Reset();
     WBT = LoadWBT();
 
     -- Detect current shard:
@@ -346,7 +349,6 @@ local function TestSharingWithoutShardId()
 end
 
 local function TestShare(bossname, expectSuccess)
-    EventManager:Reset();
     WBT = LoadWBT();
 
     -- Detect current shard:
@@ -369,7 +371,6 @@ local function TestShare(bossname, expectSuccess)
 end
 
 local function TestShareReceiverHasExpiredTimer()
-    EventManager:Reset();
     WBT = LoadWBT();
 
     -- Detect current shard:
@@ -406,7 +407,6 @@ local function TestShareReceiverHasExpiredTimer()
 end
 
 local function TestSavedShard()
-    EventManager:Reset();
     WBT = LoadWBT();
     local KillInfo = WBT.KillInfo;
 
@@ -448,7 +448,6 @@ local function TestSavedShard()
 end
 
 local function TestSavedShardKillInfo()
-    EventManager:Reset();
     WBT = LoadWBT();
     local Options = WBT.Options;
     local ki;
@@ -520,9 +519,7 @@ local function TestSavedShardKillInfo()
     assert(ki);  -- Found again
 end
 
-
 local function TestBossCombat()
-    EventManager:Reset();
     WBT = LoadWBT();
 
     -- Detect shard and get initial values
@@ -551,6 +548,46 @@ local function TestBossCombat()
     assert(t_next_old < combat_frame.t_next_alert_boss_combat);
 end
 
+local function CreateKillInfo()
+    WBT = LoadWBT();
+    g_game.world.shard_id = 44;
+    FireDetectShard();
+    FireLocalBossDeath();
+    local ki = WBT.GetPrimaryKillInfo();
+    WBT = nil;
+    return ki;
+end
+
+-- Test that serialized KIs don't cause a crash when they refer to bosses
+-- that were added by manually patching BossData.lua, but which no longer
+-- are in BossData.lua. This can happen if the user updated the addon without
+-- adding back the patched bosses. Patching BossData.lua is not officially
+-- supported, but shouldn't cause a crash.
+-- 
+-- Note that if bosses are officially removed, then KillInfo.version will
+-- be updated, which will cause all old KIs to be discarded.
+local function TestDeserializeInvalidBoss()
+    -- Create a KI for an invalid boss:
+    local ki_invalid = CreateKillInfo();
+    ki_invalid.boss_name = "InvalidBossName";
+    ki_invalid.db = nil;  -- Will cause NPE if deserialization fails
+
+    -- Also create a KI for a valid boss:
+    local ki_valid = CreateKillInfo();
+
+    -- Create a fresh WBT instance with the KIs:
+    WBT_UnitTest = {};
+    function WBT_UnitTest.PreDeserializeHook(wbt)
+        wbt.db.global.kill_infos[ki_invalid:ID()] = ki_invalid;
+        wbt.db.global.kill_infos[ki_valid:ID()]   = ki_valid;
+    end
+    WBT = LoadWBT();
+
+    -- Assert that the invalid KI was never loaded:
+    assert(WBT.db.global.kill_infos[ki_invalid:ID()] == nil);
+    assert(WBT.db.global.kill_infos[ki_valid:ID()]   ~= nil);
+end
+
 local function main()
     TestStrSplit();
     TestSharingWithoutShardId();
@@ -563,6 +600,7 @@ local function main()
     TestSavedShard();
     TestSavedShardKillInfo();
     TestBossCombat();
+    TestDeserializeInvalidBoss();
 end
 
 main()

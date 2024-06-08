@@ -14,7 +14,8 @@
         "ReloadUI",
         "IsControlKeyDown",
         "IsShiftKeyDown",
-        "DEFAULT_CHAT_FRAME"
+        "DEFAULT_CHAT_FRAME",
+        "WBT_UnitTest"
     ],
     "Lua.workspace.ignoreDir": [ "/libs" ],
     "Lua.completion.enable": false

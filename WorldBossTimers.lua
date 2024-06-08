@@ -751,7 +751,7 @@ local function DeserializeKillInfos()
     end
 end
 
--- Step1 is performed before deserialization and looks just at the ID.
+-- Step1 is performed before deserialization and looks just at the ID and boss name.
 local function FilterValidKillInfosStep1()
     -- Perform filtering in two steps to avoid what I guess would
     -- be some kind of "ConcurrentModificationException".
@@ -759,13 +759,19 @@ local function FilterValidKillInfosStep1()
     -- Find invalid:
     local invalid = {};
     for id, ki in pairs(WBT.db.global.kill_infos) do
+        -- 
         if not KillInfo.IsValidID(id) then
+            invalid[id] = ki;
+        elseif not BossData.BossExists(ki.boss_name) then
+            -- Can happen if BossData.lua was manually patched to add more bosses,
+            -- and later the user updated the addon, but didn't add back the patched
+            -- entries. Not officially supported, but shouldn't cause a crash.
             invalid[id] = ki;
         end
     end
 
     -- Remove invalid:
-    for id, ki in pairs(invalid) do
+    for id, _ in pairs(invalid) do
         Logger.Debug("[PreDeserialize]: Removing invalid KI with ID: " .. id);
         WBT.db.global.kill_infos[id] = nil;
     end
@@ -829,6 +835,11 @@ function WBT.AceAddon:OnEnable()
     WBT.AceConfigDialog:AddToBlizOptions(WBT.addon_name, WBT.addon_name, nil);
 
     g_gui = GUI:New();
+
+    -- Call unit testing hook:
+    if WBT_UnitTest then
+        WBT_UnitTest.PreDeserializeHook(WBT);
+    end
 
     -- Initialize g_kill_infos:
     g_kill_infos = WBT.db.global.kill_infos;  -- Alias to make code more readable.
