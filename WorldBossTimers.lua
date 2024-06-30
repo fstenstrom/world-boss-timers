@@ -582,15 +582,17 @@ local function StartCombatHandler()
 
     toggle_combat_frame:RegisterEvent("ZONE_CHANGED_NEW_AREA");
     toggle_combat_frame:RegisterEvent("PLAYER_ENTERING_WORLD");
-    toggle_combat_frame:SetScript("OnEvent",
-        function(...)
+    toggle_combat_frame:SetScript("OnEvent", function(...)
+        -- Sometimes the API for retrieving the map ID returns the wrong ID, e.g. when entering
+        -- Isle of Giants. It seems to be intermittent. Trying to fix by adding some delay.
+        C_Timer.After(3, function(...)
             local handler = nil;
             if WBT.InBossZone() then
                 handler = CombatHandler;
             end
             combat_frame:SetScript("OnEvent", handler);
-        end
-    );
+        end);
+    end);
 end
 
 function WBT.AceAddon:OnInitialize()
