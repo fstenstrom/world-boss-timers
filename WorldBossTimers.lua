@@ -134,8 +134,8 @@ end
 
 -- The frames that handle events. Used as an access point for testing.
 WBT.EventHandlerFrames = {
+    main_loop                       = nil,
     combat_frame                    = nil,
-    toggle_combat_frame             = nil,
     timer_parser                    = nil,
     shard_detection_frame           = nil,
     shard_detection_restarter_frame = nil,
@@ -285,7 +285,7 @@ end
 function WBT.InBossZone()
     local current_map_id = WBT.GetCurrentMapId();
 
-    for name, boss in pairs(BossData.GetAll()) do
+    for _, boss in pairs(BossData.GetAll()) do
         if boss.map_id == current_map_id then
             return true;
         end
@@ -526,16 +526,17 @@ local function PlaySoundAlertBossCombat(name)
     Util.PlaySoundAlert(soundfile);
 end
 
+-- NOTE: The handler for combat_frame is not set here, but in the main OnUpdate loop.
 local function StartCombatHandler()
     local combat_frame = CreateFrame("Frame", "WBT_COMBAT_FRAME");
     WBT.EventHandlerFrames.combat_frame = combat_frame;
 
-    local time_out_combat = 60*2; -- Old expansion world bosses should die in this time
-    local time_out_death  = 30;   -- No debuff from the bosses should last longer than this
+    local timeout_combat = 60*2; -- Old expansion world bosses should die in this time
+    local timeout_death  = 30;   -- No debuff from the bosses should last longer than this
     combat_frame.t_next_alert_boss_combat = 0;
 
     -- This function is called on every combat event, so needs to be performant.
-    function CombatHandler(...)
+    local function CombatHandler(...)
         local _, subevent, _, src_unit_guid, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
 
         if not (Util.StrEndsWith(subevent, "_DAMAGE") or
@@ -560,7 +561,7 @@ local function StartCombatHandler()
             WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
             PlaySoundAlertBossCombat(name);
             FlashClientIcon();
-            combat_frame.t_next_alert_boss_combat = t + time_out_combat;
+            combat_frame.t_next_alert_boss_combat = t + timeout_combat;
         end
 
         -- Check for boss death
@@ -569,30 +570,28 @@ local function StartCombatHandler()
             WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
             RequestRaidInfo(); -- Updates which bosses are saved
             g_gui:Update();
-            combat_frame.t_next_alert_boss_combat = t + time_out_death;
+            combat_frame.t_next_alert_boss_combat = t + timeout_death;
         end
+    end
+
+    -- Enables or disables the handler which scans for boss combat.
+    --
+    -- Should run in the main loop (every 1 sec).
+    --
+    -- Note that there used to be a separate handler which toggled this behavior based on e.g.
+    -- ZONE_CHANGED_NEW_AREA, but it was very buggy, most likely due to the map ID not updating
+    -- correctly. (Adding delays didn't fix it.)
+    function combat_frame.UpdateCombatHandler()
+        local handler = nil;
+        if WBT.InBossZone() then
+            handler = CombatHandler;
+        end
+        combat_frame:SetScript("OnEvent", handler);
     end
 
     combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
 
-    -- Start a handler which makes sure that the combat handler is only enabled when
-    -- in a boss zone. For performance.
-    local toggle_combat_frame = CreateFrame("Frame", "WBT_TOGGLE_COMBAT_FRAME");
-    WBT.EventHandlerFrames.toggle_combat_frame = toggle_combat_frame;
-
-    toggle_combat_frame:RegisterEvent("ZONE_CHANGED_NEW_AREA");
-    toggle_combat_frame:RegisterEvent("PLAYER_ENTERING_WORLD");
-    toggle_combat_frame:SetScript("OnEvent", function(...)
-        -- Sometimes the API for retrieving the map ID returns the wrong ID, e.g. when entering
-        -- Isle of Giants. It seems to be intermittent. Trying to fix by adding some delay.
-        C_Timer.After(3, function(...)
-            local handler = nil;
-            if WBT.InBossZone() then
-                handler = CombatHandler;
-            end
-            combat_frame:SetScript("OnEvent", handler);
-        end);
-    end);
+    return combat_frame;
 end
 
 function WBT.AceAddon:OnInitialize()
@@ -796,11 +795,13 @@ local function FilterValidKillInfosStep2()
     end
 end
 
-local function StartKillInfoManager()
-    WBT.kill_info_manager = CreateFrame("Frame", "WBT_KILL_INFO_MANAGER_FRAME");
-    WBT.kill_info_manager.since_update = 0;
+local function StartMainLoopHandler(combat_handler)
+    local main_loop = CreateFrame("Frame", "WBT_MAIN_LOOP_FRAME");
+    WBT.EventHandlerFrames.main_loop = main_loop;
+
+    main_loop.since_update = 0;
     local t_update = 1;
-    WBT.kill_info_manager:SetScript("OnUpdate", function(self, elapsed)
+    main_loop:SetScript("OnUpdate", function(self, elapsed)
             self.since_update = self.since_update + elapsed;
             if (self.since_update > t_update) then
 
@@ -810,6 +811,8 @@ local function StartKillInfoManager()
                         PlaySoundAlertSpawn();
                     end
                 end
+
+                combat_handler.UpdateCombatHandler();
 
                 g_gui:Update();
 
@@ -851,8 +854,8 @@ function WBT.AceAddon:OnEnable()
 
     -- Start event handlers
     StartShardDetectionHandler();
-    StartCombatHandler();
-    StartKillInfoManager();
+    local combat_frame = StartCombatHandler();
+    StartMainLoopHandler(combat_frame);
     StartVisibilityHandler();
     StartChatParser();
 
@@ -931,7 +934,7 @@ end
 -- Useful to stop getting lua errors so the stack trace can be examined without
 -- getting refreshed all the time.
 function Dev.StopGUI()
-    WBT.kill_info_manager:SetScript("OnUpdate", nil);
+    WBT.EventHandlerFrames.main_loop:SetScript("OnUpdate", nil);
 end
 
 --------------------------------------------------------------------------------

@@ -69,14 +69,18 @@ function Frame:SetScript(triggerKind, eventHandler)
 end
 
 function Frame:HandleEvent(event, ...)
-    if self.trigger_kind ~= "OnEvent" then
-        -- print("Fake Frame: Only 'OnEvent' supported. My trigger kind: ", self.trigger_kind);
-        return;
-    end
-    if self.events[event] then
-        -- print(self.name)
-        self:event_handler(event, ...);
-        return;
+    if self.trigger_kind == "OnUpdate" then
+        if event == "OnUpdate" then
+            self:event_handler(...);
+        end
+    elseif self.trigger_kind == "OnEvent" then
+        if self.events[event] then
+            self:event_handler(event, ...);
+        end
+    elseif self.trigger_kind == nil then
+        -- Do nothing. No handler set yet.
+    else
+        assert(false, "Invalid trigger kind: " .. self.trigger_kind);
     end
 end
 
@@ -246,6 +250,11 @@ function strsplit(sep, str)
     return table.unpack(t)
 end
 
+local function RunMainLoop()
+    local elapsed = 1.1;
+    EventManager:FireEvent("OnUpdate", elapsed);
+end
+
 --------------------------------------------------------------------------------
 -- Blizzard-like addon loader for WBT
 --------------------------------------------------------------------------------
@@ -272,6 +281,7 @@ local function LoadWBT()
 
     WBT.AceAddon:OnEnable();
     EventManager:FireEvent("PLAYER_ENTERING_WORLD");
+    RunMainLoop();
 
     return WBT;
 end
@@ -317,7 +327,11 @@ end
 
 local function FireZoneChange(map_id)
     g_game.player.map_id = map_id;
+
+    -- This event is no longer tracked by WBT, but it doesn't hurt keeping it for testing.
     EventManager:FireEvent("ZONE_CHANGED_NEW_AREA");
+
+    RunMainLoop();
 end
 
 local function TestSharingWithoutShardId()
