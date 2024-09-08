@@ -756,7 +756,7 @@ end
 local function FilterValidKillInfosStep1()
     -- Perform filtering in two steps to avoid what I guess would
     -- be some kind of "ConcurrentModificationException".
-    
+
     -- Find invalid:
     local invalid = {};
     for id, ki in pairs(WBT.db.global.kill_infos) do
