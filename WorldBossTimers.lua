@@ -760,7 +760,6 @@ local function FilterValidKillInfosStep1()
     -- Find invalid:
     local invalid = {};
     for id, ki in pairs(WBT.db.global.kill_infos) do
-        -- 
         if not KillInfo.IsValidID(id) then
             invalid[id] = ki;
         elseif not BossData.BossExists(ki.boss_name) then
@@ -780,17 +779,24 @@ end
 
 -- Step2 is performed after deserialization and checks the internal data.
 local function FilterValidKillInfosStep2()
+    
     -- Find invalid.
     local invalid = {};
     for id, ki in pairs(g_kill_infos) do
         if not ki:IsValidVersion() then
-            table.insert(invalid, id);
+            invalid[id] = "Invalid version.";
+        elseif ki:GetSecondsSinceDeath() > (60*60*24) then
+            -- Discard timers older than a day. They are not useful, and the GUI doesn't
+            -- scale well. With about 500 timers (on a 2024 system) you'll get an FPS drop
+            -- every second during the main loop if the GUI is shown, even if no timers are
+            -- shown in it. This avoids that.
+            invalid[id] = "Timer is very old.";
         end
     end
 
     -- Remove invalid.
-    for _, id in pairs(invalid) do
-        Logger.Debug("[PostDeserialize]: Removing invalid KI with ID: " .. id);
+    for id, msg in pairs(invalid) do
+        Logger.Debug("[PostDeserialize]: Removing KI with ID: " .. id .. ". Reason: " .. msg);
         WBT.db.global.kill_infos[id] = nil;
     end
 end
