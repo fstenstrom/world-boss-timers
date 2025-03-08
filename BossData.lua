@@ -448,6 +448,25 @@ local tracked_bosses = {
 --  ["Hirukon"] = {
 --      Won't add. Not limited by respawn time, but by the time and effort it takes to spawn it.
 --  },
+    ["Breezebiter"] = {
+        name = "Breezebiter",
+        color = "|cffe147ff",
+        ids = {195353},
+        is_saved_fcn = function() return false; end,
+        soundfile = Sound.SOUND_FILE_DEFAULT,
+        min_respawn = MinToSec(60),
+        max_respawn = MinToSec(120),
+        random_spawn_time = true,
+        auto_announce = true,
+        map_id = 2024,
+        perimiter = {
+            origin = {
+                x = 0.2980,
+                y = 0.4626,
+            },
+            radius = 0.02,
+        },
+    },
 --@do-not-package@
     ["Grellkin"] = {
         name = "Grellkin",
