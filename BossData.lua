@@ -541,7 +541,11 @@ local function AddZandalariWarbringers()
     end
 end
 
-AddZandalariWarbringers();
+-- Wait with enabling warbringers in classic MoP until they actually exist, otherwise
+-- the "Show GUI only in boss zones" will initially be incorrect.
+if WOW_PROJECT_ID == (WOW_PROJECT_MAINLINE or 1) then
+    AddZandalariWarbringers();
+end
 
 -- END OF STATIC DATA --
 

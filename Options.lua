@@ -339,7 +339,7 @@ function Options.InitializeOptionsTable()
         global_gui_position = {
             name = "Account-wide GUI position",
             order = t_cnt:plusplus(),
-            desc = "When enabled the GUI position is the same for characters",
+            desc = "When enabled the GUI position is the same for all characters",
             type = "toggle",
             width = "full",
             set = function(info, val) Options.global_gui_position:Toggle(); end,

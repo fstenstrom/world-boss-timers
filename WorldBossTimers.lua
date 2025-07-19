@@ -152,7 +152,7 @@ local g_current_shard_id;
 
 local CHANNEL_ANNOUNCE = "SAY";
 local SERVER_DEATH_TIME_PREFIX = "WorldBossTimers:";
-local CHAT_MESSAGE_TIMER_REQUEST = "Could someone share WBT timer?";
+local CHAT_MESSAGE_TIMER_REQUEST = "Could anyone share WBT timer?";
 
 WBT.defaults = {
     global = {
