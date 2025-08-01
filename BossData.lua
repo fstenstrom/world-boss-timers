@@ -23,6 +23,8 @@ local MAX_RESPAWN_ZANDALARI_WARBRINGER = MinToSec(60);
 
 local SOUND_DIR = "Interface/AddOns/WorldBossTimers/resources/sound/";
 
+local IS_RETAIL = WOW_PROJECT_ID == (WOW_PROJECT_MAINLINE or 1);
+
 
 local function IsSavedWorldBoss(id_wb)
     local n_saved = GetNumSavedWorldBosses();
@@ -88,9 +90,9 @@ local tracked_bosses = {
         ids = {62346},
         is_saved_fcn = function() return IsSavedWorldBoss(2); end,
         soundfile = Sound.SOUND_FILE_DEFAULT,
-        min_respawn = MAX_RESPAWN,
-        max_respawn = MAX_RESPAWN,
-        random_spawn_time = false,
+        min_respawn = IS_RETAIL and MAX_RESPAWN or MinToSec(60),
+        max_respawn = IS_RETAIL and MAX_RESPAWN or MinToSec(180),
+        random_spawn_time = not IS_RETAIL,
         auto_announce = true,
         map_id = 376,
         perimiter = {
@@ -543,7 +545,7 @@ end
 
 -- Wait with enabling warbringers in classic MoP until they actually exist, otherwise
 -- the "Show GUI only in boss zones" will initially be incorrect.
-if WOW_PROJECT_ID == (WOW_PROJECT_MAINLINE or 1) then
+if IS_RETAIL then
     AddZandalariWarbringers();
 end
 

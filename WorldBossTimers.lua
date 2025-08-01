@@ -531,8 +531,6 @@ local function StartCombatHandler()
     local combat_frame = CreateFrame("Frame", "WBT_COMBAT_FRAME");
     WBT.EventHandlerFrames.combat_frame = combat_frame;
 
-    local timeout_combat = 60*2; -- Old expansion world bosses should die in this time
-    local timeout_death  = 30;   -- No debuff from the bosses should last longer than this
     combat_frame.t_next_alert_boss_combat = 0;
 
     -- This function is called on every combat event, so needs to be performant.
@@ -561,8 +559,11 @@ local function StartCombatHandler()
             WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
             PlaySoundAlertBossCombat(name);
             FlashClientIcon();
-            combat_frame.t_next_alert_boss_combat = t + timeout_combat;
         end
+
+        -- Avoid repetition of alert as long as boss is in combat. Should be < 30 sec to
+        -- re-alert on Vanish resets.
+        combat_frame.t_next_alert_boss_combat = t + 25;
 
         -- Check for boss death
         if subevent == "UNIT_DIED" then
@@ -570,7 +571,6 @@ local function StartCombatHandler()
             WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
             RequestRaidInfo(); -- Updates which bosses are saved
             g_gui:Update();
-            combat_frame.t_next_alert_boss_combat = t + timeout_death;
         end
     end
 
