@@ -228,6 +228,9 @@ function PlaySoundFile(_, _)   return; end
 function FlashClientIcon() return; end
 function RequestRaidInfo() return; end
 
+function GetNumSavedWorldBosses() return 0; end
+function GetSavedWorldBossInfo(idx) return nil, 0, nil; end
+
 
 -- Change this fields before firing an event that uses combat event info.
 local CombatEventInfo = {
