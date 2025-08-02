@@ -170,6 +170,7 @@ WBT.defaults = {
         show_saved = false,
         show_realm = false,
         dev_silent = false,
+        alert_when_saved = false,
         cyclic = false,
         max_num_cycles = 1,
         log_level = "Info",
@@ -556,9 +557,12 @@ local function StartCombatHandler()
         -- Check for boss combat
         local t = GetServerTime();
         if t > combat_frame.t_next_alert_boss_combat then
-            WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
-            PlaySoundAlertBossCombat(name);
-            FlashClientIcon();
+            -- Don't alert if saved, since that would be annoying for Sha/Galleon in MoP due to their zone-wide size
+            if not BossData.IsSaved(name) or Options.alert_when_saved.get() then
+                WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
+                PlaySoundAlertBossCombat(name);
+                FlashClientIcon();
+            end
         end
 
         -- Avoid repetition of alert as long as boss is in combat. Should be < 30 sec to

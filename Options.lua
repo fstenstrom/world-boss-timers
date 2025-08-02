@@ -167,6 +167,7 @@ function Options.InitializeItems()
     Options.show_saved               = ToggleItem:New("show_saved",               "Showing if saved on boss (on timer) is now");
     Options.show_realm               = ToggleItem:New("show_realm",               "Showing realm on which timer was recorded is now");
     Options.dev_silent               = ToggleItem:New("dev_silent",               "Silent mode is now");
+    Options.alert_when_saved         = ToggleItem:New("alert_when_saved",         "Option alert_when_saved is now");
     Options.log_level                = SelectItem:New("log_level",                "Log level is now",         logger_opts.tbl, logger_opts.keys.option, logger_opts.keys.log_level, WBT.defaults.global.log_level);
     Options.spawn_alert_sound        = SelectItem:New("spawn_alert_sound",        "Spawn alert sound is now", sound_opts.tbl,  sound_opts.keys.option,  sound_opts.keys.file_id,    WBT.defaults.global.spawn_alert_sound);
     Options.spawn_alert_sec_before   = RangeItem:New("spawn_alert_sec_before",    "Spawn alert sound sec before is now", WBT.defaults.global.spawn_alert_sec_before);
@@ -208,13 +209,14 @@ local function PrintHelp()
     WBT.AceConfigDialog:Open(WBT.addon_name);
     local indent = "   ";
     WBT:Print("WorldBossTimers slash commands:");
-    WBT:Print("/wbt reset"       .. " --> Reset all timers");
-    WBT:Print("/wbt gui-reset"   .. " --> Reset the position of the timers window");
-    WBT:Print("/wbt saved"       .. " --> Print your saved bosses");
-    WBT:Print("/wbt show"        .. " --> Show the timers window");
-    WBT:Print("/wbt hide"        .. " --> Hide the timers window");
-    WBT:Print("/wbt gui-toggle"  .. " --> Toggle visibility of the timers window");
-    WBT:Print("/wbt log <level>" .. " --> Set log level for debug purposes");
+    WBT:Print("/wbt reset"            .. " --> Reset all timers");
+    WBT:Print("/wbt gui-reset"        .. " --> Reset the position of the timers window");
+    WBT:Print("/wbt saved"            .. " --> Print your saved bosses");
+    WBT:Print("/wbt alert-when-saved" .. " --> Play alerts even when saved");
+    WBT:Print("/wbt show"             .. " --> Show the timers window");
+    WBT:Print("/wbt hide"             .. " --> Hide the timers window");
+    WBT:Print("/wbt gui-toggle"       .. " --> Toggle visibility of the timers window");
+    WBT:Print("/wbt log <level>"      .. " --> Set log level for debug purposes");
 end
 
 function Options.SlashHandler(input)
@@ -261,9 +263,15 @@ function Options.SlashHandler(input)
         WBT.GUI:ResetPosition();
     elseif arg1 == "log" then
         WBT.Logger.SetLogLevel(arg2);
+    elseif arg1 == "alert-when-saved" then
+        local opt = Options.alert_when_saved;
+        opt:Toggle();
+        opt:PrintFormattedStatus(opt:get());
 --@do-not-package@
     elseif arg1 == "dev_silent" then
-        Options.dev_silent:Toggle();
+        local opt = Options.dev_silent;
+        opt:Toggle();
+        opt:PrintFormattedStatus(opt:get());
     elseif arg1 == "dev_print_location" and WBT.Dev then
         WBT.Dev.PrettyPrintLocation();
     elseif arg1 == "dev_print_distance" and WBT.Dev then
