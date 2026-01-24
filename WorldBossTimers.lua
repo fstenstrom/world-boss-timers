@@ -533,50 +533,69 @@ local function StartCombatHandler()
     WBT.EventHandlerFrames.combat_frame = combat_frame;
 
     combat_frame.t_next_alert_boss_combat = 0;
+    
+    -- TODO: Fix boss combat alerts
 
     -- This function is called on every combat event, so needs to be performant.
-    local function CombatHandler(...)
-        local _, subevent, _, src_unit_guid, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
-
-        if not (Util.StrEndsWith(subevent, "_DAMAGE") or
-                Util.StrEndsWith(subevent, "_MISSED") or  -- E.g. Rustfeather missing on AFK player
-                subevent == "UNIT_DIED")
-        then
-            return;
-        end
+--    local function CombatHandler(...)
+--        local _, subevent, _, src_unit_guid, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
+--
+--        if not (Util.StrEndsWith(subevent, "_DAMAGE") or
+--                Util.StrEndsWith(subevent, "_MISSED") or  -- E.g. Rustfeather missing on AFK player
+--                subevent == "UNIT_DIED")
+--        then
+--            return;
+--        end
+--
+--        -- Find the English name from GUID, to make it work for localization,
+--        -- instead of using the name in the event args.
+--        local map_id = WBT.GetCurrentMapId();
+--        local name = BossData.BossNameFromUnitGuid(dest_unit_guid, map_id) or
+--                     BossData.BossNameFromUnitGuid(src_unit_guid,  map_id);
+--        if name == nil then
+--            return;
+--        end
+--
+--        -- Check for boss combat
+--        local t = GetServerTime();
+--        if t > combat_frame.t_next_alert_boss_combat then
+--            -- Don't alert if saved, since that would be annoying for Sha/Galleon in MoP due to their zone-wide size
+--            if not BossData.IsSaved(name) or Options.alert_when_saved.get() then
+--                WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
+--                PlaySoundAlertBossCombat(name);
+--                FlashClientIcon();
+--            end
+--        end
+--
+--        -- Avoid repetition of alert as long as boss is in combat. Should be < 30 sec to
+--        -- re-alert on Vanish resets.
+--        combat_frame.t_next_alert_boss_combat = t + 25;
+--
+--        -- Check for boss death
+--        if subevent == "UNIT_DIED" then
+--            local shard_id = WBT.ParseShardID(dest_unit_guid);
+--            WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
+--            RequestRaidInfo(); -- Updates which bosses are saved
+--            g_gui:Update();
+--        end
+--    end
+    
+    local function CombatHandler(_, _, unit_guid)
 
         -- Find the English name from GUID, to make it work for localization,
         -- instead of using the name in the event args.
         local map_id = WBT.GetCurrentMapId();
-        local name = BossData.BossNameFromUnitGuid(dest_unit_guid, map_id) or
-                     BossData.BossNameFromUnitGuid(src_unit_guid,  map_id);
+        local name = BossData.BossNameFromUnitGuid(unit_guid, map_id);
         if name == nil then
             return;
         end
 
-        -- Check for boss combat
-        local t = GetServerTime();
-        if t > combat_frame.t_next_alert_boss_combat then
-            -- Don't alert if saved, since that would be annoying for Sha/Galleon in MoP due to their zone-wide size
-            if not BossData.IsSaved(name) or Options.alert_when_saved.get() then
-                WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
-                PlaySoundAlertBossCombat(name);
-                FlashClientIcon();
-            end
-        end
-
-        -- Avoid repetition of alert as long as boss is in combat. Should be < 30 sec to
-        -- re-alert on Vanish resets.
-        combat_frame.t_next_alert_boss_combat = t + 25;
-
-        -- Check for boss death
-        if subevent == "UNIT_DIED" then
-            local shard_id = WBT.ParseShardID(dest_unit_guid);
-            WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
-            RequestRaidInfo(); -- Updates which bosses are saved
-            g_gui:Update();
-        end
+        local shard_id = WBT.ParseShardID(unit_guid);
+        WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
+        RequestRaidInfo(); -- Updates which bosses are saved
+        g_gui:Update();
     end
+
 
     -- Enables or disables the handler which scans for boss combat.
     --
@@ -593,7 +612,7 @@ local function StartCombatHandler()
         combat_frame:SetScript("OnEvent", handler);
     end
 
-    combat_frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+    combat_frame:RegisterEvent("UNIT_DIED");
 
     return combat_frame;
 end

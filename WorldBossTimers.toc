@@ -1,4 +1,4 @@
-## Interface: 50502, 110207
+## Interface: 50502, 120000
 ## Title: WorldBossTimers
 ## Notes: Creates timers for world bosses
 ## Author: Soulstorm
