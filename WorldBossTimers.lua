@@ -670,6 +670,9 @@ local function StartShardDetectionHandler()
             return;
         end
         local guid = UnitGUID(unit);
+        if issecretvalue(guid) then
+            return;
+        end
         local unit_type = strsplit("-", guid);
         if unit_type == "Creature" or unit_type == "Vehicle" then
             g_current_shard_id = WBT.ParseShardID(guid);
