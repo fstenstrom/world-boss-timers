@@ -15,7 +15,8 @@
         "IsControlKeyDown",
         "IsShiftKeyDown",
         "DEFAULT_CHAT_FRAME",
-        "WBT_UnitTest"
+        "WBT_UnitTest",
+        "issecretvalue"
     ],
     "Lua.workspace.ignoreDir": [ "/libs" ],
     "Lua.completion.enable": false

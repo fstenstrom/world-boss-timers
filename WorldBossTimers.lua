@@ -135,7 +135,7 @@ end
 -- The frames that handle events. Used as an access point for testing.
 WBT.EventHandlerFrames = {
     main_loop                       = nil,
-    combat_frame                    = nil,
+    unit_died_frame                 = nil,
     timer_parser                    = nil,
     shard_detection_frame           = nil,
     shard_detection_restarter_frame = nil,
@@ -527,63 +527,12 @@ local function PlaySoundAlertBossCombat(name)
     Util.PlaySoundAlert(soundfile);
 end
 
--- NOTE: The handler for combat_frame is not set here, but in the main OnUpdate loop.
-local function StartCombatHandler()
-    local combat_frame = CreateFrame("Frame", "WBT_COMBAT_FRAME");
-    WBT.EventHandlerFrames.combat_frame = combat_frame;
+-- NOTE: The handler for unit_died_frame is not set here, but in the main OnUpdate loop.
+local function StartUnitDiedHandler()
+    local unit_died_frame = CreateFrame("Frame", "WBT_UNIT_DIED_FRAME");
+    WBT.EventHandlerFrames.unit_died_frame = unit_died_frame;
 
-    combat_frame.t_next_alert_boss_combat = 0;
-    
-    -- TODO: Fix boss combat alerts
-
-    -- This function is called on every combat event, so needs to be performant.
---    local function CombatHandler(...)
---        local _, subevent, _, src_unit_guid, _, _, _, dest_unit_guid, _ = CombatLogGetCurrentEventInfo();
---
---        if not (Util.StrEndsWith(subevent, "_DAMAGE") or
---                Util.StrEndsWith(subevent, "_MISSED") or  -- E.g. Rustfeather missing on AFK player
---                subevent == "UNIT_DIED")
---        then
---            return;
---        end
---
---        -- Find the English name from GUID, to make it work for localization,
---        -- instead of using the name in the event args.
---        local map_id = WBT.GetCurrentMapId();
---        local name = BossData.BossNameFromUnitGuid(dest_unit_guid, map_id) or
---                     BossData.BossNameFromUnitGuid(src_unit_guid,  map_id);
---        if name == nil then
---            return;
---        end
---
---        -- Check for boss combat
---        local t = GetServerTime();
---        if t > combat_frame.t_next_alert_boss_combat then
---            -- Don't alert if saved, since that would be annoying for Sha/Galleon in MoP due to their zone-wide size
---            if not BossData.IsSaved(name) or Options.alert_when_saved.get() then
---                WBT:Print(GetColoredBossName(name) .. " is now engaged in combat!");
---                PlaySoundAlertBossCombat(name);
---                FlashClientIcon();
---            end
---        end
---
---        -- Avoid repetition of alert as long as boss is in combat. Should be < 30 sec to
---        -- re-alert on Vanish resets.
---        combat_frame.t_next_alert_boss_combat = t + 25;
---
---        -- Check for boss death
---        if subevent == "UNIT_DIED" then
---            local shard_id = WBT.ParseShardID(dest_unit_guid);
---            WBT.PutOrUpdateKillInfo(name, shard_id, GetServerTime());
---            RequestRaidInfo(); -- Updates which bosses are saved
---            g_gui:Update();
---        end
---    end
-    
-    local function CombatHandler(_, _, unit_guid)
-
-        -- Find the English name from GUID, to make it work for localization,
-        -- instead of using the name in the event args.
+    local function UnitDiedHandler(_, _, unit_guid)
         local map_id = WBT.GetCurrentMapId();
         local name = BossData.BossNameFromUnitGuid(unit_guid, map_id);
         if name == nil then
@@ -596,25 +545,24 @@ local function StartCombatHandler()
         g_gui:Update();
     end
 
-
-    -- Enables or disables the handler which scans for boss combat.
+    -- Enables or disables the handler which scans for boss death.
     --
     -- Should run in the main loop (every 1 sec).
     --
     -- Note that there used to be a separate handler which toggled this behavior based on e.g.
     -- ZONE_CHANGED_NEW_AREA, but it was very buggy, most likely due to the map ID not updating
     -- correctly. (Adding delays didn't fix it.)
-    function combat_frame.UpdateCombatHandler()
+    function unit_died_frame.UpdateUnitDiedHandler()
         local handler = nil;
         if WBT.InBossZone() then
-            handler = CombatHandler;
+            handler = UnitDiedHandler;
         end
-        combat_frame:SetScript("OnEvent", handler);
+        unit_died_frame:SetScript("OnEvent", handler);
     end
 
-    combat_frame:RegisterEvent("UNIT_DIED");
+    unit_died_frame:RegisterEvent("UNIT_DIED");
 
-    return combat_frame;
+    return unit_died_frame;
 end
 
 function WBT.AceAddon:OnInitialize()
@@ -844,7 +792,7 @@ local function StartMainLoopHandler(combat_handler)
                     end
                 end
 
-                combat_handler.UpdateCombatHandler();
+                combat_handler.UpdateUnitDiedHandler();
 
                 g_gui:Update();
 
@@ -886,8 +834,8 @@ function WBT.AceAddon:OnEnable()
 
     -- Start event handlers
     StartShardDetectionHandler();
-    local combat_frame = StartCombatHandler();
-    StartMainLoopHandler(combat_frame);
+    local unit_died_frame = StartUnitDiedHandler();
+    StartMainLoopHandler(unit_died_frame);
     StartVisibilityHandler();
     StartChatParser();
 

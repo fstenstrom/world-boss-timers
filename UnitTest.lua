@@ -231,16 +231,8 @@ function RequestRaidInfo() return; end
 function GetNumSavedWorldBosses() return 0; end
 function GetSavedWorldBossInfo(idx) return nil, 0, nil; end
 
+function issecretvalue(value) return false; end
 
--- Change this fields before firing an event that uses combat event info.
-local CombatEventInfo = {
-    subevent = "",
-    dest_unit_guid = "";
-}
-function CombatLogGetCurrentEventInfo()
-    local _ = nil;
-    return _, CombatEventInfo.subevent, _, _, _, _, _, CombatEventInfo.dest_unit_guid, _;
-end
 --------------------------------------------------------------------------------
 -- WoW lua API
 --------------------------------------------------------------------------------
@@ -317,15 +309,7 @@ local function FireRestartShardDetection()
 end
 
 local function FireLocalBossDeath()
-    CombatEventInfo.subevent = "UNIT_DIED";
-    CombatEventInfo.dest_unit_guid = BuildGUID(WBT.BossesInCurrentZone()[1].name);
-    EventManager:FireEvent("COMBAT_LOG_EVENT_UNFILTERED");
-end
-
-local function FireLocalBossCombat(subevent)
-    CombatEventInfo.subevent = subevent;
-    CombatEventInfo.dest_unit_guid = BuildGUID(WBT.BossesInCurrentZone()[1].name);
-    EventManager:FireEvent("COMBAT_LOG_EVENT_UNFILTERED");
+    EventManager:FireEvent("UNIT_DIED", BuildGUID(WBT.BossesInCurrentZone()[1].name));
 end
 
 local function FireZoneChange(map_id)
@@ -536,35 +520,6 @@ local function TestSavedShardKillInfo()
     assert(ki);  -- Found again
 end
 
-local function TestBossCombat()
-    WBT = LoadWBT();
-
-    -- Detect shard and get initial values
-    g_game.world.shard_id = 44;
-    FireDetectShard();
-
-    local combat_frame = WBT.EventHandlerFrames.combat_frame;
-    local t_next_old = combat_frame.t_next_alert_boss_combat;
-
-    -- Check that invalid subevents don't trigger boss combat
-    assert(combat_frame.event_handler ~= nil);
-    FireLocalBossCombat("INVALID_SUBEVENT");
-    assert(t_next_old == combat_frame.t_next_alert_boss_combat);
-
-    -- Check that the combat event handler is turned off when moving
-    -- to a non-boss zone.
-    assert(combat_frame.event_handler ~= nil);
-    FireZoneChange(1);
-    assert(combat_frame.event_handler == nil);
-
-    -- Check that boss combat is detected when in boss zone
-    assert(combat_frame.event_handler == nil);
-    FireZoneChange(MAP_ID_OONDASTA);
-    assert(combat_frame.event_handler ~= nil);
-    FireLocalBossCombat("SPELL_DAMAGE");
-    assert(t_next_old < combat_frame.t_next_alert_boss_combat);
-end
-
 local function CreateKillInfo()
     WBT = LoadWBT();
     g_game.world.shard_id = 44;
@@ -616,7 +571,6 @@ local function main()
     TestShareReceiverHasExpiredTimer();
     TestSavedShard();
     TestSavedShardKillInfo();
-    TestBossCombat();
     TestDeserializeInvalidBoss();
 end
 
