@@ -136,7 +136,7 @@ end
 WBT.EventHandlerFrames = {
     main_loop                       = nil,
     unit_died_frame                 = nil,
-    timer_parser                    = nil,
+    chat_parser                     = nil,
     shard_detection_frame           = nil,
     shard_detection_restarter_frame = nil,
     gui_visibility_frame            = nil,
@@ -528,9 +528,10 @@ local function PlaySoundAlertBossCombat(name)
 end
 
 -- NOTE: The handler for unit_died_frame is not set here, but in the main OnUpdate loop.
-local function StartUnitDiedHandler()
-    local unit_died_frame = CreateFrame("Frame", "WBT_UNIT_DIED_FRAME");
-    WBT.EventHandlerFrames.unit_died_frame = unit_died_frame;
+local function InitUnitDiedHandler()
+    local frame = CreateFrame("Frame", "WBT_UNIT_DIED_FRAME");
+    WBT.EventHandlerFrames.frame = unit_died_frame;
+    frame:RegisterEvent("UNIT_DIED");
 
     local function UnitDiedHandler(_, _, unit_guid)
         local map_id = WBT.GetCurrentMapId();
@@ -552,17 +553,15 @@ local function StartUnitDiedHandler()
     -- Note that there used to be a separate handler which toggled this behavior based on e.g.
     -- ZONE_CHANGED_NEW_AREA, but it was very buggy, most likely due to the map ID not updating
     -- correctly. (Adding delays didn't fix it.)
-    function unit_died_frame.UpdateUnitDiedHandler()
+    function frame.UpdateUnitDiedHandler()
         local handler = nil;
         if WBT.InBossZone() then
             handler = UnitDiedHandler;
         end
-        unit_died_frame:SetScript("OnEvent", handler);
+        frame:SetScript("OnEvent", handler);
     end
 
-    unit_died_frame:RegisterEvent("UNIT_DIED");
-
-    return unit_died_frame;
+    return frame;
 end
 
 function WBT.AceAddon:OnInitialize()
@@ -665,59 +664,70 @@ local function StartVisibilityHandler()
     );
 end
 
-local function StartChatParser()
+local function IsPlayerName(name)
+    -- Since \b and alike doesn't exist: use "frontier pattern": %f[%A]
+    return string.match(name, GetUnitName("player") .. "%f[%A]") ~= nil;
+end
 
-    local function PlayerSentMessage(sender)
-        -- Since \b and alike doesnt exist: use "frontier pattern": %f[%A]
-        return string.match(sender, GetUnitName("player") .. "%f[%A]") ~= nil;
+local function InitChatParser()
+    local frame = CreateFrame("Frame", "WBT_CHAT_PARSER_FRAME");
+    WBT.EventHandlerFrames.chat_parser = frame;
+    frame:RegisterEvent("CHAT_MSG_SAY");
+
+    local function ParseChat(self, event, msg, sender)
+        if event ~= "CHAT_MSG_SAY" then
+            return;
+        elseif IsPlayerName(sender) then -- Don't parse your own share message
+            return;
+        elseif string.match(msg, SERVER_DEATH_TIME_PREFIX) == nil then
+            return;
+        end
+
+        -- NOTE: The name may contain dots and spaces, e.g. 'A. Harvester'.
+        local name, data = string.match(msg,
+                "[^A-Z]*" ..                   -- Discard any {rt8} from old versions
+                "([A-Z][A-Za-z%s\\.]+)" ..     -- The boss name
+                "[^\\(]*" ..                   -- Discard visuals, e.g. old {rt8} and timer as text
+                "%(" .. SERVER_DEATH_TIME_PREFIX .. "([%w-\\-]+)" .. "%)");  -- The payload
+        if not data then
+            Logger.Debug("[Parser]: Failed to parse timer. Unknown format.");
+            return;
+        end
+
+        -- Missing shard_id (as a result of sharing from old versions of WBT) is OK. This will
+        -- result in 'nil', which KillInfo must handle.
+        local t_death, shard_id = strsplit("-", data);
+        t_death  = tonumber(t_death);
+        shard_id = tonumber(shard_id);
+        local ki_id = KillInfo.CreateID(name, shard_id);
+
+        if not WBT.IsBoss(name) then
+            Logger.Debug("[Parser]: Failed to parse timer. Unknown boss name:", name);
+            return;
+        elseif not WBT.HasKillInfoExpired(ki_id) then
+            Logger.Debug("[Parser]: Ignoring shared timer. Player already has fresh timer.");
+            return;
+        else
+            WBT.PutOrUpdateKillInfo(name, shard_id, t_death);
+            WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
+        end
     end
 
-    local function InitSharedTimersParser()
-        local timer_parser = CreateFrame("Frame", "WBT_TIMER_PARSER_FRAME");
-        WBT.EventHandlerFrames.timer_parser = timer_parser;
-
-        timer_parser:RegisterEvent("CHAT_MSG_SAY");
-        timer_parser:SetScript("OnEvent",
-            function(self, event, msg, sender)
-                if event == "CHAT_MSG_SAY" then
-                    if PlayerSentMessage(sender) then
-                        return;
-                    elseif string.match(msg, SERVER_DEATH_TIME_PREFIX) ~= nil then
-                        -- NOTE: The name may contain dots and spaces, e.g. 'A. Harvester'.
-                        local name, data = string.match(msg,
-                                "[^A-Z]*" ..                   -- Discard any {rt8} from old versions
-                                "([A-Z][A-Za-z%s\\.]+)" ..     -- The boss name
-                                "[^\\(]*" ..                   -- Discard visuals, e.g. old {rt8} and timer as text
-                                "%(" .. SERVER_DEATH_TIME_PREFIX .. "([%w-\\-]+)" .. "%)");  -- The payload
-                        if not data then
-                            Logger.Debug("[Parser]: Failed to parse timer. Unknown format.");
-                            return;
-                        end
-
-                        -- Missing shard_id (as a result of sharing from old versions of WBT) is OK. This will
-                        -- result in 'nil', which KillInfo must handle.
-                        local t_death, shard_id = strsplit("-", data);
-                        t_death  = tonumber(t_death)
-                        shard_id = tonumber(shard_id)
-                        local ki_id = KillInfo.CreateID(name, shard_id);
-
-                        if not WBT.IsBoss(name) then
-                            Logger.Debug("[Parser]: Failed to parse timer. Unknown boss name:", name);
-                            return;
-                        elseif not WBT.HasKillInfoExpired(ki_id) then
-                            Logger.Debug("[Parser]: Ignoring shared timer. Player already has fresh timer.");
-                            return;
-                        else
-                            WBT.PutOrUpdateKillInfo(name, shard_id, t_death);
-                            WBT:Print("Received " .. GetColoredBossName(name) .. " timer from: " .. sender);
-                        end
-                    end
-                end
-            end
-        );
+    -- Enables or disables the handler which scans for boss death.
+    --
+    -- Should run in the main loop (every 1 sec).
+    --
+    -- Main purpose is to avoid tainted calls from GetUnitName in e.g. instanced PvP,
+    -- but also makes sense to not have it active outside of boss zones.
+    function frame.UpdateParseChatHandler()
+        local handler = nil;
+        if WBT.InBossZone() then
+            handler = ParseChat;
+        end
+        frame:SetScript("OnEvent", handler);
     end
 
-    InitSharedTimersParser();
+    return frame;
 end
 
 local function DeserializeKillInfos()
@@ -775,7 +785,7 @@ local function FilterValidKillInfosStep2()
     end
 end
 
-local function StartMainLoopHandler(combat_handler)
+local function StartMainLoopHandler(unit_died_frame, chat_parser_frame)
     local main_loop = CreateFrame("Frame", "WBT_MAIN_LOOP_FRAME");
     WBT.EventHandlerFrames.main_loop = main_loop;
 
@@ -792,7 +802,8 @@ local function StartMainLoopHandler(combat_handler)
                     end
                 end
 
-                combat_handler.UpdateUnitDiedHandler();
+                unit_died_frame.UpdateUnitDiedHandler();
+                chat_parser_frame.UpdateParseChatHandler();
 
                 g_gui:Update();
 
@@ -834,10 +845,10 @@ function WBT.AceAddon:OnEnable()
 
     -- Start event handlers
     StartShardDetectionHandler();
-    local unit_died_frame = StartUnitDiedHandler();
-    StartMainLoopHandler(unit_died_frame);
+    local unit_died_frame = InitUnitDiedHandler();
+    local chat_parser_frame = InitChatParser();
+    StartMainLoopHandler(unit_died_frame, chat_parser_frame);
     StartVisibilityHandler();
-    StartChatParser();
 
     -- Initialize slash handlers
     self:RegisterChatCommand("wbt", Options.SlashHandler);
