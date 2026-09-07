@@ -18,8 +18,6 @@ local MIN_RESPAWN_SHA = MinToSec(10);
 local MAX_RESPAWN_SHA = MinToSec(20);
 local MIN_RESPAWN_NALAK = MIN_RESPAWN_SHA;
 local MAX_RESPAWN_NALAK = MAX_RESPAWN_SHA;
-local MIN_RESPAWN_ZANDALARI_WARBRINGER = MinToSec(30);
-local MAX_RESPAWN_ZANDALARI_WARBRINGER = MinToSec(60);
 
 local SOUND_DIR = "Interface/AddOns/WorldBossTimers/resources/sound/";
 
@@ -528,9 +526,9 @@ local function ZandalariWarbringerFromTemplate(zone, map_id, color, perimiter)
         ids = {69769, 69842, 69841},
         is_saved_fcn = NeverSaved,
         soundfile = Sound.SOUND_FILE_DEFAULT,
-        min_respawn = MIN_RESPAWN_ZANDALARI_WARBRINGER,
-        max_respawn = MAX_RESPAWN_ZANDALARI_WARBRINGER,
-        random_spawn_time = true,
+        min_respawn = MinToSec(20),
+        max_respawn = MinToSec(20),
+        random_spawn_time = false,
         auto_announce = false,
         map_id = map_id,
         perimiter = perimiter,
